@@ -1,0 +1,8 @@
+{
+    "variants": {
+        "facing=north": { "model": "logiclink:block/logic_link" },
+        "facing=south": { "model": "logiclink:block/logic_link", "y": 180 },
+        "facing=west":  { "model": "logiclink:block/logic_link", "y": 270 },
+        "facing=east":  { "model": "logiclink:block/logic_link", "y": 90 }
+    }
+}

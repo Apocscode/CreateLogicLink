@@ -1,0 +1,18 @@
+{
+    "itemGroup.logiclink": "Logic Link",
+    "block.logiclink.logic_link": "Logic Link",
+    "block.logiclink.logic_sensor": "Logic Sensor",
+    "logiclink.linked.tooltip": "Tuned to logistics network",
+    "logiclink.linked.tooltip_clear": "Right-click air to clear",
+    "logiclink.linked.tuned": "Frequency copied!",
+    "logiclink.linked.cleared": "Frequency cleared",
+    "logiclink.linked.connected": "Connected to logistics network",
+    "logiclink.linked.new_unlinked": "Placed (not linked to any network)",
+    "logiclink.linked.protected": "This network is protected",
+    "logiclink.sensor.tooltip": "Tuned to logistics network",
+    "logiclink.sensor.tooltip_clear": "Right-click air to clear",
+    "logiclink.sensor.tuned": "Sensor frequency copied!",
+    "logiclink.sensor.cleared": "Sensor frequency cleared",
+    "logiclink.sensor.connected": "Sensor connected to logistics network",
+    "logiclink.sensor.new_unlinked": "Sensor placed (not linked to any network)"
+}

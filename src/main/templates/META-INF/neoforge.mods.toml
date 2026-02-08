@@ -1,0 +1,50 @@
+# This is the neoforge.mods.toml for Create: Logic Link Peripheral
+# Properties wrapped in ${} are replaced by Gradle from gradle.properties
+
+modLoader="javafml"
+loaderVersion="${loader_version_range}"
+license="${mod_license}"
+issueTrackerURL="https://github.com/apocscode/CreateLogicLink/issues"
+
+[[mods]]
+modId="${mod_id}"
+version="${mod_version}"
+displayName="${mod_name}"
+authors="${mod_authors}"
+description='''${mod_description}'''
+
+# ==================== Dependencies ====================
+
+# NeoForge - required
+[[dependencies.${mod_id}]]
+    modId="neoforge"
+    type="required"
+    versionRange="[21.1,)"
+    ordering="NONE"
+    side="BOTH"
+
+# Minecraft - required
+[[dependencies.${mod_id}]]
+    modId="minecraft"
+    type="required"
+    versionRange="${minecraft_version_range}"
+    ordering="NONE"
+    side="BOTH"
+
+# Create - required (we depend on Create's logistics API)
+[[dependencies.${mod_id}]]
+    modId="create"
+    type="required"
+    reason="Provides the logistics system that Logic Link interfaces with"
+    versionRange="${create_dep_version}"
+    ordering="AFTER"
+    side="BOTH"
+
+# CC: Tweaked - required (we provide peripherals for it)
+[[dependencies.${mod_id}]]
+    modId="computercraft"
+    type="required"
+    reason="Provides the peripheral API that Logic Link implements"
+    versionRange="${cc_tweaked_dep_version}"
+    ordering="AFTER"
+    side="BOTH"

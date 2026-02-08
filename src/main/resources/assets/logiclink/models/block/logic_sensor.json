@@ -1,0 +1,23 @@
+{
+    "parent": "minecraft:block/block",
+    "textures": {
+        "top": "minecraft:block/waxed_oxidized_copper",
+        "bottom": "minecraft:block/waxed_oxidized_copper",
+        "side": "minecraft:block/waxed_oxidized_cut_copper",
+        "particle": "minecraft:block/waxed_oxidized_cut_copper"
+    },
+    "elements": [
+        {
+            "from": [2, 0, 2],
+            "to": [14, 3, 14],
+            "faces": {
+                "north": { "texture": "#side", "uv": [2, 13, 14, 16] },
+                "south": { "texture": "#side", "uv": [2, 13, 14, 16] },
+                "east":  { "texture": "#side", "uv": [2, 13, 14, 16] },
+                "west":  { "texture": "#side", "uv": [2, 13, 14, 16] },
+                "up":    { "texture": "#top",  "uv": [2, 2, 14, 14] },
+                "down":  { "texture": "#bottom", "uv": [2, 2, 14, 14], "cullface": "down" }
+            }
+        }
+    ]
+}
