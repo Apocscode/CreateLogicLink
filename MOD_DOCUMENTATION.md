@@ -53,6 +53,17 @@ A thin wireless sensor block that attaches flat to any surface (floor, wall, cei
 - **Enchantment glow:** Item glows purple when tuned
 - **Data refresh:** Every 20 ticks (1 second), reads the target block and caches the result
 
+### Redstone Controller
+
+A peripheral block that provides programmatic control over Create's Redstone Link wireless network. One block can manage unlimited frequency channels simultaneously — all from Lua, no block GUI.
+
+- **Appearance:** Full cube, polished blackstone top, andesite casing sides/bottom, netherite block sound
+- **Map Color:** Fire red (MapColor.FIRE)
+- **Placement:** Horizontal directional (4 faces: N/S/E/W)
+- **No frequency linking:** Channels are created dynamically from Lua scripts
+- **Persistence:** Channels survive server restarts (saved to NBT)
+- **Range:** Subject to Create's `linkRange` config, same as physical Redstone Links
+
 ---
 
 ## Network Highlight System
@@ -136,6 +147,27 @@ Items are delivered through Create's logistics system (Frogports, packagers, etc
 
 ---
 
+## Lua API — `redstone_controller` peripheral
+
+Wrap with: `local rc = peripheral.wrap("redstone_controller")`
+
+| Function | Parameters | Returns | Description |
+|----------|-----------|---------|-------------|
+| `setOutput(item1, item2, power)` | two item registry names, signal 0–15 | — | Transmit a redstone signal on a frequency pair. Creates channel on first use. |
+| `getInput(item1, item2)` | two item registry names | `number` (0–15) | Read signal from external transmitters on a frequency pair. Creates receiver on first use. |
+| `getOutput(item1, item2)` | two item registry names | `number` (0–15) | Read current transmit power without modifying anything. Returns 0 if channel doesn't exist. |
+| `removeChannel(item1, item2)` | two item registry names | — | Remove a channel entirely, unregistering from Create's network. |
+| `getChannels()` | — | `[{item1, item2, mode, power}, ...]` | List all active channels with their mode ("transmit"/"receive") and power. |
+| `setAllOutputs(power)` | signal 0–15 | — | Set all transmit channels to one value. Receivers unaffected. |
+| `clearChannels()` | — | — | Remove all channels. |
+| `getPosition()` | — | `{x, y, z}` | Block position. |
+
+**Frequency pairs** match Create's Redstone Link two-slot system. Each channel is identified by a pair of item registry names (e.g. `"minecraft:redstone"`, `"minecraft:lever"`). Order matters — `(redstone, lever)` is a different channel from `(lever, redstone)`.
+
+**Mode switching:** Calling `setOutput` on a receiver channel switches it to transmitter mode (and vice versa for `getInput`).
+
+---
+
 ## Lua API — `logicsensor` peripheral
 
 Wrap with: `local sensor = peripheral.wrap("logicsensor")`
@@ -203,33 +235,41 @@ F:\Controller\CreateLogicLink\
 │   │   ├── LogicLinkBlockItem.java       -- Item with frequency linking on right-click
 │   │   ├── LogicSensorBlock.java         -- Logic Sensor block (FaceAttachedHorizontalDirectionalBlock)
 │   │   ├── LogicSensorBlockEntity.java   -- Stores frequency, caches target block data
-│   │   └── LogicSensorBlockItem.java     -- Item with frequency linking on right-click
+│   │   ├── LogicSensorBlockItem.java     -- Item with frequency linking on right-click
+│   │   ├── RedstoneControllerBlock.java  -- Redstone Controller block (HorizontalDirectionalBlock)
+│   │   └── RedstoneControllerBlockEntity.java -- Manages virtual redstone link channels
 │   ├── peripheral/
 │   │   ├── LogicLinkPeripheral.java      -- CC:Tweaked peripheral (14 Lua functions)
-│   │   ├── LogicLinkPeripheralProvider.java -- Registers both peripherals with CC
+│   │   ├── LogicLinkPeripheralProvider.java -- Registers all peripherals with CC
 │   │   ├── LogicSensorPeripheral.java    -- CC:Tweaked peripheral (7 Lua functions)
+│   │   ├── RedstoneControllerPeripheral.java -- CC:Tweaked peripheral (8 Lua functions)
 │   │   └── CreateBlockReader.java        -- Reads Create block data via reflection
 │   ├── network/
 │   │   ├── LinkNetwork.java              -- Static link registry + highlight packet sender
 │   │   ├── SensorNetwork.java            -- Static sensor registry by frequency UUID
-│   │   └── NetworkHighlightPayload.java  -- Server→client packet with block positions
+│   │   ├── NetworkHighlightPayload.java  -- Server→client packet with block positions
+│   │   └── VirtualRedstoneLink.java      -- IRedstoneLinkable impl for virtual channels
 │   └── client/
 │       └── NetworkHighlightRenderer.java -- Client-side outline renderer (Create-style)
 ├── src/main/resources/
 │   ├── assets/logiclink/
 │   │   ├── blockstates/
 │   │   │   ├── logic_link.json           -- 4 horizontal variants
-│   │   │   └── logic_sensor.json         -- 12 face+facing variants (floor/wall/ceiling × 4)
+│   │   │   ├── logic_sensor.json         -- 12 face+facing variants (floor/wall/ceiling × 4)
+│   │   │   └── redstone_controller.json  -- 4 horizontal variants
 │   │   ├── models/block/
 │   │   │   ├── logic_link.json           -- Cube: polished andesite top, andesite casing sides
-│   │   │   └── logic_sensor.json         -- Thin pad: smooth stone top, polished andesite sides
+│   │   │   ├── logic_sensor.json         -- Thin pad: smooth stone top, polished andesite sides
+│   │   │   └── redstone_controller.json  -- Cube: polished blackstone top, andesite casing sides
 │   │   ├── models/item/
 │   │   │   ├── logic_link.json
-│   │   │   └── logic_sensor.json
+│   │   │   ├── logic_sensor.json
+│   │   │   └── redstone_controller.json
 │   │   └── lang/en_us.json               -- English translations
 │   └── data/logiclink/loot_table/blocks/
 │       ├── logic_link.json               -- Drops itself
-│       └── logic_sensor.json             -- Drops itself
+│       ├── logic_sensor.json             -- Drops itself
+│       └── redstone_controller.json      -- Drops itself
 └── build/libs/logiclink-0.1.0.jar        -- Compiled mod jar
 ```
 
@@ -284,14 +324,24 @@ F:\Controller\CreateLogicLink\
 28. **Blockstate JSON** — 12 variants with correct x/y rotations: floor (x=0), ceiling (x=180), walls (x=90 + y rotation following Create's horizontalAngle convention: SOUTH=0, NORTH=180, EAST=270, WEST=90).
 29. **No support block required** — `canSurvive()` always returns true, like Create's Stock Link.
 
+### Phase 7 — Redstone Controller
+
+30. **Redstone Controller block** — New peripheral block that provides programmatic control over Create's Redstone Link wireless network. Full cube, polished blackstone top, andesite casing sides.
+31. **RedstoneControllerBlockEntity** — Manages a HashMap of virtual channels. Each channel is a `VirtualRedstoneLink` registered with Create's `RedstoneLinkNetworkHandler`. Channels persist to NBT and restore on world load.
+32. **VirtualRedstoneLink** — Implements Create's `IRedstoneLinkable` interface. Creates `Couple<Frequency>` network keys from item registry names. Supports both transmitter and receiver modes.
+33. **RedstoneControllerPeripheral** — CC:Tweaked peripheral type `redstone_controller` with 8 Lua functions: `setOutput`, `getInput`, `getOutput`, `removeChannel`, `getChannels`, `setAllOutputs`, `clearChannels`, `getPosition`.
+34. **No frequency linking or GUI** — Channels are created entirely from Lua scripts. `setOutput()` creates a transmitter, `getInput()` creates a receiver. Mode switches automatically if called on an existing channel of the opposite type.
+35. **Unlimited simultaneous channels** — One block replaces unlimited physical Redstone Links. Each channel is a virtual node in Create's network.
+36. **Verified in-game** — All 8 Lua functions tested. Transmit output confirmed received by physical Create Redstone Link blocks on matching frequencies.
+
 ---
 
 ## What Still Needs To Be Done
 
 ### High Priority
 
-- [ ] **Custom textures** — Both blocks use vanilla/Create textures as placeholders. Need proper unique textures.
-- [ ] **Recipes** — No crafting recipes defined yet. Need data-generation or JSON recipes for both blocks.
+- [ ] **Custom textures** — All blocks use vanilla/Create textures as placeholders. Need proper unique textures.
+- [ ] **Recipes** — No crafting recipes defined yet. Need data-generation or JSON recipes for all three blocks.
 
 ### Medium Priority
 
@@ -301,7 +351,6 @@ F:\Controller\CreateLogicLink\
 
 ### Low Priority / Future Features
 
-- [ ] **Redstone integration** — Expose redstone output from sensor data
 - [ ] **Monitor display support** — Pre-built Lua programs for CC:Tweaked monitors
 - [ ] **Pocket computer support** — Wireless modem integration
 - [ ] **Sensor filtering** — Report only specific data types to reduce traffic
@@ -368,4 +417,21 @@ end
 ```lua
 local link = peripheral.wrap("logiclink")
 link.requestItem("minecraft:iron_ingot", 64, "my_address")
+```
+
+### Control Create Redstone Links wirelessly
+```lua
+local rc = peripheral.wrap("redstone_controller")
+
+-- Transmit on 3 channels
+rc.setOutput("minecraft:granite", "minecraft:granite", 15)
+rc.setOutput("minecraft:cobblestone", "minecraft:cobblestone", 15)
+rc.setOutput("minecraft:oak_log", "minecraft:oak_log", 15)
+
+-- Read a channel from an external transmitter
+local power = rc.getInput("minecraft:red_dye", "minecraft:diamond")
+print("Received: " .. power)
+
+-- Kill switch: zero all outputs
+rc.setAllOutputs(0)
 ```

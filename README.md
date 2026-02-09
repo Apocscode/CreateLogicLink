@@ -6,6 +6,7 @@ A Minecraft NeoForge mod that bridges **Create mod's** logistics system with **C
 
 - **Logic Link Block** — Full-size peripheral block that connects to Create's logistics network. Query inventory, enumerate gauges/links, and request item deliveries via Lua (14 functions).
 - **Logic Sensor Block** — Thin surface-mount sensor that reads Create machine data (inventory, fluids, kinetic speed/stress, Blaze Burner heat). Attaches to any surface like a Stock Link (7 functions).
+- **Redstone Controller Block** — Programmatic control over Create's Redstone Link wireless network. One block manages unlimited frequency channels from Lua — no GUI, no physical Redstone Links needed (8 functions).
 - **Network Highlighting** — Hold a linked item to see all blocks on the network outlined in Create's signature blue.
 - **Item Requests** — Send items through Create's packaging/delivery system from Lua scripts.
 - **Wireless Sensor Discovery** — Logic Links can discover all Logic Sensors on the network via `getSensors()`.
@@ -116,6 +117,43 @@ Hold a linked Logic Link or Logic Sensor item to see all blocks on the network h
 
 The outlines follow actual block shapes (not full cubes) and match Create's visual style.
 
+## Redstone Controller
+
+Place a Redstone Controller next to a CC:Tweaked computer to control Create's Redstone Link network from code:
+
+```lua
+local rc = peripheral.wrap("redstone_controller")
+
+-- Transmit signal 15 on channel (granite, granite)
+rc.setOutput("minecraft:granite", "minecraft:granite", 15)
+
+-- Read signal from external transmitters
+local power = rc.getInput("minecraft:red_dye", "minecraft:diamond")
+
+-- List all active channels
+for _, ch in ipairs(rc.getChannels()) do
+    print(ch.item1 .. " + " .. ch.item2 .. " = " .. ch.mode .. " @ " .. ch.power)
+end
+
+-- Kill switch: zero all outputs
+rc.setAllOutputs(0)
+```
+
+No frequency linking needed — channels are created on first use. One block replaces unlimited physical Redstone Links.
+
+## Lua API — `redstone_controller`
+
+| Function | Returns | Description |
+|----------|---------|-------------|
+| `setOutput(item1, item2, power)` | — | Transmit 0–15 on a frequency pair |
+| `getInput(item1, item2)` | number | Read signal from external transmitters |
+| `getOutput(item1, item2)` | number | Read current transmit power |
+| `removeChannel(item1, item2)` | — | Remove a channel |
+| `getChannels()` | [channel] | List all channels with mode and power |
+| `setAllOutputs(power)` | — | Set all transmit channels to one value |
+| `clearChannels()` | — | Remove all channels |
+| `getPosition()` | {x,y,z} | Block position |
+
 ## Building from Source
 
 ```bash
@@ -140,16 +178,20 @@ src/main/java/com/apocscode/logiclink/
 │   ├── LogicLinkBlockItem.java       # Frequency linking item
 │   ├── LogicSensorBlock.java         # Sensor (FaceAttachedHorizontalDirectionalBlock)
 │   ├── LogicSensorBlockEntity.java   # Frequency, target data cache
-│   └── LogicSensorBlockItem.java     # Frequency linking item
+│   ├── LogicSensorBlockItem.java     # Frequency linking item
+│   ├── RedstoneControllerBlock.java  # Redstone Controller (HorizontalDirectionalBlock)
+│   └── RedstoneControllerBlockEntity.java # Virtual redstone link channels
 ├── peripheral/
 │   ├── LogicLinkPeripheral.java      # 14 Lua functions
 │   ├── LogicLinkPeripheralProvider.java
 │   ├── LogicSensorPeripheral.java    # 7 Lua functions
+│   ├── RedstoneControllerPeripheral.java # 8 Lua functions
 │   └── CreateBlockReader.java        # Reads Create block data via reflection
 ├── network/
 │   ├── LinkNetwork.java              # Link registry + highlight packet sender
 │   ├── SensorNetwork.java            # Sensor registry by frequency UUID
-│   └── NetworkHighlightPayload.java  # Server→client highlight packet
+│   ├── NetworkHighlightPayload.java  # Server→client highlight packet
+│   └── VirtualRedstoneLink.java      # IRedstoneLinkable impl for virtual channels
 └── client/
     └── NetworkHighlightRenderer.java # Create-style outline renderer
 ```

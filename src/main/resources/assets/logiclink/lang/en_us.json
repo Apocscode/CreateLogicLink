@@ -14,5 +14,6 @@
     "logiclink.sensor.tuned": "Sensor frequency copied!",
     "logiclink.sensor.cleared": "Sensor frequency cleared",
     "logiclink.sensor.connected": "Sensor connected to logistics network",
-    "logiclink.sensor.new_unlinked": "Sensor placed (not linked to any network)"
+    "logiclink.sensor.new_unlinked": "Sensor placed (not linked to any network)",
+    "block.logiclink.redstone_controller": "Redstone Controller"
 }

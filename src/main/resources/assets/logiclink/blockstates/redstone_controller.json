@@ -1,0 +1,8 @@
+{
+    "variants": {
+        "facing=north": { "model": "logiclink:block/redstone_controller" },
+        "facing=south": { "model": "logiclink:block/redstone_controller", "y": 180 },
+        "facing=west":  { "model": "logiclink:block/redstone_controller", "y": 270 },
+        "facing=east":  { "model": "logiclink:block/redstone_controller", "y": 90 }
+    }
+}

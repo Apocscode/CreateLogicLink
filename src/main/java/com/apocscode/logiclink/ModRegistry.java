@@ -6,10 +6,13 @@ import com.apocscode.logiclink.block.LogicLinkBlockItem;
 import com.apocscode.logiclink.block.LogicSensorBlock;
 import com.apocscode.logiclink.block.LogicSensorBlockEntity;
 import com.apocscode.logiclink.block.LogicSensorBlockItem;
+import com.apocscode.logiclink.block.RedstoneControllerBlock;
+import com.apocscode.logiclink.block.RedstoneControllerBlockEntity;
 
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.CreativeModeTab;
+import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.SoundType;
@@ -65,6 +68,19 @@ public class ModRegistry {
                     .noOcclusion())
     );
 
+    /**
+     * The Redstone Controller block — a CC:Tweaked peripheral that provides
+     * programmatic control over Create's Redstone Link wireless network.
+     */
+    public static final DeferredBlock<RedstoneControllerBlock> REDSTONE_CONTROLLER_BLOCK = BLOCKS.register(
+            "redstone_controller",
+            () -> new RedstoneControllerBlock(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.FIRE)
+                    .strength(3.5F)
+                    .requiresCorrectToolForDrops()
+                    .sound(SoundType.NETHERITE_BLOCK))
+    );
+
     // ==================== Items ====================
 
     /**
@@ -81,6 +97,14 @@ public class ModRegistry {
     public static final DeferredItem<LogicSensorBlockItem> LOGIC_SENSOR_ITEM = ITEMS.register(
             "logic_sensor",
             () -> new LogicSensorBlockItem(LOGIC_SENSOR_BLOCK.get(), new Item.Properties())
+    );
+
+    /**
+     * Standard BlockItem for the Redstone Controller (no frequency linking needed).
+     */
+    public static final DeferredItem<BlockItem> REDSTONE_CONTROLLER_ITEM = ITEMS.register(
+            "redstone_controller",
+            () -> new BlockItem(REDSTONE_CONTROLLER_BLOCK.get(), new Item.Properties())
     );
 
     // ==================== Block Entities ====================
@@ -103,6 +127,15 @@ public class ModRegistry {
                     ).build(null)
             );
 
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<RedstoneControllerBlockEntity>> REDSTONE_CONTROLLER_BE =
+            BLOCK_ENTITY_TYPES.register(
+                    "redstone_controller",
+                    () -> BlockEntityType.Builder.of(
+                            RedstoneControllerBlockEntity::new,
+                            REDSTONE_CONTROLLER_BLOCK.get()
+                    ).build(null)
+            );
+
     // ==================== Creative Mode Tabs ====================
 
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> LOGIC_LINK_TAB =
@@ -113,6 +146,7 @@ public class ModRegistry {
                     .displayItems((parameters, output) -> {
                         output.accept(LOGIC_LINK_ITEM.get());
                         output.accept(LOGIC_SENSOR_ITEM.get());
+                        output.accept(REDSTONE_CONTROLLER_ITEM.get());
                     })
                     .build()
             );

@@ -4,6 +4,7 @@ import com.apocscode.logiclink.LogicLink;
 import com.apocscode.logiclink.ModRegistry;
 import com.apocscode.logiclink.block.LogicLinkBlockEntity;
 import com.apocscode.logiclink.block.LogicSensorBlockEntity;
+import com.apocscode.logiclink.block.RedstoneControllerBlockEntity;
 
 import dan200.computercraft.api.peripheral.IPeripheral;
 import dan200.computercraft.api.peripheral.PeripheralCapability;
@@ -42,7 +43,14 @@ public class LogicLinkPeripheralProvider {
                 LogicLinkPeripheralProvider::getSensorPeripheral
         );
 
-        LogicLink.LOGGER.info("Registered Logic Link and Logic Sensor peripherals with CC:Tweaked");
+        // Register Redstone Controller peripheral
+        event.registerBlockEntity(
+                PeripheralCapability.get(),
+                ModRegistry.REDSTONE_CONTROLLER_BE.get(),
+                LogicLinkPeripheralProvider::getRedstoneControllerPeripheral
+        );
+
+        LogicLink.LOGGER.info("Registered Logic Link, Logic Sensor, and Redstone Controller peripherals with CC:Tweaked");
     }
 
     @Nullable
@@ -53,5 +61,10 @@ public class LogicLinkPeripheralProvider {
     @Nullable
     private static IPeripheral getSensorPeripheral(LogicSensorBlockEntity blockEntity, @Nullable Direction direction) {
         return new LogicSensorPeripheral(blockEntity);
+    }
+
+    @Nullable
+    private static IPeripheral getRedstoneControllerPeripheral(RedstoneControllerBlockEntity blockEntity, @Nullable Direction direction) {
+        return new RedstoneControllerPeripheral(blockEntity);
     }
 }
