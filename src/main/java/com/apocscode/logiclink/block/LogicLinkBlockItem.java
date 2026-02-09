@@ -140,7 +140,7 @@ public class LogicLinkBlockItem extends BlockItem {
         boolean tuned = isTuned(stack);
 
         if (link != null) {
-            // Target is a logistics-linked block — copy its frequency
+            // Target is a Create logistics-linked block — copy its frequency
             if (level.isClientSide)
                 return InteractionResult.SUCCESS;
             if (!link.mayInteract(player)) {
@@ -151,6 +151,20 @@ public class LogicLinkBlockItem extends BlockItem {
             }
 
             assignFrequency(stack, player, link.freqId);
+            return InteractionResult.SUCCESS;
+        }
+
+        // Check if the target is one of our own linked blocks
+        java.util.UUID ourFreq = null;
+        if (level.getBlockEntity(pos) instanceof LogicLinkBlockEntity be && be.isLinked()) {
+            ourFreq = be.getNetworkFrequency();
+        } else if (level.getBlockEntity(pos) instanceof LogicSensorBlockEntity be && be.isLinked()) {
+            ourFreq = be.getNetworkFrequency();
+        }
+        if (ourFreq != null) {
+            if (level.isClientSide)
+                return InteractionResult.SUCCESS;
+            assignFrequency(stack, player, ourFreq);
             return InteractionResult.SUCCESS;
         }
 

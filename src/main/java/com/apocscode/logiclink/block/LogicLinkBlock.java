@@ -35,8 +35,8 @@ public class LogicLinkBlock extends HorizontalDirectionalBlock implements Entity
 
     public static final MapCodec<LogicLinkBlock> CODEC = simpleCodec(LogicLinkBlock::new);
 
-    // Block shape — full block with a slightly shorter top
-    private static final VoxelShape SHAPE = Block.box(0, 0, 0, 16, 14, 16);
+    // Block shape — full cube (andesite casing appearance)
+    private static final VoxelShape SHAPE = Block.box(0, 0, 0, 16, 16, 16);
 
     public LogicLinkBlock(Properties properties) {
         super(properties);

@@ -1,10 +1,16 @@
 {
     "variants": {
-        "facing=north": { "model": "logiclink:block/logic_sensor" },
-        "facing=south": { "model": "logiclink:block/logic_sensor", "y": 180 },
-        "facing=west":  { "model": "logiclink:block/logic_sensor", "y": 270 },
-        "facing=east":  { "model": "logiclink:block/logic_sensor", "y": 90 },
-        "facing=up":    { "model": "logiclink:block/logic_sensor", "x": 270 },
-        "facing=down":  { "model": "logiclink:block/logic_sensor", "x": 90 }
+        "face=floor,facing=north":   { "model": "logiclink:block/logic_sensor", "y": 180 },
+        "face=floor,facing=south":   { "model": "logiclink:block/logic_sensor" },
+        "face=floor,facing=east":    { "model": "logiclink:block/logic_sensor", "y": 270 },
+        "face=floor,facing=west":    { "model": "logiclink:block/logic_sensor", "y": 90 },
+        "face=ceiling,facing=north": { "model": "logiclink:block/logic_sensor", "x": 180, "y": 180 },
+        "face=ceiling,facing=south": { "model": "logiclink:block/logic_sensor", "x": 180 },
+        "face=ceiling,facing=east":  { "model": "logiclink:block/logic_sensor", "x": 180, "y": 270 },
+        "face=ceiling,facing=west":  { "model": "logiclink:block/logic_sensor", "x": 180, "y": 90 },
+        "face=wall,facing=north":    { "model": "logiclink:block/logic_sensor", "x": 90, "y": 180 },
+        "face=wall,facing=south":    { "model": "logiclink:block/logic_sensor", "x": 90 },
+        "face=wall,facing=east":     { "model": "logiclink:block/logic_sensor", "x": 90, "y": 270 },
+        "face=wall,facing=west":     { "model": "logiclink:block/logic_sensor", "x": 90, "y": 90 }
     }
 }

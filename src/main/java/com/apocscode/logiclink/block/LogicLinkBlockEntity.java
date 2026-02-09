@@ -2,6 +2,7 @@ package com.apocscode.logiclink.block;
 
 import com.apocscode.logiclink.LogicLink;
 import com.apocscode.logiclink.ModRegistry;
+import com.apocscode.logiclink.network.LinkNetwork;
 
 import com.simibubi.create.content.logistics.packager.InventorySummary;
 import com.simibubi.create.content.logistics.packagerLink.LogisticallyLinkedBehaviour;
@@ -37,6 +38,9 @@ public class LogicLinkBlockEntity extends BlockEntity {
     @Nullable
     private InventorySummary cachedSummary = null;
 
+    /** Whether this link needs to register with LinkNetwork on next tick. */
+    private boolean needsRegistration = false;
+
     /** Tick counter for periodic network inventory refresh. */
     private int refreshTimer = 0;
     private static final int REFRESH_INTERVAL = 40; // Refresh every 2 seconds
@@ -60,10 +64,21 @@ public class LogicLinkBlockEntity extends BlockEntity {
      * with a tuned LogicLinkBlockItem (right-clicked on an existing Stock Link).
      */
     public void setNetworkFrequency(@Nullable UUID frequency) {
+        // Unregister from old frequency
+        if (this.networkFrequency != null) {
+            LinkNetwork.unregister(this.networkFrequency, this);
+        }
+
         this.networkFrequency = frequency;
         this.cachedSummary = null;
         this.refreshTimer = 0;
         setChanged();
+
+        // Register with new frequency
+        if (frequency != null && level != null && !level.isClientSide()) {
+            LinkNetwork.register(frequency, this);
+        }
+
         if (level != null && !level.isClientSide()) {
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
         }
@@ -110,6 +125,12 @@ public class LogicLinkBlockEntity extends BlockEntity {
      * from the Create logistics network.
      */
     public static void serverTick(Level level, BlockPos pos, BlockState state, LogicLinkBlockEntity be) {
+        // Handle deferred registration (after world load)
+        if (be.needsRegistration && be.networkFrequency != null) {
+            LinkNetwork.register(be.networkFrequency, be);
+            be.needsRegistration = false;
+        }
+
         if (!be.isLinked()) return;
 
         be.refreshTimer++;
@@ -125,7 +146,9 @@ public class LogicLinkBlockEntity extends BlockEntity {
      * Called when the block is removed from the world.
      */
     public void onRemoved() {
-        // Nothing to unregister since we're read-only observers of the network
+        if (networkFrequency != null) {
+            LinkNetwork.unregister(networkFrequency, this);
+        }
     }
 
     // ==================== NBT Persistence ====================
@@ -143,6 +166,8 @@ public class LogicLinkBlockEntity extends BlockEntity {
         super.loadAdditional(tag, registries);
         if (tag.hasUUID("Freq")) {
             networkFrequency = tag.getUUID("Freq");
+            // Defer registration to first tick (level may not be set yet)
+            needsRegistration = true;
         } else {
             networkFrequency = null;
         }

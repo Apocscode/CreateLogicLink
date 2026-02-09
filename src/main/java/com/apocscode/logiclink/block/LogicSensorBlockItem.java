@@ -128,6 +128,20 @@ public class LogicSensorBlockItem extends BlockItem {
             return InteractionResult.SUCCESS;
         }
 
+        // Check if the target is one of our own linked blocks
+        java.util.UUID ourFreq = null;
+        if (level.getBlockEntity(pos) instanceof LogicLinkBlockEntity be && be.isLinked()) {
+            ourFreq = be.getNetworkFrequency();
+        } else if (level.getBlockEntity(pos) instanceof LogicSensorBlockEntity be && be.isLinked()) {
+            ourFreq = be.getNetworkFrequency();
+        }
+        if (ourFreq != null) {
+            if (level.isClientSide)
+                return InteractionResult.SUCCESS;
+            assignFrequency(stack, player, ourFreq);
+            return InteractionResult.SUCCESS;
+        }
+
         // Place the block
         InteractionResult useOn = super.useOn(context);
         if (level.isClientSide || useOn == InteractionResult.FAIL)

@@ -1,22 +1,22 @@
 {
     "parent": "minecraft:block/block",
     "textures": {
-        "top": "minecraft:block/waxed_oxidized_copper",
-        "bottom": "minecraft:block/waxed_oxidized_copper",
-        "side": "minecraft:block/waxed_oxidized_cut_copper",
-        "particle": "minecraft:block/waxed_oxidized_cut_copper"
+        "top": "minecraft:block/smooth_stone",
+        "bottom": "create:block/andesite_casing",
+        "side": "minecraft:block/polished_andesite",
+        "particle": "minecraft:block/polished_andesite"
     },
     "elements": [
         {
-            "from": [2, 0, 2],
-            "to": [14, 3, 14],
+            "from": [1, 0, 1],
+            "to": [15, 5, 15],
             "faces": {
-                "north": { "texture": "#side", "uv": [2, 13, 14, 16] },
-                "south": { "texture": "#side", "uv": [2, 13, 14, 16] },
-                "east":  { "texture": "#side", "uv": [2, 13, 14, 16] },
-                "west":  { "texture": "#side", "uv": [2, 13, 14, 16] },
-                "up":    { "texture": "#top",  "uv": [2, 2, 14, 14] },
-                "down":  { "texture": "#bottom", "uv": [2, 2, 14, 14], "cullface": "down" }
+                "north": { "texture": "#side", "uv": [1, 11, 15, 16] },
+                "south": { "texture": "#side", "uv": [1, 11, 15, 16] },
+                "east":  { "texture": "#side", "uv": [1, 11, 15, 16] },
+                "west":  { "texture": "#side", "uv": [1, 11, 15, 16] },
+                "up":    { "texture": "#top",  "uv": [1, 1, 15, 15] },
+                "down":  { "texture": "#bottom", "uv": [1, 1, 15, 15], "cullface": "down" }
             }
         }
     ]
