@@ -2,7 +2,9 @@ package com.apocscode.logiclink.peripheral;
 
 import com.apocscode.logiclink.LogicLink;
 import com.apocscode.logiclink.ModRegistry;
+import com.apocscode.logiclink.block.CreativeLogicMotorBlockEntity;
 import com.apocscode.logiclink.block.LogicLinkBlockEntity;
+import com.apocscode.logiclink.block.LogicMotorBlockEntity;
 import com.apocscode.logiclink.block.LogicSensorBlockEntity;
 import com.apocscode.logiclink.block.RedstoneControllerBlockEntity;
 
@@ -11,6 +13,7 @@ import dan200.computercraft.api.peripheral.PeripheralCapability;
 
 import net.minecraft.core.Direction;
 import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.ModList;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 
@@ -50,7 +53,27 @@ public class LogicLinkPeripheralProvider {
                 LogicLinkPeripheralProvider::getRedstoneControllerPeripheral
         );
 
-        LogicLink.LOGGER.info("Registered Logic Link, Logic Sensor, and Redstone Controller peripherals with CC:Tweaked");
+        // Register Creative Logic Motor peripheral
+        event.registerBlockEntity(
+                PeripheralCapability.get(),
+                ModRegistry.CREATIVE_LOGIC_MOTOR_BE.get(),
+                LogicLinkPeripheralProvider::getCreativeLogicMotorPeripheral
+        );
+
+        // Register Logic Motor peripheral
+        event.registerBlockEntity(
+                PeripheralCapability.get(),
+                ModRegistry.LOGIC_MOTOR_BE.get(),
+                LogicLinkPeripheralProvider::getLogicMotorPeripheral
+        );
+
+        LogicLink.LOGGER.info("Registered all peripherals with CC:Tweaked (Logic Link, Sensor, Redstone Controller, Creative Motor, Motor)");
+
+        // ==================== Optional: Create Storage Peripherals ====================
+        if (ModList.get().isLoaded("fxntstorage")) {
+            StoragePeripheralCompat.register(event);
+            LogicLink.LOGGER.info("Create Storage (fxntstorage) detected — registered Storage Controller and Storage Interface peripherals");
+        }
     }
 
     @Nullable
@@ -66,5 +89,15 @@ public class LogicLinkPeripheralProvider {
     @Nullable
     private static IPeripheral getRedstoneControllerPeripheral(RedstoneControllerBlockEntity blockEntity, @Nullable Direction direction) {
         return new RedstoneControllerPeripheral(blockEntity);
+    }
+
+    @Nullable
+    private static IPeripheral getCreativeLogicMotorPeripheral(CreativeLogicMotorBlockEntity blockEntity, @Nullable Direction direction) {
+        return new CreativeLogicMotorPeripheral(blockEntity);
+    }
+
+    @Nullable
+    private static IPeripheral getLogicMotorPeripheral(LogicMotorBlockEntity blockEntity, @Nullable Direction direction) {
+        return new LogicMotorPeripheral(blockEntity);
     }
 }

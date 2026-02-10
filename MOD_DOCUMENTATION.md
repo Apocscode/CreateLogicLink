@@ -2,7 +2,7 @@
 
 ## Overview
 
-**Create: Logic Link Peripheral** is a Minecraft mod that bridges **Create**'s logistics system with **CC:Tweaked** (ComputerCraft). It provides programmable peripheral blocks that allow ComputerCraft computers to monitor inventory, read machine data, and request items from Create's logistics network — all through Lua scripts.
+**Create: Logic Link Peripheral** is a Minecraft mod that bridges **Create**'s logistics system with **CC:Tweaked** (ComputerCraft). It provides programmable peripheral blocks that allow ComputerCraft computers to monitor inventory, read machine data, request items, control redstone wirelessly, drive programmable motors, and manage Create Storage — all through Lua scripts.
 
 - **Mod ID:** `logiclink`
 - **Package:** `com.apocscode.logiclink`
@@ -22,6 +22,12 @@
 | Create CC Logistics | 0.3.6 |
 | Create Unlimited Logistics | 1.2.1 |
 | Create Factory Abstractions | 1.4.8 (runtime) |
+
+### Optional Mods (Soft Dependencies)
+
+| Mod | Version | Enables |
+|-----|---------|---------|
+| Create: Storage | 1.1.7 | `storage_controller` + `storage_interface` peripherals |
 
 ### Modpack
 
@@ -64,6 +70,36 @@ A peripheral block that provides programmatic control over Create's Redstone Lin
 - **Persistence:** Channels survive server restarts (saved to NBT)
 - **Range:** Subject to Create's `linkRange` config, same as physical Redstone Links
 
+### Creative Logic Motor
+
+A CC:Tweaked-controlled rotation source with unlimited stress capacity. Generates rotation directly — no external power needed.
+
+- **Appearance:** Uses Create's creative motor model
+- **Base Class:** `DirectionalKineticBlock` with `IBE<CreativeLogicMotorBlockEntity>`
+- **Block Entity:** Extends `GeneratingKineticBlockEntity` — builds a kinetic source network
+- **Placement:** Directional (all 6 faces: N/S/E/W/UP/DOWN), shaft exits from FACING direction
+- **Speed Range:** -256 to 256 RPM, set from Lua
+- **Stress:** Unlimited capacity (creative-tier)
+- **Sequences:** Supports timed rotation steps (rotate X degrees at Y RPM), wait steps, and speed-change steps with optional looping
+
+### Logic Motor
+
+A CC:Tweaked-controlled rotation modifier that sits inline on a shaft. Functions as a programmable clutch + gearshift + sequenced gearshift in one block.
+
+- **Appearance:** Uses Create's sequenced gearshift model with colored directional markers:
+  - **Orange stripes** = INPUT (drive) side — connect your power source here
+  - **Light blue stripes** = OUTPUT side — CC-controlled modified rotation exits here
+- **Base Class:** `KineticBlock` with `IBE<LogicMotorBlockEntity>`
+- **Block Entity:** Extends `SplitShaftBlockEntity` — splits rotation into two halves with a configurable ratio
+- **Block State:** `HORIZONTAL_FACING` (N/S/E/W) indicates output direction + `ACTIVE` boolean
+- **Placement:** Horizontal only, FACING = output direction, opposite = input
+- **Model:** Multipart blockstate with base gearshift model + overlay marker models
+- **Speed Modifier:** -16.0 to 16.0× (doubles, halves, reverses, or zeroes input speed)
+- **Clutch:** `enable()`/`disable()` connects/disconnects rotation
+- **Reverse:** `setReversed()` flips rotation direction
+- **Sequences:** Rotate steps (degrees at modifier), wait steps, modifier-change steps with optional looping
+- **Kinematics Debounce:** Rapid Lua property changes are coalesced into a single kinetic network update per tick to prevent block popping
+
 ---
 
 ## Network Highlight System
@@ -95,11 +131,11 @@ When a player holds a tuned Logic Link or Logic Sensor item, all blocks on the s
 - ✅ Create Stock Links
 - ✅ Create Packager Links
 - ✅ Any block with `LogisticallyLinkedBehaviour`
-- ❌ Gauges (speed/stress/factory) — these are kinetic/display blocks, not logistics network participants. Create's own highlight system also doesn't highlight them.
+- ❌ Gauges (speed/stress/factory) — these are kinetic/display blocks, not logistics network participants
 
 ---
 
-## Lua API — `logiclink` peripheral
+## Lua API — `logiclink` peripheral (14 functions)
 
 Wrap with: `local link = peripheral.wrap("logiclink")`
 
@@ -130,12 +166,6 @@ Wrap with: `local link = peripheral.wrap("logiclink")`
 | `getLinks()` | `[link, ...]` | All logistics links with type detection |
 | `getSensors()` | `[sensor, ...]` | All Logic Sensors on the same frequency |
 
-**Gauge table fields:** `item`, `targetAmount`, `currentStock`, `promised`, `satisfied`, `promisedSatisfied`, `waitingForNetwork`, `redstonePowered`, `address`, `slot`, `position`
-
-**Link table fields:** `type` (packager_link, redstone_requester, stock_ticker, or block name), `position`
-
-**Sensor table fields:** `position`, `targetPosition`, `data` (see sensor data below)
-
 ### Item Requests
 
 | Function | Parameters | Returns | Description |
@@ -143,32 +173,9 @@ Wrap with: `local link = peripheral.wrap("logiclink")`
 | `requestItem(name, count, address)` | item registry name, amount, delivery address | `boolean` | Request a single item type to be packaged and delivered |
 | `requestItems(items, address)` | table of `{name, count}`, delivery address | `boolean` | Request multiple item types in a single order |
 
-Items are delivered through Create's logistics system (Frogports, packagers, etc.).
-
 ---
 
-## Lua API — `redstone_controller` peripheral
-
-Wrap with: `local rc = peripheral.wrap("redstone_controller")`
-
-| Function | Parameters | Returns | Description |
-|----------|-----------|---------|-------------|
-| `setOutput(item1, item2, power)` | two item registry names, signal 0–15 | — | Transmit a redstone signal on a frequency pair. Creates channel on first use. |
-| `getInput(item1, item2)` | two item registry names | `number` (0–15) | Read signal from external transmitters on a frequency pair. Creates receiver on first use. |
-| `getOutput(item1, item2)` | two item registry names | `number` (0–15) | Read current transmit power without modifying anything. Returns 0 if channel doesn't exist. |
-| `removeChannel(item1, item2)` | two item registry names | — | Remove a channel entirely, unregistering from Create's network. |
-| `getChannels()` | — | `[{item1, item2, mode, power}, ...]` | List all active channels with their mode ("transmit"/"receive") and power. |
-| `setAllOutputs(power)` | signal 0–15 | — | Set all transmit channels to one value. Receivers unaffected. |
-| `clearChannels()` | — | — | Remove all channels. |
-| `getPosition()` | — | `{x, y, z}` | Block position. |
-
-**Frequency pairs** match Create's Redstone Link two-slot system. Each channel is identified by a pair of item registry names (e.g. `"minecraft:redstone"`, `"minecraft:lever"`). Order matters — `(redstone, lever)` is a different channel from `(lever, redstone)`.
-
-**Mode switching:** Calling `setOutput` on a receiver channel switches it to transmitter mode (and vice versa for `getInput`).
-
----
-
-## Lua API — `logicsensor` peripheral
+## Lua API — `logicsensor` peripheral (7 functions)
 
 Wrap with: `local sensor = peripheral.wrap("logicsensor")`
 
@@ -192,28 +199,140 @@ The data table returned by `getData()` / `getTargetData()` includes:
 - `position` — `{x, y, z}`
 
 **Kinetic blocks** (shafts, gearboxes, mechanical presses, saws, etc.):
-- `isKinetic = true`
-- `speed` — Current RPM
-- `theoreticalSpeed` — Theoretical RPM
-- `overStressed` — boolean
-- `hasKineticNetwork` — boolean
-- `stressCapacity` — Network stress capacity
-- `networkStress` — Current network stress
+- `isKinetic = true`, `speed`, `theoreticalSpeed`, `overStressed`, `hasKineticNetwork`, `stressCapacity`, `networkStress`
 
 **Blocks with inventory** (basins, depots, vaults, etc.):
-- `hasInventory = true`
-- `inventorySize` — Number of slots
-- `totalItems` — Total item count
-- `inventory` — `[{name, displayName, count, maxCount, slot}, ...]`
+- `hasInventory = true`, `inventorySize`, `totalItems`, `inventory` — `[{name, displayName, count, maxCount, slot}, ...]`
 
 **Blocks with fluid storage** (basins, tanks, etc.):
-- `hasFluidStorage = true`
-- `tankCount` — Number of tanks
-- `tanks` — `[{tank, fluid, amount, capacity, percentage}, ...]`
+- `hasFluidStorage = true`, `tankCount`, `tanks` — `[{tank, fluid, amount, capacity, percentage}, ...]`
 
 **Blaze Burners:**
-- `isBlazeBurner = true`
-- `heatLevel` — Heat level string (none, smouldering, fading, kindled, seething)
+- `isBlazeBurner = true`, `heatLevel` — (none, smouldering, fading, kindled, seething)
+
+---
+
+## Lua API — `redstone_controller` peripheral (8 functions)
+
+Wrap with: `local rc = peripheral.wrap("redstone_controller")`
+
+| Function | Parameters | Returns | Description |
+|----------|-----------|---------|-------------|
+| `setOutput(item1, item2, power)` | two item registry names, signal 0–15 | — | Transmit a redstone signal on a frequency pair |
+| `getInput(item1, item2)` | two item registry names | `number` (0–15) | Read signal from external transmitters |
+| `getOutput(item1, item2)` | two item registry names | `number` (0–15) | Read current transmit power |
+| `removeChannel(item1, item2)` | two item registry names | — | Remove a channel entirely |
+| `getChannels()` | — | `[{item1, item2, mode, power}, ...]` | List all active channels |
+| `setAllOutputs(power)` | signal 0–15 | — | Set all transmit channels to one value |
+| `clearChannels()` | — | — | Remove all channels |
+| `getPosition()` | — | `{x, y, z}` | Block position |
+
+---
+
+## Lua API — `creative_logic_motor` peripheral (16 functions)
+
+Wrap with: `local motor = peripheral.wrap("creative_logic_motor")`
+
+| Function | Parameters | Returns | Description |
+|----------|-----------|---------|-------------|
+| `setSpeed(rpm)` | -256 to 256 | — | Set motor speed in RPM |
+| `getSpeed()` | — | `number` | Current target speed |
+| `getActualSpeed()` | — | `number` | Actual network rotation speed |
+| `enable()` | — | — | Enable the motor |
+| `disable()` | — | — | Disable the motor |
+| `stop()` | — | — | Set speed to 0 and disable |
+| `isEnabled()` | — | `boolean` | Whether motor is enabled |
+| `isRunning()` | — | `boolean` | Enabled and speed ≠ 0 |
+| `clearSequence()` | — | — | Clear all sequence steps |
+| `addRotateStep(deg, rpm)` | degrees, speed 1-256 | — | Add rotation step |
+| `addWaitStep(ticks)` | 1-6000 | — | Add wait step (20 ticks = 1 second) |
+| `addSpeedStep(rpm)` | -256 to 256 | — | Add speed-change step |
+| `runSequence(loop)` | boolean | — | Run the sequence |
+| `stopSequence()` | — | — | Stop running sequence |
+| `isSequenceRunning()` | — | `boolean` | Whether a sequence is active |
+| `getSequenceSize()` | — | `number` | Number of queued steps |
+
+---
+
+## Lua API — `logic_motor` peripheral (17 functions)
+
+Wrap with: `local motor = peripheral.wrap("logic_motor")`
+
+| Function | Parameters | Returns | Description |
+|----------|-----------|---------|-------------|
+| `enable()` | — | — | Enable (pass rotation through) |
+| `disable()` | — | — | Disable (disconnect, clutch off) |
+| `isEnabled()` | — | `boolean` | Whether motor is enabled |
+| `setReversed(bool)` | boolean | — | Reverse output rotation |
+| `isReversed()` | — | `boolean` | Whether reversed |
+| `setModifier(mult)` | -16.0 to 16.0 | — | Set speed multiplier |
+| `getModifier()` | — | `number` | Current speed modifier |
+| `getInputSpeed()` | — | `number` | Input RPM from external source |
+| `getOutputSpeed()` | — | `number` | Output RPM after modifier |
+| `clearSequence()` | — | — | Clear all sequence steps |
+| `addRotateStep(deg, mod)` | degrees, modifier 0.1-16.0 | — | Add rotation step |
+| `addWaitStep(ticks)` | 1-6000 | — | Add wait step |
+| `addModifierStep(mod)` | -16.0 to 16.0 | — | Add modifier-change step |
+| `runSequence(loop)` | boolean | — | Run the sequence |
+| `stopSequence()` | — | — | Stop running sequence |
+| `isSequenceRunning()` | — | `boolean` | Whether a sequence is active |
+| `getSequenceSize()` | — | `number` | Number of queued steps |
+
+### Logic Motor vs Create's Sequenced Gearshift
+
+| Feature | Sequenced Gearshift | Logic Motor |
+|---------|---------------------|-------------|
+| Configuration | Manual GUI, fixed cards | Lua scripts, dynamic at runtime |
+| Trigger | Redstone signal | Any Lua condition (sensor data, time, etc.) |
+| Instruction limit | 5 slots | Unlimited (ArrayList) |
+| Clutch | Needs separate block | Built-in `enable()`/`disable()` |
+| Gearshift | Needs separate block | Built-in `setReversed()` |
+| Speed modifier | Fixed ratios | Arbitrary -16× to 16× |
+| Loop mode | No | Yes (`runSequence(true)`) |
+| Conditional logic | No | Via Lua scripts |
+| Requires | Redstone source | CC:Tweaked computer |
+
+---
+
+## Lua API — `storage_controller` peripheral (14 functions) — *Requires Create: Storage*
+
+Wrap with: `local sc = peripheral.wrap("storage_controller")`
+
+| Function | Parameters | Returns | Description |
+|----------|-----------|---------|-------------|
+| `isConnected()` | — | `boolean` | Whether connected to storage boxes |
+| `getBoxCount()` | — | `number` | Number of connected storage boxes |
+| `getPosition()` | — | `{x, y, z}` | Block position |
+| `size()` | — | `number` | Number of slots in the network |
+| `list()` | — | `table` | All items (slot → item info) |
+| `getItemDetail(slot)` | 1-based slot | `table` or `nil` | Detailed item info |
+| `getBoxes()` | — | `[box, ...]` | All boxes with capacity, filter, void upgrade |
+| `getTotalItemCount()` | — | `number` | Total items across all boxes |
+| `getTotalCapacity()` | — | `number` | Total max capacity |
+| `getItemCount(name)` | item registry name | `number` | Count of a specific item |
+| `getItemSummary()` | — | `[item, ...]` | Unique items with total counts |
+| `findItems(query)` | partial name | `[item, ...]` | Search by name (case-insensitive) |
+| `pushItems(to, slot, limit?, toSlot?)` | target peripheral, slot | `number` | Push to adjacent inventory |
+| `pullItems(from, slot, limit?, toSlot?)` | source peripheral, slot | `number` | Pull from adjacent inventory |
+
+---
+
+## Lua API — `storage_interface` peripheral (10 functions) — *Requires Create: Storage*
+
+Wrap with: `local si = peripheral.wrap("storage_interface")`
+
+| Function | Parameters | Returns | Description |
+|----------|-----------|---------|-------------|
+| `isConnected()` | — | `boolean` | Whether connected to a controller |
+| `getPosition()` | — | `{x, y, z}` | Block position |
+| `getControllerPosition()` | — | `{x, y, z}` or `nil` | Connected controller position |
+| `size()` | — | `number` | Slots in connected network |
+| `list()` | — | `table` | All items in connected network |
+| `getItemDetail(slot)` | 1-based slot | `table` or `nil` | Item details by slot |
+| `getBoxCount()` | — | `number` | Connected boxes via controller |
+| `getItemCount(name)` | item registry name | `number` | Count of specific item |
+| `getItemSummary()` | — | `[item, ...]` | Unique items with totals |
+| `findItems(query)` | partial name | `[item, ...]` | Search by name (case-insensitive) |
 
 ---
 
@@ -226,50 +345,77 @@ F:\Controller\CreateLogicLink\
 ├── README.md                             -- GitHub README
 ├── MOD_DOCUMENTATION.md                  -- This file
 ├── LICENSE                               -- MIT License
+├── generate_ponder_nbt.ps1               -- Generates Ponder schematic .nbt files
 ├── src/main/java/com/apocscode/logiclink/
 │   ├── LogicLink.java                    -- Mod entry point, PlayerTickEvent for highlights
 │   ├── ModRegistry.java                  -- Block/item/BE/creative tab registration
 │   ├── block/
-│   │   ├── LogicLinkBlock.java           -- Logic Link block (HorizontalDirectionalBlock, full cube)
+│   │   ├── LogicLinkBlock.java           -- Logic Link block (HorizontalDirectionalBlock)
 │   │   ├── LogicLinkBlockEntity.java     -- Stores frequency, caches network inventory
 │   │   ├── LogicLinkBlockItem.java       -- Item with frequency linking on right-click
-│   │   ├── LogicSensorBlock.java         -- Logic Sensor block (FaceAttachedHorizontalDirectionalBlock)
+│   │   ├── LogicSensorBlock.java         -- Sensor (FaceAttachedHorizontalDirectionalBlock)
 │   │   ├── LogicSensorBlockEntity.java   -- Stores frequency, caches target block data
 │   │   ├── LogicSensorBlockItem.java     -- Item with frequency linking on right-click
-│   │   ├── RedstoneControllerBlock.java  -- Redstone Controller block (HorizontalDirectionalBlock)
-│   │   └── RedstoneControllerBlockEntity.java -- Manages virtual redstone link channels
+│   │   ├── RedstoneControllerBlock.java  -- Redstone Controller (HorizontalDirectionalBlock)
+│   │   ├── RedstoneControllerBlockEntity.java -- Manages virtual redstone link channels
+│   │   ├── CreativeLogicMotorBlock.java  -- Creative Motor (DirectionalKineticBlock)
+│   │   ├── CreativeLogicMotorBlockEntity.java -- Speed control, sequences (GeneratingKineticBE)
+│   │   ├── LogicMotorBlock.java          -- Logic Motor (KineticBlock, HORIZONTAL_FACING)
+│   │   └── LogicMotorBlockEntity.java    -- Modifier, clutch, sequences (SplitShaftBE)
 │   ├── peripheral/
 │   │   ├── LogicLinkPeripheral.java      -- CC:Tweaked peripheral (14 Lua functions)
 │   │   ├── LogicLinkPeripheralProvider.java -- Registers all peripherals with CC
 │   │   ├── LogicSensorPeripheral.java    -- CC:Tweaked peripheral (7 Lua functions)
 │   │   ├── RedstoneControllerPeripheral.java -- CC:Tweaked peripheral (8 Lua functions)
-│   │   └── CreateBlockReader.java        -- Reads Create block data via reflection
+│   │   ├── CreativeLogicMotorPeripheral.java -- CC:Tweaked peripheral (16 Lua functions)
+│   │   ├── LogicMotorPeripheral.java     -- CC:Tweaked peripheral (17 Lua functions)
+│   │   ├── CreateBlockReader.java        -- Reads Create block data via reflection
+│   │   ├── StoragePeripheralCompat.java  -- Soft-dependency guard for Create Storage
+│   │   └── storage/
+│   │       ├── StorageControllerPeripheral.java -- CC:Tweaked peripheral (14 Lua functions)
+│   │       └── StorageInterfacePeripheral.java  -- CC:Tweaked peripheral (10 Lua functions)
 │   ├── network/
 │   │   ├── LinkNetwork.java              -- Static link registry + highlight packet sender
 │   │   ├── SensorNetwork.java            -- Static sensor registry by frequency UUID
 │   │   ├── NetworkHighlightPayload.java  -- Server→client packet with block positions
 │   │   └── VirtualRedstoneLink.java      -- IRedstoneLinkable impl for virtual channels
 │   └── client/
-│       └── NetworkHighlightRenderer.java -- Client-side outline renderer (Create-style)
+│       ├── NetworkHighlightRenderer.java -- Client-side outline renderer (Create-style)
+│       ├── LogicLinkClientSetup.java     -- Registers Ponder plugin on FMLClientSetupEvent
+│       └── ponder/
+│           ├── LogicLinkPonderPlugin.java     -- PonderPlugin impl: 12 tags + scene registration
+│           ├── LogicLinkPonderScenes.java     -- Registers 5 storyboards with tag highlighting
+│           └── LogicLinkSceneAnimations.java  -- 5 animated Ponder scenes
 ├── src/main/resources/
 │   ├── assets/logiclink/
 │   │   ├── blockstates/
 │   │   │   ├── logic_link.json           -- 4 horizontal variants
-│   │   │   ├── logic_sensor.json         -- 12 face+facing variants (floor/wall/ceiling × 4)
-│   │   │   └── redstone_controller.json  -- 4 horizontal variants
+│   │   │   ├── logic_sensor.json         -- 12 face+facing variants
+│   │   │   ├── redstone_controller.json  -- 4 horizontal variants
+│   │   │   ├── creative_logic_motor.json -- 6 directional variants (Create creative motor)
+│   │   │   └── logic_motor.json          -- Multipart: base gearshift + input/output markers
 │   │   ├── models/block/
 │   │   │   ├── logic_link.json           -- Cube: polished andesite top, andesite casing sides
 │   │   │   ├── logic_sensor.json         -- Thin pad: smooth stone top, polished andesite sides
-│   │   │   └── redstone_controller.json  -- Cube: polished blackstone top, andesite casing sides
+│   │   │   ├── redstone_controller.json  -- Cube: polished blackstone top, andesite casing sides
+│   │   │   ├── motor_input_marker.json   -- Orange concrete stripe overlay (drive input side)
+│   │   │   └── motor_output_marker.json  -- Light blue concrete stripe overlay (CC output side)
 │   │   ├── models/item/
+│   │   │   ├── creative_logic_motor.json
 │   │   │   ├── logic_link.json
+│   │   │   ├── logic_motor.json
 │   │   │   ├── logic_sensor.json
 │   │   │   └── redstone_controller.json
-│   │   └── lang/en_us.json               -- English translations
-│   └── data/logiclink/loot_table/blocks/
-│       ├── logic_link.json               -- Drops itself
-│       ├── logic_sensor.json             -- Drops itself
-│       └── redstone_controller.json      -- Drops itself
+│   │   ├── lang/en_us.json               -- English translations + Ponder lang keys
+│   │   └── ponder/
+│   │       ├── logic_link/overview.nbt            -- 7×4×7 schematic
+│   │       ├── logic_sensor/overview.nbt          -- 7×4×7 schematic
+│   │       ├── redstone_controller/overview.nbt   -- 7×3×7 schematic
+│   │       ├── creative_logic_motor/overview.nbt  -- 7×4×7 schematic
+│   │       └── logic_motor/overview.nbt           -- 7×4×7 schematic
+│   └── data/logiclink/
+│       ├── loot_table/blocks/            -- All 5 blocks drop themselves
+│       └── recipe/                       -- All 5 blocks have shaped crafting recipes
 └── build/libs/logiclink-0.1.0.jar        -- Compiled mod jar
 ```
 
@@ -279,84 +425,181 @@ F:\Controller\CreateLogicLink\
 
 ### Phase 1 — Core Logic Link
 
-1. **Logic Link block and block entity** — Connects to Create logistics networks via frequency UUID. Caches inventory with 2-second auto-refresh.
-2. **Frequency linking system** — Right-click Stock Links to copy frequency, right-click air to clear. Tooltip shows linked status. Items glow purple when tuned.
-3. **CC:Tweaked peripheral registration** — Logic Link appears as `logiclink` peripheral when adjacent to a computer.
+1. **Logic Link block and block entity** — Connects to Create logistics networks via frequency UUID.
+2. **Frequency linking system** — Right-click Stock Links to copy frequency, right-click air to clear.
+3. **CC:Tweaked peripheral registration** — Logic Link appears as `logiclink` peripheral.
 4. **9 read-only Lua functions** — `isLinked`, `getPosition`, `getNetworkID`, `list`, `getItemCount`, `getItemTypeCount`, `getTotalItemCount`, `refresh`, `getNetworkInfo`.
-5. **2 item request functions** — `requestItem`, `requestItems` with auto-detection of Create Factory Abstractions mod (uses reflection to route through GenericLogisticsManager when present).
-6. **Factory Abstractions compatibility** — Factory Abstractions uses @Overwrite on LogisticsManager.attemptToSend(). Fixed by detecting the mod at runtime and using reflection to call GenericLogisticsManager directly.
+5. **2 item request functions** — `requestItem`, `requestItems`.
+6. **Factory Abstractions compatibility** — Detects mod at runtime, routes through GenericLogisticsManager via reflection.
 
 ### Phase 2 — Gauges & Links
 
-7. **`getGauges()` function** — Enumerates all Factory Panel gauges on the network. Reads panel data including item filter, target amount, current stock, promised amounts, satisfaction status, redstone state, and address.
-8. **`getLinks()` function** — Lists all logistics links on the network with type detection (packager_link, redstone_requester, stock_ticker, or raw block name).
+7. **`getGauges()` function** — Enumerates Factory Panel gauges on the network.
+8. **`getLinks()` function** — Lists all logistics links with type detection.
 
 ### Phase 3 — Logic Sensor
 
-9. **Logic Sensor block** — Thin directional block that attaches to Create machines.
-10. **Logic Sensor block entity** — Stores frequency UUID, registers with SensorNetwork, caches target block data with 20-tick refresh.
-11. **Logic Sensor block item** — Same frequency linking mechanic as Logic Link.
-12. **SensorNetwork static registry** — ConcurrentHashMap with WeakReferences, tracks sensors by frequency UUID.
-13. **CreateBlockReader utility** — Reads data from Create blocks using reflection (KineticBlockEntity speed/stress/capacity) and NeoForge capabilities (IItemHandler, IFluidHandler). Supports Blaze Burner heat levels.
-14. **Logic Sensor peripheral** — CC:Tweaked peripheral type `logicsensor` with 7 Lua functions for direct wired access.
-15. **`getSensors()` on Logic Link** — Queries SensorNetwork to discover all sensors on the same frequency, returns their position, target position, and cached data.
+9. **Logic Sensor block** (FaceAttachedHorizontalDirectionalBlock) with frequency linking.
+10. **SensorNetwork static registry** — ConcurrentHashMap with WeakReferences.
+11. **CreateBlockReader utility** — Reads Create block data via reflection and NeoForge capabilities.
+12. **Logic Sensor peripheral** — 7 Lua functions for direct wired access.
+13. **`getSensors()` on Logic Link** — Wireless sensor discovery across the network.
 
 ### Phase 4 — Textures & Visual Identity
 
-16. **Custom block textures** — Logic Link uses andesite casing variant (polished andesite top, andesite casing sides/bottom). Logic Sensor uses smooth stone top, polished andesite sides, andesite casing bottom. Both differentiated from Create's stock link blue.
-17. **Model definitions** — Logic Link is a full cube (cube_bottom_top parent). Logic Sensor is a thin pad (custom elements [1,0,1]→[15,5,15]).
+14. **Custom block textures** — Andesite casing variants for Logic Link/Sensor/Redstone Controller.
 
 ### Phase 5 — Network Highlight System
 
-18. **Held-item highlight** — When holding a tuned Logic Link or Logic Sensor item, all blocks on the same network light up with Create-style outlines.
-19. **Server-side PlayerTickEvent** — Every 5 ticks, checks if player holds a tuned item, extracts frequency, sends highlight packet.
-20. **LinkNetwork registry** — Static ConcurrentHashMap tracking Logic Link block entities by frequency UUID with WeakReferences.
-21. **NetworkHighlightPayload** — Custom server→client packet carrying a list of BlockPos.
-22. **NetworkHighlightRenderer** — Client-side renderer using `RenderLevelStageEvent.AFTER_TRANSLUCENT_BLOCKS`. Draws actual block shape outlines with Create's alternating blue colors (0x708DAD / 0x90ADCD).
-23. **Create network integration** — `sendNetworkHighlight()` queries `LogisticallyLinkedBehaviour.getAllPresent(freq)` to include all Create logistics blocks (Stock Links, Packager Links, etc.) alongside our own blocks.
+15. **Held-item Network Highlighting** — Create-style alternating blue outlines on all network blocks.
+16. **LinkNetwork + SensorNetwork registries** — Server-side WeakReference tracking.
+17. **NetworkHighlightPayload** — Custom server→client packet.
+18. **NetworkHighlightRenderer** — Client-side VoxelShape outline rendering.
 
 ### Phase 6 — Sensor Block Rewrite (FaceAttached)
 
-24. **FaceAttachedHorizontalDirectionalBlock** — Rewrote LogicSensorBlock from DirectionalBlock to FaceAttachedHorizontalDirectionalBlock, matching Create's PackagerLinkBlock/Stock Link behavior.
-25. **FACE + FACING properties** — Floor, wall, and ceiling attachment with 12 blockstate variants (3 faces × 4 horizontal directions).
-26. **Correct VoxelShapes** — Explicit shape lookup using `state.getValue(FACE)` with dedicated shapes for floor (pad at y=0), ceiling (pad at y=16), and each wall direction.
-27. **Correct target position** — `getTargetPos()` uses explicit FACE property: floor→below, ceiling→above, wall→FACING direction.
-28. **Blockstate JSON** — 12 variants with correct x/y rotations: floor (x=0), ceiling (x=180), walls (x=90 + y rotation following Create's horizontalAngle convention: SOUTH=0, NORTH=180, EAST=270, WEST=90).
-29. **No support block required** — `canSurvive()` always returns true, like Create's Stock Link.
+19. **FaceAttachedHorizontalDirectionalBlock** — 12 blockstate variants (3 faces × 4 directions).
+20. **Correct VoxelShapes** — Floor/ceiling/wall-specific hit boxes.
+21. **Correct target position** — FACE-based target detection.
 
 ### Phase 7 — Redstone Controller
 
-30. **Redstone Controller block** — New peripheral block that provides programmatic control over Create's Redstone Link wireless network. Full cube, polished blackstone top, andesite casing sides.
-31. **RedstoneControllerBlockEntity** — Manages a HashMap of virtual channels. Each channel is a `VirtualRedstoneLink` registered with Create's `RedstoneLinkNetworkHandler`. Channels persist to NBT and restore on world load.
-32. **VirtualRedstoneLink** — Implements Create's `IRedstoneLinkable` interface. Creates `Couple<Frequency>` network keys from item registry names. Supports both transmitter and receiver modes.
-33. **RedstoneControllerPeripheral** — CC:Tweaked peripheral type `redstone_controller` with 8 Lua functions: `setOutput`, `getInput`, `getOutput`, `removeChannel`, `getChannels`, `setAllOutputs`, `clearChannels`, `getPosition`.
-34. **No frequency linking or GUI** — Channels are created entirely from Lua scripts. `setOutput()` creates a transmitter, `getInput()` creates a receiver. Mode switches automatically if called on an existing channel of the opposite type.
-35. **Unlimited simultaneous channels** — One block replaces unlimited physical Redstone Links. Each channel is a virtual node in Create's network.
-36. **Verified in-game** — All 8 Lua functions tested. Transmit output confirmed received by physical Create Redstone Link blocks on matching frequencies.
+22. **Redstone Controller block + entity** — Virtual channel management with NBT persistence.
+23. **VirtualRedstoneLink** — Implements Create's `IRedstoneLinkable` interface.
+24. **RedstoneControllerPeripheral** — 8 Lua functions for wireless redstone.
+
+### Phase 8 — Crafting Recipes
+
+25. **5 shaped crafting recipes** — Cross-pattern recipes for all blocks using Create + vanilla ingredients.
+
+### Phase 9 — Ponder Tutorials (W Key)
+
+26. **Ponder system** — Create-style animated tutorials for Logic Link, Logic Sensor, and Redstone Controller.
+27. **9 Ponder tags** — Categorized with distinct item icons.
+28. **3 scene schematics** — `.nbt` Structure Block files.
+
+### Phase 10 — Creative Logic Motor
+
+29. **CreativeLogicMotorBlock** — `DirectionalKineticBlock` with shaft output on FACING.
+30. **CreativeLogicMotorBlockEntity** — Extends `GeneratingKineticBlockEntity`, speed -256 to 256 RPM.
+31. **Sequence system** — Rotate steps (degrees at RPM), wait steps, speed-change steps with optional looping.
+32. **CreativeLogicMotorPeripheral** — 16 Lua functions.
+
+### Phase 11 — Logic Motor (Rotation Modifier)
+
+33. **LogicMotorBlock** — `KineticBlock` with `HORIZONTAL_FACING` + `ACTIVE` properties.
+34. **LogicMotorBlockEntity** — Extends `SplitShaftBlockEntity`, speed modifier -16× to 16×.
+35. **Clutch + Gearshift + Sequenced Gearshift** — All in one block controlled from Lua.
+36. **Directional markers** — Orange input stripes + light blue output stripes via multipart blockstate with overlay models.
+37. **Kinematics debounce** — Rapid Lua changes coalesced to one kinetic update per tick.
+38. **LogicMotorPeripheral** — 17 Lua functions.
+
+### Phase 12 — Create Storage Integration (Optional)
+
+39. **StorageControllerPeripheral** — 14 Lua functions for Create: Storage controller blocks.
+40. **StorageInterfacePeripheral** — 10 Lua functions for storage interfaces.
+41. **Soft dependency** — `compileOnly` jar, conditional registration via `ModList.get().isLoaded("fxntstorage")`.
+
+### Phase 13 — Motor Ponder Scenes
+
+42. **Motor Ponder schematics** — Generated `.nbt` files for both motor scenes.
+43. **Motor Ponder tags** — 3 new tags: Rotation Output, Computer Control, Sequenced Operations.
+44. **Motor Ponder scenes** — Creative motor overview + Logic motor overview with drive/output side explanation.
+
+### Phase 14 — `mainThread` Fix & Stability
+
+45. **`mainThread = true`** — Added to all 86 `@LuaFunction` methods across all 9 peripheral files. Fixes "Too long without yielding" crashes from accessing block entity state on CC's Lua thread.
+46. **Sequence guard** — `stopSequence()` and `clearSequence()` only call `detachKinetics()/attachKinetics()` when a sequence was actually running.
+47. **Server shutdown fix** — Verified `SensorNetwork` and `LinkNetwork` classes present in compiled jar.
 
 ---
 
-## What Still Needs To Be Done
+## Crafting Recipes
 
-### High Priority
+### Logic Link
+```
+     [ ]         [Ender Pearl]    [ ]
+[Brass Ingot] [Andesite Casing] [Brass Ingot]
+     [ ]         [Comparator]     [ ]
+```
 
-- [ ] **Custom textures** — All blocks use vanilla/Create textures as placeholders. Need proper unique textures.
-- [ ] **Recipes** — No crafting recipes defined yet. Need data-generation or JSON recipes for all three blocks.
+### Logic Sensor
+```
+     [ ]          [Observer]       [ ]
+[Copper Ingot] [Andesite Casing] [Copper Ingot]
+     [ ]        [Nether Quartz]    [ ]
+```
 
-### Medium Priority
+### Redstone Controller
+```
+     [ ]         [Ender Pearl]      [ ]
+[Brass Ingot] [Andesite Casing] [Brass Ingot]
+     [ ]       [Redstone Block]     [ ]
+```
 
-- [ ] **Testing getGauges()** — Factory Panel gauge reading not verified in-game yet.
-- [ ] **Testing requestItem / requestItems** — Item request functions need re-verification.
-- [ ] **Kinetic/fluid/blaze sensor testing** — Verify sensor reads all data types from various Create blocks.
+### Creative Logic Motor & Logic Motor
+*(Recipes defined in data/logiclink/recipe/)*
 
-### Low Priority / Future Features
+---
 
-- [ ] **Monitor display support** — Pre-built Lua programs for CC:Tweaked monitors
-- [ ] **Pocket computer support** — Wireless modem integration
-- [ ] **Sensor filtering** — Report only specific data types to reduce traffic
-- [ ] **Create block-specific readers** — Specialized data for: mechanical press, deployer, mechanical crafter, millstone, sequenced gearshift, trains, display links, contraptions
-- [ ] **Mod version bump** — Currently 0.1.0, increment when features stabilize
-- [ ] **CurseForge / Modrinth publishing** — Package and publish when ready
+## Ponder System (W Key Tutorials)
+
+All 5 blocks have Create-style animated Ponder tutorials, accessible by pressing **(W)** while hovering over the item in JEI or inventory.
+
+### Architecture
+
+| Class | Purpose |
+|---|---|
+| `LogicLinkClientSetup` | Registers plugin via `PonderIndex.addPlugin()` on `FMLClientSetupEvent` |
+| `LogicLinkPonderPlugin` | `PonderPlugin` implementation — registers 12 tags and 5 scenes |
+| `LogicLinkPonderScenes` | Maps each block to a storyboard + schematic path + primary tag |
+| `LogicLinkSceneAnimations` | 5 `PonderStoryBoard` methods with multi-step animated sequences |
+
+### Tags (Left-Panel Icons)
+
+| Tag ID | Icon | Shown On | Description |
+|---|---|---|---|
+| `sensor_inventories` | Chest | Logic Sensor | Inventory blocks |
+| `sensor_kinetics` | Shaft | Logic Sensor | Kinetic components |
+| `sensor_fluids` | Fluid Tank | Logic Sensor | Fluid storage |
+| `sensor_heat` | Blaze Burner | Logic Sensor | Heat sources |
+| `link_logistics` | Stock Link | Logic Link | Create logistics |
+| `link_sensors` | Logic Sensor | Logic Link | Logic Sensors on network |
+| `link_computers` | CC Computer | Logic Link | CC:Tweaked computers |
+| `rc_redstone_links` | Redstone Link | Redstone Controller | Redstone Links |
+| `rc_lamps` | Redstone Lamp | Redstone Controller | Redstone outputs |
+| `motor_kinetics` | — | Both Motors | Rotation output |
+| `motor_computers` | — | Both Motors | Computer control |
+| `motor_sequences` | — | Both Motors | Sequenced operations |
+
+### Scene Animations
+
+**Logic Link Overview** (7×4×7) — Network bridge demonstration with inventory access
+
+**Logic Sensor Overview** (7×4×7) — Sensor types on chest, barrel, shaft, basin
+
+**Redstone Controller Overview** (7×3×7) — Controller with Redstone Links and lamps
+
+**Creative Logic Motor Overview** (7×4×7) — Rotation source with shaft chain and machine
+
+**Logic Motor Overview** (7×4×7) — Shows orange input side, light blue output side, modifier/sequence concepts
+
+---
+
+## Peripheral Summary
+
+| Peripheral Type | Block | Functions | Category |
+|---|---|---|---|
+| `logiclink` | Logic Link | 14 | Logistics network |
+| `logicsensor` | Logic Sensor | 7 | Machine data |
+| `redstone_controller` | Redstone Controller | 8 | Wireless redstone |
+| `creative_logic_motor` | Creative Logic Motor | 16 | Rotation source |
+| `logic_motor` | Logic Motor | 17 | Rotation modifier |
+| `storage_controller` | Storage Controller* | 14 | Storage network |
+| `storage_interface` | Storage Interface* | 10 | Storage access |
+| **Total** | **7 blocks** | **86** | |
+
+*\*Requires Create: Storage mod*
 
 ---
 
@@ -370,23 +613,21 @@ cd F:\Controller\CreateLogicLink
 .\gradlew.bat build --no-daemon
 ```
 
-**Important:** `JAVA_HOME` must be cleared before building — Gradle needs to find its own JDK.
-
 Output: `build/libs/logiclink-0.1.0.jar`
 
 ### Deploy
 
 ```powershell
-Copy-Item "F:\Controller\CreateLogicLink\build\libs\logiclink-0.1.0.jar" "C:\Users\travf\curseforge\minecraft\Instances\All the Mods 10 - ATM10\mods\logiclink-0.1.0.jar" -Force
+Copy-Item "F:\Controller\CreateLogicLink\build\libs\logiclink-0.1.0.jar" `
+    "C:\Users\travf\curseforge\minecraft\Instances\All the Mods 10 - ATM10\mods\logiclink-0.1.0.jar" -Force
 ```
 
 Then restart the Minecraft instance.
 
-### CC:Tweaked Computer Files
+### Generate Ponder Schematics
 
-In-game computer files are stored at:
-```
-C:\Users\travf\curseforge\minecraft\Instances\All the Mods 10 - ATM10\saves\Train2map\computercraft\computer\29\
+```powershell
+powershell -ExecutionPolicy Bypass -File .\generate_ponder_nbt.ps1
 ```
 
 ---
@@ -401,37 +642,44 @@ for _, item in ipairs(link.list()) do
 end
 ```
 
-### Read a sensor attached to a basin
+### Control a Creative Logic Motor
 ```lua
-local link = peripheral.wrap("logiclink")
-local sensors = link.getSensors()
-for _, s in ipairs(sensors) do
-    print(s.data.blockName .. " at " .. s.targetPosition.x .. "," .. s.targetPosition.y .. "," .. s.targetPosition.z)
-    for _, item in ipairs(s.data.inventory or {}) do
-        print("  " .. item.displayName .. " x" .. item.count)
-    end
-end
+local motor = peripheral.wrap("creative_logic_motor")
+motor.setSpeed(128)
+sleep(2)
+motor.setSpeed(-64)
+sleep(2)
+motor.stop()
 ```
 
-### Request items from the network
+### Use Logic Motor as a programmable gearshift
 ```lua
-local link = peripheral.wrap("logiclink")
-link.requestItem("minecraft:iron_ingot", 64, "my_address")
+local motor = peripheral.wrap("logic_motor")
+motor.enable()
+motor.setModifier(2.0)    -- Double speed
+sleep(5)
+motor.setReversed(true)   -- Reverse
+sleep(5)
+motor.disable()           -- Clutch off
 ```
 
 ### Control Create Redstone Links wirelessly
 ```lua
 local rc = peripheral.wrap("redstone_controller")
-
--- Transmit on 3 channels
 rc.setOutput("minecraft:granite", "minecraft:granite", 15)
-rc.setOutput("minecraft:cobblestone", "minecraft:cobblestone", 15)
-rc.setOutput("minecraft:oak_log", "minecraft:oak_log", 15)
-
--- Read a channel from an external transmitter
 local power = rc.getInput("minecraft:red_dye", "minecraft:diamond")
 print("Received: " .. power)
-
--- Kill switch: zero all outputs
 rc.setAllOutputs(0)
+```
+
+### Read Create Storage network
+```lua
+local sc = peripheral.wrap("storage_controller")
+if sc then
+    print("Boxes: " .. sc.getBoxCount())
+    print("Items: " .. sc.getTotalItemCount())
+    for _, item in ipairs(sc.getItemSummary()) do
+        print("  " .. item.displayName .. " x" .. item.count)
+    end
+end
 ```

@@ -128,6 +128,10 @@ dependencies {
     compileOnly("cc.tweaked:cc-tweaked-${minecraft_version}-forge-api:${cc_tweaked_version}")
     // Full CC:Tweaked for runtime testing
     localRuntime("cc.tweaked:cc-tweaked-${minecraft_version}-forge:${cc_tweaked_version}")
+
+    // ==================== Create Storage (optional) ====================
+    // Compile against Create Storage for peripheral integration
+    compileOnly(files("libs/fxntstorage-1.1.7+mc-1.21.1-neoforge.jar"))
 }
 
 // Expand properties into resource templates (neoforge.mods.toml etc.)

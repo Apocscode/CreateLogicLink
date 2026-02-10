@@ -1,0 +1,26 @@
+{
+    "type": "minecraft:crafting_shaped",
+    "pattern": [
+        " E ",
+        "BAB",
+        " C "
+    ],
+    "key": {
+        "E": {
+            "item": "minecraft:ender_pearl"
+        },
+        "B": {
+            "item": "create:brass_ingot"
+        },
+        "A": {
+            "item": "create:andesite_casing"
+        },
+        "C": {
+            "item": "minecraft:comparator"
+        }
+    },
+    "result": {
+        "id": "logiclink:logic_link",
+        "count": 1
+    }
+}

@@ -1,8 +1,12 @@
 package com.apocscode.logiclink;
 
+import com.apocscode.logiclink.block.CreativeLogicMotorBlock;
+import com.apocscode.logiclink.block.CreativeLogicMotorBlockEntity;
 import com.apocscode.logiclink.block.LogicLinkBlock;
 import com.apocscode.logiclink.block.LogicLinkBlockEntity;
 import com.apocscode.logiclink.block.LogicLinkBlockItem;
+import com.apocscode.logiclink.block.LogicMotorBlock;
+import com.apocscode.logiclink.block.LogicMotorBlockEntity;
 import com.apocscode.logiclink.block.LogicSensorBlock;
 import com.apocscode.logiclink.block.LogicSensorBlockEntity;
 import com.apocscode.logiclink.block.LogicSensorBlockItem;
@@ -81,6 +85,35 @@ public class ModRegistry {
                     .sound(SoundType.NETHERITE_BLOCK))
     );
 
+    /**
+     * Creative Logic Motor — CC-controlled rotation source with unlimited stress.
+     * Uses Create's Creative Motor model with emerald green tint.
+     */
+    public static final DeferredBlock<CreativeLogicMotorBlock> CREATIVE_LOGIC_MOTOR_BLOCK = BLOCKS.register(
+            "creative_logic_motor",
+            () -> new CreativeLogicMotorBlock(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.EMERALD)
+                    .strength(3.5F)
+                    .requiresCorrectToolForDrops()
+                    .sound(SoundType.NETHERITE_BLOCK)
+                    .noOcclusion())
+    );
+
+    /**
+     * Logic Motor (standard) — CC-controlled rotation modifier.
+     * Takes external rotation input and modifies the output.
+     * Uses Create's Gearshift model with cyan tint.
+     */
+    public static final DeferredBlock<LogicMotorBlock> LOGIC_MOTOR_BLOCK = BLOCKS.register(
+            "logic_motor",
+            () -> new LogicMotorBlock(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.COLOR_CYAN)
+                    .strength(3.5F)
+                    .requiresCorrectToolForDrops()
+                    .sound(SoundType.NETHERITE_BLOCK)
+                    .noOcclusion())
+    );
+
     // ==================== Items ====================
 
     /**
@@ -105,6 +138,22 @@ public class ModRegistry {
     public static final DeferredItem<BlockItem> REDSTONE_CONTROLLER_ITEM = ITEMS.register(
             "redstone_controller",
             () -> new BlockItem(REDSTONE_CONTROLLER_BLOCK.get(), new Item.Properties())
+    );
+
+    /**
+     * BlockItem for the Creative Logic Motor.
+     */
+    public static final DeferredItem<BlockItem> CREATIVE_LOGIC_MOTOR_ITEM = ITEMS.register(
+            "creative_logic_motor",
+            () -> new BlockItem(CREATIVE_LOGIC_MOTOR_BLOCK.get(), new Item.Properties())
+    );
+
+    /**
+     * BlockItem for the Logic Motor (standard).
+     */
+    public static final DeferredItem<BlockItem> LOGIC_MOTOR_ITEM = ITEMS.register(
+            "logic_motor",
+            () -> new BlockItem(LOGIC_MOTOR_BLOCK.get(), new Item.Properties())
     );
 
     // ==================== Block Entities ====================
@@ -136,6 +185,32 @@ public class ModRegistry {
                     ).build(null)
             );
 
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<CreativeLogicMotorBlockEntity>> CREATIVE_LOGIC_MOTOR_BE =
+            BLOCK_ENTITY_TYPES.register(
+                    "creative_logic_motor",
+                    () -> {
+                        BlockEntityType<CreativeLogicMotorBlockEntity>[] holder = new BlockEntityType[1];
+                        holder[0] = BlockEntityType.Builder.of(
+                                (pos, state) -> new CreativeLogicMotorBlockEntity(holder[0], pos, state),
+                                CREATIVE_LOGIC_MOTOR_BLOCK.get()
+                        ).build(null);
+                        return holder[0];
+                    }
+            );
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<LogicMotorBlockEntity>> LOGIC_MOTOR_BE =
+            BLOCK_ENTITY_TYPES.register(
+                    "logic_motor",
+                    () -> {
+                        BlockEntityType<LogicMotorBlockEntity>[] holder = new BlockEntityType[1];
+                        holder[0] = BlockEntityType.Builder.of(
+                                (pos, state) -> new LogicMotorBlockEntity(holder[0], pos, state),
+                                LOGIC_MOTOR_BLOCK.get()
+                        ).build(null);
+                        return holder[0];
+                    }
+            );
+
     // ==================== Creative Mode Tabs ====================
 
     public static final DeferredHolder<CreativeModeTab, CreativeModeTab> LOGIC_LINK_TAB =
@@ -147,6 +222,8 @@ public class ModRegistry {
                         output.accept(LOGIC_LINK_ITEM.get());
                         output.accept(LOGIC_SENSOR_ITEM.get());
                         output.accept(REDSTONE_CONTROLLER_ITEM.get());
+                        output.accept(CREATIVE_LOGIC_MOTOR_ITEM.get());
+                        output.accept(LOGIC_MOTOR_ITEM.get());
                     })
                     .build()
             );

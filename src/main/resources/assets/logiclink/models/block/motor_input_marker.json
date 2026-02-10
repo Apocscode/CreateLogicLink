@@ -1,0 +1,31 @@
+{
+    "textures": {
+        "marker": "minecraft:block/orange_concrete"
+    },
+    "elements": [
+        {
+            "name": "input_stripe_bottom",
+            "from": [2, 0.5, -0.5],
+            "to": [14, 2.5, 0],
+            "faces": {
+                "north": { "uv": [2, 13.5, 14, 15.5], "texture": "#marker" },
+                "up":    { "uv": [2, 0, 14, 0.5], "texture": "#marker" },
+                "down":  { "uv": [2, 0, 14, 0.5], "texture": "#marker" },
+                "east":  { "uv": [0, 13.5, 0.5, 15.5], "texture": "#marker" },
+                "west":  { "uv": [15.5, 13.5, 16, 15.5], "texture": "#marker" }
+            }
+        },
+        {
+            "name": "input_stripe_top",
+            "from": [2, 13.5, -0.5],
+            "to": [14, 15.5, 0],
+            "faces": {
+                "north": { "uv": [2, 0.5, 14, 2.5], "texture": "#marker" },
+                "up":    { "uv": [2, 15.5, 14, 16], "texture": "#marker" },
+                "down":  { "uv": [2, 15.5, 14, 16], "texture": "#marker" },
+                "east":  { "uv": [0, 0.5, 0.5, 2.5], "texture": "#marker" },
+                "west":  { "uv": [15.5, 0.5, 16, 2.5], "texture": "#marker" }
+            }
+        }
+    ]
+}

@@ -111,7 +111,7 @@ public class RedstoneControllerPeripheral implements IPeripheral {
      * @return The current transmit power (0–15), or 0.
      * @throws LuaException if items are invalid.
      */
-    @LuaFunction
+    @LuaFunction(mainThread = true)
     public final int getOutput(String item1, String item2) throws LuaException {
         validateItem(item1);
         validateItem(item2);
@@ -145,7 +145,7 @@ public class RedstoneControllerPeripheral implements IPeripheral {
      *
      * @return A list of channel info tables.
      */
-    @LuaFunction
+    @LuaFunction(mainThread = true)
     public final List<Map<String, Object>> getChannels() {
         return blockEntity.getChannelList();
     }
@@ -179,7 +179,7 @@ public class RedstoneControllerPeripheral implements IPeripheral {
      *
      * @return A table with x, y, z coordinates.
      */
-    @LuaFunction
+    @LuaFunction(mainThread = true)
     public final Map<String, Integer> getPosition() {
         Map<String, Integer> pos = new HashMap<>();
         pos.put("x", blockEntity.getBlockPos().getX());

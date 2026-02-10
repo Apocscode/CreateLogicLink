@@ -1,0 +1,18 @@
+{
+    "type": "minecraft:crafting_shaped",
+    "pattern": [
+        " E ",
+        "BAB",
+        " S "
+    ],
+    "key": {
+        "E": { "item": "minecraft:ender_pearl" },
+        "B": { "item": "create:brass_ingot" },
+        "A": { "item": "create:electron_tube" },
+        "S": { "item": "create:shaft" }
+    },
+    "result": {
+        "id": "logiclink:creative_logic_motor",
+        "count": 1
+    }
+}

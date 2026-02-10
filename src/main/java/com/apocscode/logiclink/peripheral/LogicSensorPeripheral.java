@@ -53,7 +53,7 @@ public class LogicSensorPeripheral implements IPeripheral {
     /**
      * Returns whether this sensor is linked to a logistics network.
      */
-    @LuaFunction
+    @LuaFunction(mainThread = true)
     public final boolean isLinked() {
         return blockEntity.isLinked();
     }
@@ -61,7 +61,7 @@ public class LogicSensorPeripheral implements IPeripheral {
     /**
      * Returns the network frequency UUID as a string, or nil if not linked.
      */
-    @LuaFunction
+    @LuaFunction(mainThread = true)
     @Nullable
     public final String getNetworkID() {
         if (blockEntity.getNetworkFrequency() == null) return null;
@@ -71,7 +71,7 @@ public class LogicSensorPeripheral implements IPeripheral {
     /**
      * Returns the position of this sensor block.
      */
-    @LuaFunction
+    @LuaFunction(mainThread = true)
     public final Map<String, Integer> getPosition() {
         Map<String, Integer> pos = new HashMap<>();
         pos.put("x", blockEntity.getBlockPos().getX());
@@ -83,7 +83,7 @@ public class LogicSensorPeripheral implements IPeripheral {
     /**
      * Returns the position of the target block (the machine this sensor reads).
      */
-    @LuaFunction
+    @LuaFunction(mainThread = true)
     public final Map<String, Integer> getTargetPosition() {
         var targetPos = blockEntity.getTargetPos();
         Map<String, Integer> pos = new HashMap<>();
@@ -98,7 +98,7 @@ public class LogicSensorPeripheral implements IPeripheral {
      * This is fast (no world access) and refreshes automatically every second.
      * Returns an empty table if no data is available yet.
      */
-    @LuaFunction
+    @LuaFunction(mainThread = true)
     public final Map<String, Object> getData() {
         Map<String, Object> data = blockEntity.getCachedData();
         return data != null ? data : new HashMap<>();

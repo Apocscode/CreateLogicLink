@@ -1,0 +1,18 @@
+{
+    "multipart": [
+        { "when": { "active": "false", "facing": "north|south" }, "apply": { "model": "create:block/sequenced_gearshift/idle" } },
+        { "when": { "active": "false", "facing": "east|west" },   "apply": { "model": "create:block/sequenced_gearshift/idle", "y": 90 } },
+        { "when": { "active": "true",  "facing": "north|south" }, "apply": { "model": "create:block/sequenced_gearshift/seq_1" } },
+        { "when": { "active": "true",  "facing": "east|west" },   "apply": { "model": "create:block/sequenced_gearshift/seq_1", "y": 90 } },
+
+        { "when": { "facing": "north" }, "apply": { "model": "logiclink:block/motor_input_marker",  "y": 180 } },
+        { "when": { "facing": "south" }, "apply": { "model": "logiclink:block/motor_input_marker" } },
+        { "when": { "facing": "east" },  "apply": { "model": "logiclink:block/motor_input_marker",  "y": 270 } },
+        { "when": { "facing": "west" },  "apply": { "model": "logiclink:block/motor_input_marker",  "y": 90 } },
+
+        { "when": { "facing": "north" }, "apply": { "model": "logiclink:block/motor_output_marker" } },
+        { "when": { "facing": "south" }, "apply": { "model": "logiclink:block/motor_output_marker", "y": 180 } },
+        { "when": { "facing": "east" },  "apply": { "model": "logiclink:block/motor_output_marker", "y": 90 } },
+        { "when": { "facing": "west" },  "apply": { "model": "logiclink:block/motor_output_marker", "y": 270 } }
+    ]
+}

@@ -86,7 +86,7 @@ public class LogicLinkPeripheral implements IPeripheral {
      *
      * @return true if linked to a network, false otherwise.
      */
-    @LuaFunction
+    @LuaFunction(mainThread = true)
     public final boolean isLinked() {
         return blockEntity.isLinked();
     }
@@ -96,7 +96,7 @@ public class LogicLinkPeripheral implements IPeripheral {
      *
      * @return A table with x, y, z coordinates.
      */
-    @LuaFunction
+    @LuaFunction(mainThread = true)
     public final Map<String, Integer> getPosition() {
         Map<String, Integer> pos = new HashMap<>();
         pos.put("x", blockEntity.getBlockPos().getX());
@@ -110,7 +110,7 @@ public class LogicLinkPeripheral implements IPeripheral {
      *
      * @return The network UUID string, or null.
      */
-    @LuaFunction
+    @LuaFunction(mainThread = true)
     @Nullable
     public final String getNetworkID() {
         if (blockEntity.getNetworkFrequency() == null) return null;
@@ -123,7 +123,7 @@ public class LogicLinkPeripheral implements IPeripheral {
      *
      * @return A list of item tables, or an empty list if not linked.
      */
-    @LuaFunction
+    @LuaFunction(mainThread = true)
     public final List<Map<String, Object>> list() {
         List<Map<String, Object>> result = new ArrayList<>();
 
@@ -148,7 +148,7 @@ public class LogicLinkPeripheral implements IPeripheral {
      * @param itemName The registry name (e.g. "minecraft:iron_ingot").
      * @return The total count of that item, or 0 if not found/not linked.
      */
-    @LuaFunction
+    @LuaFunction(mainThread = true)
     public final int getItemCount(String itemName) {
         InventorySummary summary = blockEntity.getNetworkSummary();
         if (summary == null) return 0;
@@ -168,7 +168,7 @@ public class LogicLinkPeripheral implements IPeripheral {
      *
      * @return The number of unique item types.
      */
-    @LuaFunction
+    @LuaFunction(mainThread = true)
     public final int getItemTypeCount() {
         InventorySummary summary = blockEntity.getNetworkSummary();
         if (summary == null) return 0;
@@ -180,7 +180,7 @@ public class LogicLinkPeripheral implements IPeripheral {
      *
      * @return The total item count.
      */
-    @LuaFunction
+    @LuaFunction(mainThread = true)
     public final int getTotalItemCount() {
         InventorySummary summary = blockEntity.getNetworkSummary();
         if (summary == null) return 0;
@@ -192,7 +192,7 @@ public class LogicLinkPeripheral implements IPeripheral {
      * Forces a refresh of the cached inventory data from the network.
      * Normally the cache refreshes every 2 seconds automatically.
      */
-    @LuaFunction
+    @LuaFunction(mainThread = true)
     public final void refresh() {
         blockEntity.refreshNetworkSummary();
     }
@@ -202,7 +202,7 @@ public class LogicLinkPeripheral implements IPeripheral {
      *
      * @return A table with network info (linked, networkId, position, itemTypes, totalItems).
      */
-    @LuaFunction
+    @LuaFunction(mainThread = true)
     public final Map<String, Object> getNetworkInfo() {
         Map<String, Object> info = new HashMap<>();
         info.put("linked", blockEntity.isLinked());

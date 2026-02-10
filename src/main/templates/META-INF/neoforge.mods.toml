@@ -48,3 +48,12 @@ description='''${mod_description}'''
     versionRange="${cc_tweaked_dep_version}"
     ordering="AFTER"
     side="BOTH"
+
+# Create Storage (FXNT Storage) - optional (enables storage network peripherals)
+[[dependencies.${mod_id}]]
+    modId="fxntstorage"
+    type="optional"
+    reason="Enables CC:Tweaked peripherals for Create Storage controllers and interfaces"
+    versionRange="[1.1.0,)"
+    ordering="AFTER"
+    side="BOTH"
