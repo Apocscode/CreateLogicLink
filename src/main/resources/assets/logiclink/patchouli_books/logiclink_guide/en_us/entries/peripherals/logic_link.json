@@ -1,0 +1,55 @@
+{
+    "name": "Logic Link",
+    "icon": "logiclink:logic_link",
+    "category": "logiclink:peripherals",
+    "sortnum": 0,
+    "pages": [
+        {
+            "type": "patchouli:spotlight",
+            "item": "logiclink:logic_link",
+            "link_recipe": true,
+            "title": "Logic Link",
+            "text": "The central hub peripheral for $(thing)CreateLogicLink$(). Connects a CC:Tweaked computer to a Create logistics network for inventory access, item requests, and wireless device control.$(br2)Peripheral type: $(thing)\"logiclink\"$()"
+        },
+        {
+            "type": "patchouli:crafting",
+            "recipe": "logiclink:logic_link",
+            "text": "$(bold)To connect:$() Right-click the Logic Link on any Create linked block (Stock Link, Package Link, etc.) to join that logistics network. Then place it next to a CC computer."
+        },
+        {
+            "type": "patchouli:text",
+            "title": "Network Status",
+            "text": "$(li)$(thing)isLinked()$() → boolean — connected to network?$(br)$(li)$(thing)getPosition()$() → {x, y, z}$(br)$(li)$(thing)getNetworkID()$() → string or nil$(br)$(li)$(thing)getNetworkInfo()$() → {linked, networkId, position, itemTypes, totalItems}$(br)$(li)$(thing)refresh()$() — force cache update$(br2)$(bold)Example:$()$(br)$(#4488CC)local link = peripheral.find(\"logiclink\")$(br)local info = link.getNetworkInfo()$(br)print(\"Linked: \" .. tostring(info.linked))$(br)print(\"Items: \" .. info.totalItems)$()"
+        },
+        {
+            "type": "patchouli:text",
+            "title": "Inventory Methods",
+            "text": "$(li)$(thing)list()$() → [{name, count, displayName}] — all items on network$(br)$(li)$(thing)getItemCount(name)$() → int — count by registry name$(br)$(li)$(thing)getItemTypeCount()$() → int — distinct item types$(br)$(li)$(thing)getTotalItemCount()$() → int — sum of all counts$(br2)$(bold)Example:$()$(br)$(#4488CC)local items = link.list()$(br)for _, item in ipairs(items) do$(br)  print(item.displayName .. \": \" .. item.count)$(br)end$()"
+        },
+        {
+            "type": "patchouli:text",
+            "title": "Logistics Data",
+            "text": "$(li)$(thing)getGauges()$() → [{item, target, stock, status, address, position}] — Factory Gauge panels$(br)$(li)$(thing)getLinks()$() → [{position, type, redstonePower}] — Stock Links$(br)$(li)$(thing)getSensors()$() → [{position, targetPosition, data}] — Logic Sensors on network$(br2)$(bold)Item Requests$()$(br)$(li)$(thing)requestItem(name, count, address)$() → boolean$(br)$(li)$(thing)requestItems(items, address)$() → boolean$(br2)$(#4488CC)link.requestItem(\"minecraft:iron_ingot\", 64, \"Smeltery\")$()"
+        },
+        {
+            "type": "patchouli:text",
+            "title": "Wireless Hub",
+            "text": "The Logic Link doubles as a $(thing)wireless hub$(), discovering nearby LogicLink devices without wires.$(br2)$(li)$(thing)getDevices()$() → [{id, type, label, position, distance, dimension}]$(br)$(li)$(thing)getHubRange()$() → int (default 64, max 256)$(br)$(li)$(thing)setHubRange(range)$()$(br)$(li)$(thing)setDeviceLabel(id, label)$()$(br)$(li)$(thing)getDeviceLabel(id)$() → string$(br2)$(#4488CC)local devs = link.getDevices()$(br)for _, d in ipairs(devs) do$(br)  print(d.id .. \" [\" .. d.type .. \"]\")$(br)end$()"
+        },
+        {
+            "type": "patchouli:text",
+            "title": "Remote Sensors",
+            "text": "Read data from sensors discovered by the hub:$(br2)$(li)$(thing)getRemoteSensorData(id)$() → sensor data or nil$(br)$(li)$(thing)getAllRemoteSensorData()$() → all sensor data$(br)$(li)$(thing)cycleTrackSwitch(sensorId)$() → boolean$(br)$(li)$(thing)getTrackSwitchState(sensorId)$() → state info or nil$(br)$(li)$(thing)getTrainBlockData(sensorId)$() → station/signal/observer data$(br2)$(#4488CC)local data = link.getRemoteSensorData(\"sensor_0\")$(br)if data then print(data.data.speed) end$()"
+        },
+        {
+            "type": "patchouli:text",
+            "title": "Remote Motor / Drive",
+            "text": "Control motors and drives over the hub:$(br2)$(li)$(thing)enableRemote(id, enabled)$() — enable/disable$(br)$(li)$(thing)setRemoteSpeed(id, speed)$() — motor speed$(br)$(li)$(thing)setRemoteModifier(id, modifier)$() — drive modifier$(br)$(li)$(thing)setRemoteReversed(id, reversed)$() — drive reverse$(br)$(li)$(thing)getRemoteMotorInfo(id)$() → {type, enabled, speed, stress, sequence}$(br2)$(#4488CC)link.setRemoteSpeed(\"motor_0\", 128)$(br)link.enableRemote(\"motor_0\", true)$()"
+        },
+        {
+            "type": "patchouli:text",
+            "title": "Remote Redstone",
+            "text": "Control Redstone Controllers over the hub:$(br2)$(li)$(thing)setRemoteRedstoneOutput(id, item1, item2, power)$()$(br)$(li)$(thing)getRemoteRedstoneInput(id, item1, item2)$() → int$(br)$(li)$(thing)getRemoteRedstoneChannels(id)$() → [{item1, item2, mode, power}]$(br)$(li)$(thing)setAllRemoteRedstoneOutputs(id, power)$()$(br2)$(#4488CC)link.setRemoteRedstoneOutput(\"rc_0\",$(br)  \"minecraft:redstone\",$(br)  \"minecraft:redstone\", 15)$()"
+        }
+    ]
+}

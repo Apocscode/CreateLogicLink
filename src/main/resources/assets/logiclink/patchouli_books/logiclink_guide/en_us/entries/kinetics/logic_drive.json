@@ -1,0 +1,35 @@
+{
+    "name": "Logic Drive",
+    "icon": "logiclink:logic_drive",
+    "category": "logiclink:kinetics",
+    "sortnum": 1,
+    "pages": [
+        {
+            "type": "patchouli:spotlight",
+            "item": "logiclink:logic_drive",
+            "link_recipe": true,
+            "title": "Logic Drive",
+            "text": "A Lua-controlled $(thing)rotation modifier$() — acts as a programmable clutch and gearbox. Enable/disable rotation pass-through, reverse direction, and multiply speed from -16x to 16x.$(br2)Peripheral type: $(thing)\"logic_drive\"$()"
+        },
+        {
+            "type": "patchouli:crafting",
+            "recipe": "logiclink:logic_drive",
+            "text": "Place inline with a shaft. The drive modifies rotation passing through it."
+        },
+        {
+            "type": "patchouli:text",
+            "title": "Drive Control",
+            "text": "$(li)$(thing)enable()$() — allow rotation through (clutch on)$(br)$(li)$(thing)disable()$() — block rotation (clutch off)$(br)$(li)$(thing)isEnabled()$() → boolean$(br)$(li)$(thing)setReversed(bool)$() — reverse output direction$(br)$(li)$(thing)isReversed()$() → boolean$(br)$(li)$(thing)setModifier(value)$() — speed multiplier (-16.0 to 16.0)$(br)$(li)$(thing)getModifier()$() → float$(br)$(li)$(thing)getInputSpeed()$() → float RPM$(br)$(li)$(thing)getOutputSpeed()$() → float RPM$(br2)$(bold)Example:$()$(br)$(#4488CC)local d = peripheral.find(\"logic_drive\")$(br)d.setModifier(2.0)$(br)d.enable()$()"
+        },
+        {
+            "type": "patchouli:text",
+            "title": "Sequence Programming",
+            "text": "Build timed modifier sequences:$(br2)$(li)$(thing)clearSequence()$() — clear all steps$(br)$(li)$(thing)addRotateStep(degrees, modifier)$() — rotate by degrees at modifier (0.1-16.0)$(br)$(li)$(thing)addWaitStep(ticks)$() — pause (1-6000 ticks)$(br)$(li)$(thing)addModifierStep(modifier)$() — instant modifier change (-16.0 to 16.0)$(br)$(li)$(thing)runSequence(loop)$() — execute sequence$(br)$(li)$(thing)stopSequence()$() — halt sequence$(br)$(li)$(thing)isSequenceRunning()$() → boolean$(br)$(li)$(thing)getSequenceSize()$() → int"
+        },
+        {
+            "type": "patchouli:text",
+            "title": "Sequence Example",
+            "text": "$(bold)Accelerate then brake:$()$(br2)$(#4488CC)local d = peripheral.find(\"logic_drive\")$(br)d.enable()$(br)d.clearSequence()$(br)d.addModifierStep(1.0)$(br)d.addWaitStep(40)$(br)d.addModifierStep(4.0)$(br)d.addWaitStep(40)$(br)d.addModifierStep(0.5)$(br)d.runSequence(true)$()$(br2)Use the Logic Drive as a programmable gearbox to ramp machines up and down on schedule."
+        }
+    ]
+}

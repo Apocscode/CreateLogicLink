@@ -1,0 +1,23 @@
+{
+    "name": "Storage Interface",
+    "icon": "minecraft:barrel",
+    "category": "logiclink:storage",
+    "sortnum": 1,
+    "pages": [
+        {
+            "type": "patchouli:text",
+            "title": "Storage Interface",
+            "text": "A $(thing)remote access point$() that connects to a Storage Controller's network. Place anywhere and link to a controller to query items without being adjacent.$(br2)Peripheral type: $(thing)\"storage_interface\"$()$(br2)$(bold)Requires:$() Functional Storage mod (fxntstorage).$(br2)$(#4488CC)local si = peripheral.find(\"storage_interface\")$(br)if si.isConnected() then$(br)  print(si.getBoxCount() .. \" boxes\")$(br)end$()"
+        },
+        {
+            "type": "patchouli:text",
+            "title": "Lua API",
+            "text": "$(li)$(thing)isConnected()$() → boolean — linked to a controller?$(br)$(li)$(thing)getPosition()$() → {x, y, z}$(br)$(li)$(thing)getControllerPosition()$() → {x, y, z} or nil$(br)$(li)$(thing)size()$() → int — slot count$(br)$(li)$(thing)list()$() → {slot → {name, count, displayName, maxCount}}$(br)$(li)$(thing)getItemDetail(slot)$() → detailed info with tags$(br)$(li)$(thing)getBoxCount()$() → int$(br)$(li)$(thing)getItemCount(itemId)$() → int$(br)$(li)$(thing)getItemSummary()$() → [{name, displayName, count, boxes}]$(br)$(li)$(thing)findItems(query)$() → search by partial name/ID"
+        },
+        {
+            "type": "patchouli:text",
+            "title": "Usage Example",
+            "text": "$(bold)Remote inventory display:$()$(br2)$(#4488CC)local si = peripheral.find(\"storage_interface\")$(br)local summary = si.getItemSummary()$(br)for _, item in ipairs(summary) do$(br)  print(item.displayName)$(br)  print(\"  Count: \" .. item.count)$(br)  print(\"  Boxes: \" .. item.boxes)$(br)end$()$(br2)The interface provides the same query methods as the Storage Controller but can be placed remotely — useful for building monitoring stations away from the main storage area."
+        }
+    ]
+}

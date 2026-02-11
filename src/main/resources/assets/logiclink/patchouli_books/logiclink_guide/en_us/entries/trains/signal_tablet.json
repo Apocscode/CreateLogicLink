@@ -1,0 +1,25 @@
+{
+    "name": "Signal Tablet",
+    "icon": "logiclink:signal_tablet",
+    "category": "logiclink:trains",
+    "sortnum": 2,
+    "pages": [
+        {
+            "type": "patchouli:spotlight",
+            "item": "logiclink:signal_tablet",
+            "link_recipe": true,
+            "title": "Signal Tablet",
+            "text": "A handheld $(thing)signal diagnostic tool$() for debugging your train network. Shows real-time signal states, train positions, and track observer data in a portable display.$(br2)No peripheral API — this is a handheld item."
+        },
+        {
+            "type": "patchouli:crafting",
+            "recipe": "logiclink:signal_tablet",
+            "text": "Hold in hand and right-click to open the diagnostic display."
+        },
+        {
+            "type": "patchouli:text",
+            "title": "Using the Tablet",
+            "text": "$(bold)Features:$()$(br)$(li)View all signal states at a glance$(br)$(li)See which trains occupy which track segments$(br)$(li)Monitor track observer activation$(br)$(li)Diagnose signal conflicts$(br)$(li)Identify derailed trains$(br2)The Signal Tablet provides the same network data as the Train Controller peripheral but in a visual handheld format, useful for walking around your rail network and checking signal states."
+        }
+    ]
+}

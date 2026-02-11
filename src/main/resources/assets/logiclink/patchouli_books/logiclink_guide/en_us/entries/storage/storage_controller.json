@@ -1,0 +1,28 @@
+{
+    "name": "Storage Controller",
+    "icon": "minecraft:chest",
+    "category": "logiclink:storage",
+    "sortnum": 0,
+    "pages": [
+        {
+            "type": "patchouli:text",
+            "title": "Storage Controller",
+            "text": "Provides Lua access to a $(thing)Simple Storage$() network. Query inventories, search items, and transfer between storage boxes and adjacent inventories.$(br2)Peripheral type: $(thing)\"storage_controller\"$()$(br2)$(bold)Requires:$() Functional Storage mod (fxntstorage). This peripheral attaches to existing Simple Storage Controller blocks.$(br2)$(#4488CC)local sc = peripheral.find(\"storage_controller\")$(br)print(sc.getBoxCount() .. \" boxes\")$()"
+        },
+        {
+            "type": "patchouli:text",
+            "title": "Connection & Info",
+            "text": "$(li)$(thing)isConnected()$() → boolean — any boxes connected?$(br)$(li)$(thing)getBoxCount()$() → int — connected boxes$(br)$(li)$(thing)getPosition()$() → {x, y, z}$(br)$(li)$(thing)size()$() → int — slot count in network$(br)$(li)$(thing)getTotalItemCount()$() → int — all items$(br)$(li)$(thing)getTotalCapacity()$() → long — max capacity$(br)$(li)$(thing)getItemCount(itemId)$() → int — count of specific item$(br2)$(#4488CC)local total = sc.getTotalItemCount()$(br)local cap = sc.getTotalCapacity()$(br)print(total .. \"/\" .. cap)$()"
+        },
+        {
+            "type": "patchouli:text",
+            "title": "Inventory Access",
+            "text": "$(li)$(thing)list()$() → {slot → {name, count, displayName, maxCount}}$(br)$(li)$(thing)getItemDetail(slot)$() → detailed item info with tags (1-based)$(br)$(li)$(thing)getBoxes()$() → [{position, storedAmount, maxCapacity, upgrades, filter, item}]$(br)$(li)$(thing)getItemSummary()$() → [{name, displayName, count, boxes}]$(br)$(li)$(thing)findItems(query)$() → search by partial name/ID$(br2)$(#4488CC)local results = sc.findItems(\"iron\")$(br)for _, r in ipairs(results) do$(br)  print(r.displayName .. \": \" .. r.count)$(br)end$()"
+        },
+        {
+            "type": "patchouli:text",
+            "title": "Item Transfer",
+            "text": "$(li)$(thing)pushItems(toName, fromSlot, limit?, toSlot?)$() → int — extract items to adjacent inventory$(br)$(li)$(thing)pullItems(fromName, fromSlot, limit?, toSlot?)$() → int — insert from adjacent inventory$(br2)The $(thing)toName$() / $(thing)fromName$() is the peripheral name of an adjacent inventory (e.g., a chest).$(br2)$(#4488CC)-- Push 64 items from slot 1 to a chest$(br)local moved = sc.pushItems($(br)  \"minecraft:chest_0\", 1, 64)$(br)print(\"Moved: \" .. moved)$()"
+        }
+    ]
+}

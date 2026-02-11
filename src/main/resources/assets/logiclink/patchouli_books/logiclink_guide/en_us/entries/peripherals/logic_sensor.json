@@ -1,0 +1,30 @@
+{
+    "name": "Logic Sensor",
+    "icon": "logiclink:logic_sensor",
+    "category": "logiclink:peripherals",
+    "sortnum": 1,
+    "pages": [
+        {
+            "type": "patchouli:spotlight",
+            "item": "logiclink:logic_sensor",
+            "link_recipe": true,
+            "title": "Logic Sensor",
+            "text": "A thin wireless sensor that reads data from any $(thing)Create machine$() it's pointed at — speeds, temperatures, fluid levels, inventories, and more. Links to a logistics network via frequency.$(br2)Peripheral type: $(thing)\"logicsensor\"$()"
+        },
+        {
+            "type": "patchouli:crafting",
+            "recipe": "logiclink:logic_sensor",
+            "text": "$(bold)To connect:$() Right-click on any Create linked block (Stock Link, etc.) to join that logistics network. Then right-click a target machine to aim the sensor at it."
+        },
+        {
+            "type": "patchouli:text",
+            "title": "Lua API",
+            "text": "$(li)$(thing)isLinked()$() → boolean — connected to network?$(br)$(li)$(thing)getNetworkID()$() → string or nil$(br)$(li)$(thing)getPosition()$() → {x, y, z} — sensor position$(br)$(li)$(thing)getTargetPosition()$() → {x, y, z} — aimed machine position$(br)$(li)$(thing)getData()$() → table — cached target data (refreshes every 1s)$(br)$(li)$(thing)getTargetData()$() → table — force fresh read$(br)$(li)$(thing)refresh()$() — force cache refresh$(br2)The $(thing)getData()$() method returns different fields depending on the target machine type."
+        },
+        {
+            "type": "patchouli:text",
+            "title": "Data Examples",
+            "text": "$(bold)Reading machine speed:$()$(br)$(#4488CC)local s = peripheral.find(\"logicsensor\")$(br)local data = s.getData()$(br)print(\"Speed: \" .. data.speed)$(br)print(\"Stress: \" .. data.stress)$()$(br2)$(bold)Supported sources:$()$(br)$(li)Kinetic blocks — speed, stress, capacity$(br)$(li)Blaze burners — heat level, fuel$(br)$(li)Fluid tanks — fluid type, amount$(br)$(li)Inventories — items, slot data$(br)$(li)Train stations — present train$(br)$(li)Signals — signal state$(br)$(li)Track switches — switch position"
+        }
+    ]
+}

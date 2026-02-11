@@ -1,0 +1,35 @@
+{
+    "name": "Train Controller",
+    "icon": "logiclink:train_controller",
+    "category": "logiclink:trains",
+    "sortnum": 0,
+    "pages": [
+        {
+            "type": "patchouli:spotlight",
+            "item": "logiclink:train_controller",
+            "link_recipe": true,
+            "title": "Train Controller",
+            "text": "Provides $(thing)global read access$() to Create's entire train network. Query every train, station, signal, and observer from a single block — no wired connections needed.$(br2)Peripheral type: $(thing)\"train_controller\"$()"
+        },
+        {
+            "type": "patchouli:crafting",
+            "recipe": "logiclink:train_controller",
+            "text": "Place next to a computer. Works anywhere — no rail connection required."
+        },
+        {
+            "type": "patchouli:text",
+            "title": "Network Overview",
+            "text": "$(li)$(thing)getNetworkOverview()$() → {trainCount, stationCount, signalCount, observerCount, graphCount, trainsMoving, trainsStopped, trainsDerailed}$(br)$(li)$(thing)getTrainCount()$() → int$(br)$(li)$(thing)getRefreshInterval()$() → int (ticks)$(br)$(li)$(thing)setRefreshInterval(ticks)$() — 1-200$(br)$(li)$(thing)refresh()$() — force immediate refresh$(br2)$(#4488CC)local tc = peripheral.find(\"train_controller\")$(br)local o = tc.getNetworkOverview()$(br)print(o.trainCount .. \" trains\")$()"
+        },
+        {
+            "type": "patchouli:text",
+            "title": "Train Data",
+            "text": "$(li)$(thing)getTrains()$() → list of all trains$(br)$(li)$(thing)getTrain(name)$() → single train by name (partial match)$(br2)Each train has: $(item)name, id, speed, throttle, maxSpeed, derailed, fuelTicks, carriages, station, position, dimension, schedule, navigation$()$(br2)$(#4488CC)local trains = tc.getTrains()$(br)for _, t in ipairs(trains) do$(br)  print(t.name .. \" @ \" .. (t.station or \"moving\"))$(br)end$()"
+        },
+        {
+            "type": "patchouli:text",
+            "title": "Stations, Signals, Observers",
+            "text": "$(li)$(thing)getStations()$() → [{name, position, dimension, assembling, presentTrain, imminentTrain}]$(br2)$(li)$(thing)getSignals()$() → [{id, states, types, positions}] — signal boundary data$(br2)$(li)$(thing)getObservers()$() → [{id, activated, currentTrain, position, dimension, filter}]$(br2)$(#4488CC)local stations = tc.getStations()$(br)for _, s in ipairs(stations) do$(br)  if s.presentTrain then$(br)    print(s.name .. \": \" .. s.presentTrain)$(br)  end$(br)end$()"
+        }
+    ]
+}

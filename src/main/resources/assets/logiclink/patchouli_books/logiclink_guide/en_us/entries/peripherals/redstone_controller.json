@@ -1,0 +1,30 @@
+{
+    "name": "Redstone Controller",
+    "icon": "logiclink:redstone_controller",
+    "category": "logiclink:peripherals",
+    "sortnum": 2,
+    "pages": [
+        {
+            "type": "patchouli:spotlight",
+            "item": "logiclink:redstone_controller",
+            "link_recipe": true,
+            "title": "Redstone Controller",
+            "text": "Lua-controlled $(thing)wireless redstone$() via Create's Redstone Link frequency system. Transmit and receive redstone signals on any frequency channel from code.$(br2)Peripheral type: $(thing)\"redstone_controller\"$()"
+        },
+        {
+            "type": "patchouli:crafting",
+            "recipe": "logiclink:redstone_controller",
+            "text": "Channels use two item IDs as the frequency pair, matching Create's Redstone Link system."
+        },
+        {
+            "type": "patchouli:text",
+            "title": "Lua API",
+            "text": "$(li)$(thing)setOutput(item1, item2, power)$() — transmit signal (0-15) on channel$(br)$(li)$(thing)getInput(item1, item2)$() → int — received signal on channel$(br)$(li)$(thing)getOutput(item1, item2)$() → int — current transmit power$(br)$(li)$(thing)removeChannel(item1, item2)$() — remove a channel$(br)$(li)$(thing)getChannels()$() → [{item1, item2, mode, power}]$(br)$(li)$(thing)setAllOutputs(power)$() — set all transmit channels$(br)$(li)$(thing)clearChannels()$() — remove all channels$(br)$(li)$(thing)getPosition()$() → {x, y, z}"
+        },
+        {
+            "type": "patchouli:text",
+            "title": "Usage Examples",
+            "text": "$(bold)Toggle a door:$()$(br)$(#4488CC)local rc = peripheral.find(\"redstone_controller\")$(br)rc.setOutput($(br)  \"minecraft:redstone\",$(br)  \"minecraft:redstone\", 15)$()$(br2)$(bold)Read a sensor:$()$(br)$(#4488CC)local power = rc.getInput($(br)  \"minecraft:iron_ingot\",$(br)  \"minecraft:gold_ingot\")$(br)print(\"Signal: \" .. power)$()$(br2)Frequency pairs match Create's Redstone Links — any two item IDs form a channel."
+        }
+    ]
+}

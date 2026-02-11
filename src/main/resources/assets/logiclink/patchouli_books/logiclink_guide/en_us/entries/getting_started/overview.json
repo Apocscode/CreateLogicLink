@@ -9,7 +9,7 @@
             "images": ["logiclink:textures/patchouli/book_cover.png"],
             "title": "\u2200 CreateLogicLink",
             "border": true,
-            "text": "The $(bold)\u2200$() (\"for all\") symbol is the mod's emblem — representing universal control over all your factory machines through code."
+            "text": "$(italic)For all machines, for all control.$()$(br2)Total Lua control over every Create machine in your factory."
         },
         {
             "type": "patchouli:spotlight",

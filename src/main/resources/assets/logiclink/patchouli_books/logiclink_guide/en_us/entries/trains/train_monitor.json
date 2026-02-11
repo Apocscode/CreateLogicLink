@@ -1,0 +1,30 @@
+{
+    "name": "Train Monitor",
+    "icon": "logiclink:train_monitor",
+    "category": "logiclink:trains",
+    "sortnum": 1,
+    "pages": [
+        {
+            "type": "patchouli:spotlight",
+            "item": "logiclink:train_monitor",
+            "link_recipe": true,
+            "title": "Train Monitor",
+            "text": "A visual $(thing)CTC-style train network map$() displayed on a multi-block monitor. Shows real-time train positions, station names, signal states, and track topology.$(br2)No peripheral API — this is a display-only block."
+        },
+        {
+            "type": "patchouli:crafting",
+            "recipe": "logiclink:train_monitor",
+            "text": "Place multiple monitors in a grid (up to 10×10) to create a larger display."
+        },
+        {
+            "type": "patchouli:text",
+            "title": "Multi-Block Setup",
+            "text": "$(bold)Building a display:$()$(br)$(li)Place Train Monitors in a flat wall$(br)$(li)They auto-detect adjacent monitors$(br)$(li)Max size: 10 wide × 10 tall$(br)$(li)Right-click to open the map GUI$(br2)$(bold)Map Features:$()$(br)$(li)Track graph drawn as connected lines$(br)$(li)$(#55FF55)Green$() stations with names$(br)$(li)Moving train icons with names$(br)$(li)$(#FF5555)Red$() / $(#55FF55)Green$() signal indicators$(br)$(li)Pan and zoom with mouse$(br)$(li)Click trains or stations for details"
+        },
+        {
+            "type": "patchouli:text",
+            "title": "Display Modes",
+            "text": "The monitor renders a $(thing)real-time schematic$() of the entire train network, similar to a Centralized Traffic Control (CTC) board.$(br2)$(bold)Color Legend:$()$(br)$(li)$(#AAAAAA)Gray lines$() — track segments$(br)$(li)$(#55FF55)Green dots$() — stations$(br)$(li)$(#FFAA00)Orange icons$() — moving trains$(br)$(li)$(#FF5555)Red signals$() — occupied blocks$(br)$(li)$(#55FF55)Green signals$() — clear$(br2)The map auto-updates as trains move and signals change."
+        }
+    ]
+}
