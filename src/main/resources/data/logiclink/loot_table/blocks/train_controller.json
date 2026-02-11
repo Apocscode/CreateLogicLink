@@ -7,7 +7,7 @@
             "entries": [
                 {
                     "type": "minecraft:item",
-                    "name": "logiclink:logic_motor"
+                    "name": "logiclink:train_controller"
                 }
             ],
             "conditions": [

@@ -10,6 +10,13 @@ A Minecraft NeoForge mod that bridges **Create mod's** logistics system with **C
 - **Creative Logic Motor** — CC-controlled rotation source with unlimited stress capacity. Set speed, direction, and run timed sequences from Lua (16 functions).
 - **Logic Motor** — CC-controlled rotation modifier that sits inline on a shaft. Acts as a programmable clutch + gearshift + sequenced gearshift. Orange-marked input side, light-blue output side (17 functions).
 - **Create Storage Integration** *(optional)* — Storage Controller peripheral (14 functions) and Storage Interface peripheral (10 functions) for the Create: Storage mod. Automatically available when that mod is installed.
+- **Train Monitor Block** — CTC-style train network overview with real-time map display, signal diagnostics, and conflict detection. Renders a scrollable/zoomable network map on a Create-themed GUI.
+- **Signal Diagnostic Tablet** — Handheld item for field debugging. Right-click to scan the train network, then view diagnostics sorted by distance. Click per-issue highlight buttons to toggle in-world ghost boxes at signal locations.
+- **In-World Signal Highlights** — Color-coded ghost boxes rendered at real world coordinates:
+  - **Green** = Place a regular signal here
+  - **Cyan** = Place a chain signal here
+  - **Red** = Signal conflict (remove/fix)
+  - **Yellow** = Warning (unsignaled junction)
 - **Network Highlighting** — Hold a linked item to see all blocks on the network outlined in Create's signature blue.
 - **Item Requests** — Send items through Create's packaging/delivery system from Lua scripts.
 - **Wireless Sensor Discovery** — Logic Links can discover all Logic Sensors on the network via `getSensors()`.
@@ -332,6 +339,28 @@ src/main/java/com/apocscode/logiclink/
 │   └── storage/
 │       ├── StorageControllerPeripheral.java  # 14 Lua functions (Create Storage)
 │       └── StorageInterfacePeripheral.java   # 10 Lua functions (Create Storage)
+│   ├── TrainMonitorBlock.java             # Train Monitor block
+│   ├── TrainMonitorBlockEntity.java       # Train network data, diagnostics cache
+│   ├── TrainMonitorMenu.java              # Container menu for monitor GUI
+│   ├── SignalTabletItem.java              # Handheld signal diagnostic scanner
+│   ├── TrainControllerBlock.java          # Train Controller block
+│   ├── TrainControllerBlockEntity.java    # Train control logic
+│   ├── LogicDriveBlock.java               # Logic Drive block
+│   └── LogicDriveBlockEntity.java         # Drive data storage
+├── peripheral/
+│   ├── LogicLinkPeripheral.java           # 14 Lua functions
+│   ├── LogicLinkPeripheralProvider.java   # Registers all peripherals with CC
+│   ├── LogicSensorPeripheral.java         # 7 Lua functions
+│   ├── RedstoneControllerPeripheral.java  # 8 Lua functions
+│   ├── CreativeLogicMotorPeripheral.java  # 16 Lua functions
+│   ├── TrainControllerPeripheral.java     # Train controller Lua functions
+│   ├── TrainNetworkDataReader.java        # Train network scanner & diagnostics engine
+│   ├── LogicDrivePeripheral.java          # Logic Drive Lua functions
+│   ├── CreateBlockReader.java             # Reads Create block data via reflection
+│   ├── StoragePeripheralCompat.java       # Soft-dependency guard for Create Storage
+│   └── storage/
+│       ├── StorageControllerPeripheral.java  # 14 Lua functions (Create Storage)
+│       └── StorageInterfacePeripheral.java   # 10 Lua functions (Create Storage)
 ├── network/
 │   ├── LinkNetwork.java                   # Link registry + highlight packet sender
 │   ├── SensorNetwork.java                 # Sensor registry by frequency UUID
@@ -339,6 +368,13 @@ src/main/java/com/apocscode/logiclink/
 │   └── VirtualRedstoneLink.java           # IRedstoneLinkable impl for virtual channels
 └── client/
     ├── NetworkHighlightRenderer.java      # Create-style outline renderer
+    ├── SignalGhostRenderer.java           # In-world signal highlight boxes
+    ├── SignalHighlightManager.java        # Client-side highlight toggle store
+    ├── SignalTabletScreen.java            # Signal Diagnostic Tablet GUI
+    ├── TrainMonitorRenderer.java          # Train Monitor block entity renderer
+    ├── TrainMonitorScreen.java            # Train Monitor GUI with CTC map
+    ├── TrainMapRenderer.java              # Network map rendering engine
+    ├── TrainMapTexture.java               # Render-to-texture for map
     ├── LogicLinkClientSetup.java          # Registers Ponder plugin on FMLClientSetupEvent
     └── ponder/
         ├── LogicLinkPonderPlugin.java     # PonderPlugin impl: 12 tags + scene registration

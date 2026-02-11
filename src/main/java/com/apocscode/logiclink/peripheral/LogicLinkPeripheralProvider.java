@@ -4,9 +4,10 @@ import com.apocscode.logiclink.LogicLink;
 import com.apocscode.logiclink.ModRegistry;
 import com.apocscode.logiclink.block.CreativeLogicMotorBlockEntity;
 import com.apocscode.logiclink.block.LogicLinkBlockEntity;
-import com.apocscode.logiclink.block.LogicMotorBlockEntity;
+import com.apocscode.logiclink.block.LogicDriveBlockEntity;
 import com.apocscode.logiclink.block.LogicSensorBlockEntity;
 import com.apocscode.logiclink.block.RedstoneControllerBlockEntity;
+import com.apocscode.logiclink.block.TrainControllerBlockEntity;
 
 import dan200.computercraft.api.peripheral.IPeripheral;
 import dan200.computercraft.api.peripheral.PeripheralCapability;
@@ -60,14 +61,21 @@ public class LogicLinkPeripheralProvider {
                 LogicLinkPeripheralProvider::getCreativeLogicMotorPeripheral
         );
 
-        // Register Logic Motor peripheral
+        // Register Logic Drive peripheral
         event.registerBlockEntity(
                 PeripheralCapability.get(),
-                ModRegistry.LOGIC_MOTOR_BE.get(),
-                LogicLinkPeripheralProvider::getLogicMotorPeripheral
+                ModRegistry.LOGIC_DRIVE_BE.get(),
+                LogicLinkPeripheralProvider::getLogicDrivePeripheral
         );
 
-        LogicLink.LOGGER.info("Registered all peripherals with CC:Tweaked (Logic Link, Sensor, Redstone Controller, Creative Motor, Motor)");
+        // Register Train Controller peripheral
+        event.registerBlockEntity(
+                PeripheralCapability.get(),
+                ModRegistry.TRAIN_CONTROLLER_BE.get(),
+                LogicLinkPeripheralProvider::getTrainControllerPeripheral
+        );
+
+        LogicLink.LOGGER.info("Registered all peripherals with CC:Tweaked (Logic Link, Sensor, Redstone Controller, Creative Motor, Drive, Train Controller)");
 
         // ==================== Optional: Create Storage Peripherals ====================
         if (ModList.get().isLoaded("fxntstorage")) {
@@ -97,7 +105,12 @@ public class LogicLinkPeripheralProvider {
     }
 
     @Nullable
-    private static IPeripheral getLogicMotorPeripheral(LogicMotorBlockEntity blockEntity, @Nullable Direction direction) {
-        return new LogicMotorPeripheral(blockEntity);
+    private static IPeripheral getTrainControllerPeripheral(TrainControllerBlockEntity blockEntity, @Nullable Direction direction) {
+        return new TrainControllerPeripheral(blockEntity);
+    }
+
+    @Nullable
+    private static IPeripheral getLogicDrivePeripheral(LogicDriveBlockEntity blockEntity, @Nullable Direction direction) {
+        return new LogicDrivePeripheral(blockEntity);
     }
 }

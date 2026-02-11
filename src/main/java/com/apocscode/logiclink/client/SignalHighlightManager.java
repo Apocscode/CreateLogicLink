@@ -1,0 +1,61 @@
+package com.apocscode.logiclink.client;
+
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+
+/**
+ * Client-side singleton that holds individually toggled signal highlight markers.
+ * The tablet screen adds/removes markers here when the player clicks the highlight button.
+ * SignalGhostRenderer reads from this manager to draw in-world boxes.
+ *
+ * This decouples highlights from the TrainMonitorBlockEntity — no need to be
+ * near the monitor block; just stand near the target coordinates.
+ */
+public final class SignalHighlightManager {
+
+    public static final int TYPE_SIGNAL   = 0;  // Regular signal (green)
+    public static final int TYPE_CHAIN    = 1;  // Chain signal (cyan)
+    public static final int TYPE_CONFLICT = 2;  // Conflict (red)
+
+    public record Marker(int x, int y, int z, int type) {
+        public long posKey() {
+            return ((long)(x + 30000000) << 36) | ((long)(y + 512) << 26) | ((long)(z + 30000000));
+        }
+    }
+
+    private static final Map<Long, Marker> activeMarkers = new ConcurrentHashMap<>();
+
+    /** Toggle a marker on/off. Returns true if now active, false if removed. */
+    public static boolean toggle(int x, int y, int z, int type) {
+        Marker m = new Marker(x, y, z, type);
+        long key = m.posKey();
+        if (activeMarkers.containsKey(key)) {
+            activeMarkers.remove(key);
+            return false;
+        } else {
+            activeMarkers.put(key, m);
+            return true;
+        }
+    }
+
+    /** Check if a position is currently highlighted. */
+    public static boolean isActive(int x, int y, int z) {
+        return activeMarkers.containsKey(new Marker(x, y, z, 0).posKey());
+    }
+
+    /** Get all active markers for the renderer. */
+    public static Collection<Marker> getActiveMarkers() {
+        return Collections.unmodifiableCollection(activeMarkers.values());
+    }
+
+    /** Clear all highlights. */
+    public static void clearAll() {
+        activeMarkers.clear();
+    }
+
+    public static int count() {
+        return activeMarkers.size();
+    }
+}

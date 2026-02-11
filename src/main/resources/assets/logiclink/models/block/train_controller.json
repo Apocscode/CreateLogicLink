@@ -1,0 +1,8 @@
+{
+    "parent": "minecraft:block/cube_bottom_top",
+    "textures": {
+        "top": "logiclink:block/train_controller_top",
+        "bottom": "create:block/andesite_casing",
+        "side": "logiclink:block/train_controller_side"
+    }
+}

@@ -5,15 +5,22 @@ import com.apocscode.logiclink.block.CreativeLogicMotorBlockEntity;
 import com.apocscode.logiclink.block.LogicLinkBlock;
 import com.apocscode.logiclink.block.LogicLinkBlockEntity;
 import com.apocscode.logiclink.block.LogicLinkBlockItem;
-import com.apocscode.logiclink.block.LogicMotorBlock;
-import com.apocscode.logiclink.block.LogicMotorBlockEntity;
+import com.apocscode.logiclink.block.LogicDriveBlock;
+import com.apocscode.logiclink.block.LogicDriveBlockEntity;
 import com.apocscode.logiclink.block.LogicSensorBlock;
 import com.apocscode.logiclink.block.LogicSensorBlockEntity;
 import com.apocscode.logiclink.block.LogicSensorBlockItem;
 import com.apocscode.logiclink.block.RedstoneControllerBlock;
 import com.apocscode.logiclink.block.RedstoneControllerBlockEntity;
+import com.apocscode.logiclink.block.TrainControllerBlock;
+import com.apocscode.logiclink.block.TrainControllerBlockEntity;
+import com.apocscode.logiclink.block.SignalTabletItem;
+import com.apocscode.logiclink.block.TrainMonitorBlock;
+import com.apocscode.logiclink.block.TrainMonitorBlockEntity;
+import com.apocscode.logiclink.block.TrainMonitorMenu;
 
 import net.minecraft.core.registries.Registries;
+import net.minecraft.world.inventory.MenuType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.BlockItem;
@@ -39,6 +46,8 @@ public class ModRegistry {
     public static final DeferredRegister.Items ITEMS = DeferredRegister.createItems(LogicLink.MOD_ID);
     public static final DeferredRegister<BlockEntityType<?>> BLOCK_ENTITY_TYPES =
             DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, LogicLink.MOD_ID);
+    public static final DeferredRegister<MenuType<?>> MENU_TYPES =
+            DeferredRegister.create(Registries.MENU, LogicLink.MOD_ID);
     public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS =
             DeferredRegister.create(Registries.CREATIVE_MODE_TAB, LogicLink.MOD_ID);
 
@@ -100,14 +109,41 @@ public class ModRegistry {
     );
 
     /**
-     * Logic Motor (standard) — CC-controlled rotation modifier.
+     * Logic Drive (standard) — CC-controlled rotation modifier.
      * Takes external rotation input and modifies the output.
      * Uses Create's Gearshift model with cyan tint.
      */
-    public static final DeferredBlock<LogicMotorBlock> LOGIC_MOTOR_BLOCK = BLOCKS.register(
-            "logic_motor",
-            () -> new LogicMotorBlock(BlockBehaviour.Properties.of()
+    public static final DeferredBlock<LogicDriveBlock> LOGIC_DRIVE_BLOCK = BLOCKS.register(
+            "logic_drive",
+            () -> new LogicDriveBlock(BlockBehaviour.Properties.of()
                     .mapColor(MapColor.COLOR_CYAN)
+                    .strength(3.5F)
+                    .requiresCorrectToolForDrops()
+                    .sound(SoundType.NETHERITE_BLOCK)
+                    .noOcclusion())
+    );
+
+    /**
+     * Train Controller — CC-controlled peripheral for global train network monitoring.
+     * Reads directly from Create's GlobalRailwayManager. No sensors needed.
+     */
+    public static final DeferredBlock<TrainControllerBlock> TRAIN_CONTROLLER_BLOCK = BLOCKS.register(
+            "train_controller",
+            () -> new TrainControllerBlock(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.WARPED_NYLIUM)
+                    .strength(3.5F)
+                    .requiresCorrectToolForDrops()
+                    .sound(SoundType.NETHERITE_BLOCK))
+    );
+
+    /**
+     * Train Network Monitor — multi-block display (up to 10x10) showing live train data.
+     * Supports all 6 facing directions. In-world TESR + right-click GUI.
+     */
+    public static final DeferredBlock<TrainMonitorBlock> TRAIN_MONITOR_BLOCK = BLOCKS.register(
+            "train_monitor",
+            () -> new TrainMonitorBlock(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.COLOR_BLACK)
                     .strength(3.5F)
                     .requiresCorrectToolForDrops()
                     .sound(SoundType.NETHERITE_BLOCK)
@@ -149,11 +185,36 @@ public class ModRegistry {
     );
 
     /**
-     * BlockItem for the Logic Motor (standard).
+     * BlockItem for the Logic Drive (standard).
      */
-    public static final DeferredItem<BlockItem> LOGIC_MOTOR_ITEM = ITEMS.register(
-            "logic_motor",
-            () -> new BlockItem(LOGIC_MOTOR_BLOCK.get(), new Item.Properties())
+    public static final DeferredItem<BlockItem> LOGIC_DRIVE_ITEM = ITEMS.register(
+            "logic_drive",
+            () -> new BlockItem(LOGIC_DRIVE_BLOCK.get(), new Item.Properties())
+    );
+
+    /**
+     * BlockItem for the Train Controller.
+     */
+    public static final DeferredItem<BlockItem> TRAIN_CONTROLLER_ITEM = ITEMS.register(
+            "train_controller",
+            () -> new BlockItem(TRAIN_CONTROLLER_BLOCK.get(), new Item.Properties())
+    );
+
+    /**
+     * BlockItem for the Train Network Monitor.
+     */
+    public static final DeferredItem<BlockItem> TRAIN_MONITOR_ITEM = ITEMS.register(
+            "train_monitor",
+            () -> new BlockItem(TRAIN_MONITOR_BLOCK.get(), new Item.Properties())
+    );
+
+    /**
+     * Signal Diagnostic Tablet — handheld item that scans the train network
+     * for signal issues and displays diagnostics. Updates after repairs.
+     */
+    public static final DeferredItem<SignalTabletItem> SIGNAL_TABLET_ITEM = ITEMS.register(
+            "signal_tablet",
+            () -> new SignalTabletItem(new Item.Properties())
     );
 
     // ==================== Block Entities ====================
@@ -198,17 +259,45 @@ public class ModRegistry {
                     }
             );
 
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<LogicMotorBlockEntity>> LOGIC_MOTOR_BE =
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<LogicDriveBlockEntity>> LOGIC_DRIVE_BE =
             BLOCK_ENTITY_TYPES.register(
-                    "logic_motor",
+                    "logic_drive",
                     () -> {
-                        BlockEntityType<LogicMotorBlockEntity>[] holder = new BlockEntityType[1];
+                        BlockEntityType<LogicDriveBlockEntity>[] holder = new BlockEntityType[1];
                         holder[0] = BlockEntityType.Builder.of(
-                                (pos, state) -> new LogicMotorBlockEntity(holder[0], pos, state),
-                                LOGIC_MOTOR_BLOCK.get()
+                                (pos, state) -> new LogicDriveBlockEntity(holder[0], pos, state),
+                                LOGIC_DRIVE_BLOCK.get()
                         ).build(null);
                         return holder[0];
                     }
+            );
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TrainControllerBlockEntity>> TRAIN_CONTROLLER_BE =
+            BLOCK_ENTITY_TYPES.register(
+                    "train_controller",
+                    () -> BlockEntityType.Builder.of(
+                            TrainControllerBlockEntity::new,
+                            TRAIN_CONTROLLER_BLOCK.get()
+                    ).build(null)
+            );
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<TrainMonitorBlockEntity>> TRAIN_MONITOR_BE =
+            BLOCK_ENTITY_TYPES.register(
+                    "train_monitor",
+                    () -> BlockEntityType.Builder.of(
+                            TrainMonitorBlockEntity::new,
+                            TRAIN_MONITOR_BLOCK.get()
+                    ).build(null)
+            );
+
+    // ==================== Menu Types ====================
+
+    public static final DeferredHolder<MenuType<?>, MenuType<TrainMonitorMenu>> TRAIN_MONITOR_MENU =
+            MENU_TYPES.register(
+                    "train_monitor",
+                    () -> net.neoforged.neoforge.common.extensions.IMenuTypeExtension.create(
+                            TrainMonitorMenu::new
+                    )
             );
 
     // ==================== Creative Mode Tabs ====================
@@ -223,7 +312,10 @@ public class ModRegistry {
                         output.accept(LOGIC_SENSOR_ITEM.get());
                         output.accept(REDSTONE_CONTROLLER_ITEM.get());
                         output.accept(CREATIVE_LOGIC_MOTOR_ITEM.get());
-                        output.accept(LOGIC_MOTOR_ITEM.get());
+                        output.accept(LOGIC_DRIVE_ITEM.get());
+                        output.accept(TRAIN_CONTROLLER_ITEM.get());
+                        output.accept(TRAIN_MONITOR_ITEM.get());
+                        output.accept(SIGNAL_TABLET_ITEM.get());
                     })
                     .build()
             );

@@ -2,6 +2,7 @@ package com.apocscode.logiclink.block;
 
 import com.apocscode.logiclink.LogicLink;
 import com.apocscode.logiclink.ModRegistry;
+import com.apocscode.logiclink.network.HubNetwork;
 import com.apocscode.logiclink.network.LinkNetwork;
 
 import com.simibubi.create.content.logistics.packager.InventorySummary;
@@ -44,6 +45,9 @@ public class LogicLinkBlockEntity extends BlockEntity {
     /** Tick counter for periodic network inventory refresh. */
     private int refreshTimer = 0;
     private static final int REFRESH_INTERVAL = 40; // Refresh every 2 seconds
+
+    /** Hub scanning range for wireless device discovery. */
+    private int hubRange = HubNetwork.DEFAULT_RANGE;
 
     public LogicLinkBlockEntity(BlockPos pos, BlockState blockState) {
         super(ModRegistry.LOGIC_LINK_BE.get(), pos, blockState);
@@ -140,6 +144,23 @@ public class LogicLinkBlockEntity extends BlockEntity {
         }
     }
 
+    // ==================== Hub Range ====================
+
+    /**
+     * Gets the current hub scanning range in blocks.
+     */
+    public int getHubRange() {
+        return hubRange;
+    }
+
+    /**
+     * Sets the hub scanning range. Devices within this distance are discoverable.
+     */
+    public void setHubRange(int range) {
+        this.hubRange = Math.max(1, Math.min(HubNetwork.MAX_RANGE, range));
+        setChanged();
+    }
+
     // ==================== Cleanup ====================
 
     /**
@@ -159,6 +180,9 @@ public class LogicLinkBlockEntity extends BlockEntity {
         if (networkFrequency != null) {
             tag.putUUID("Freq", networkFrequency);
         }
+        if (hubRange != HubNetwork.DEFAULT_RANGE) {
+            tag.putInt("HubRange", hubRange);
+        }
     }
 
     @Override
@@ -171,6 +195,7 @@ public class LogicLinkBlockEntity extends BlockEntity {
         } else {
             networkFrequency = null;
         }
+        hubRange = tag.contains("HubRange") ? tag.getInt("HubRange") : HubNetwork.DEFAULT_RANGE;
         cachedSummary = null;
     }
 }

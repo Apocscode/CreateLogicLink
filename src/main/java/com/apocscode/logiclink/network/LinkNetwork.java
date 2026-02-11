@@ -2,12 +2,18 @@ package com.apocscode.logiclink.network;
 
 import com.apocscode.logiclink.block.LogicLinkBlockEntity;
 import com.apocscode.logiclink.block.LogicSensorBlockEntity;
+import com.simibubi.create.content.logistics.factoryBoard.FactoryPanelBehaviour;
+import com.simibubi.create.content.logistics.factoryBoard.FactoryPanelBlock;
+import com.simibubi.create.content.logistics.factoryBoard.FactoryPanelBlockEntity;
 import com.simibubi.create.content.logistics.packagerLink.LogisticallyLinkedBehaviour;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.chunk.LevelChunk;
 import net.neoforged.neoforge.network.PacketDistributor;
 
 import java.lang.ref.WeakReference;
@@ -109,11 +115,43 @@ public class LinkNetwork {
         }
 
         // Gather all Create logistics blocks on this network
+        // Also scan nearby chunks for Factory Panel blocks on the same network
         try {
             Collection<LogisticallyLinkedBehaviour> createLinks =
                     LogisticallyLinkedBehaviour.getAllPresent(freq, false);
+
+            Set<Long> searchedChunks = new HashSet<>();
+            int chunkRadius = 4; // 64 blocks from each link
+
             for (LogisticallyLinkedBehaviour behaviour : createLinks) {
-                positionSet.add(behaviour.getPos());
+                BlockPos linkPos = behaviour.getPos();
+                positionSet.add(linkPos);
+
+                // Scan nearby chunks for factory panel blocks
+                int centerCX = linkPos.getX() >> 4;
+                int centerCZ = linkPos.getZ() >> 4;
+                for (int dx = -chunkRadius; dx <= chunkRadius; dx++) {
+                    for (int dz = -chunkRadius; dz <= chunkRadius; dz++) {
+                        int cx = centerCX + dx;
+                        int cz = centerCZ + dz;
+                        long chunkKey = ChunkPos.asLong(cx, cz);
+                        if (!searchedChunks.add(chunkKey)) continue;
+                        if (!level.hasChunk(cx, cz)) continue;
+
+                        LevelChunk chunk = (LevelChunk) level.getChunk(cx, cz);
+                        for (BlockEntity be : chunk.getBlockEntities().values()) {
+                            if (be instanceof FactoryPanelBlockEntity panelBE) {
+                                for (FactoryPanelBehaviour panel : panelBE.panels.values()) {
+                                    if (panel != null && panel.isActive()
+                                            && panel.network != null && panel.network.equals(freq)) {
+                                        positionSet.add(panelBE.getBlockPos());
+                                        break; // one match is enough for this block
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         } catch (Exception e) {
             // Silently handle if Create API unavailable

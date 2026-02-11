@@ -2,15 +2,20 @@ package com.apocscode.logiclink.block;
 
 import com.apocscode.logiclink.LogicLink;
 import com.apocscode.logiclink.ModRegistry;
+import com.apocscode.logiclink.network.HubNetwork;
+import com.apocscode.logiclink.network.IHubDevice;
 import com.apocscode.logiclink.network.VirtualRedstoneLink;
 import com.simibubi.create.Create;
+import com.simibubi.create.api.equipment.goggles.IHaveGoggleInformation;
 
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
@@ -36,10 +41,16 @@ import java.util.Map;
  * dozens of physical Redstone Link blocks.
  * </p>
  */
-public class RedstoneControllerBlockEntity extends BlockEntity {
+public class RedstoneControllerBlockEntity extends BlockEntity implements IHubDevice, IHaveGoggleInformation {
 
     /** Live virtual redstone link channels, keyed by "item1|item2". */
     private final Map<String, VirtualRedstoneLink> channels = new HashMap<>();
+
+    /** User-assigned label for hub identification. */
+    private String hubLabel = "";
+
+    /** Whether this device has registered with HubNetwork. */
+    private boolean hubRegistered = false;
 
     /** Saved channel data from NBT, consumed on first tick. */
     private List<SavedChannel> pendingChannels = null;
@@ -249,6 +260,12 @@ public class RedstoneControllerBlockEntity extends BlockEntity {
             be.needsRegistration = false;
             be.restoreChannels();
         }
+
+        // Register with hub network (proximity-based)
+        if (!be.hubRegistered) {
+            HubNetwork.register(be);
+            be.hubRegistered = true;
+        }
     }
 
     /**
@@ -289,6 +306,58 @@ public class RedstoneControllerBlockEntity extends BlockEntity {
             link.kill();
         }
         channels.clear();
+        HubNetwork.unregister(this);
+    }
+
+    // ==================== IHubDevice ====================
+
+    @Override
+    public String getHubLabel() { return hubLabel; }
+
+    @Override
+    public void setHubLabel(String label) {
+        this.hubLabel = label != null ? label : "";
+        setChanged();
+        // Sync to client for goggle tooltip
+        if (level != null && !level.isClientSide()) {
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+        }
+    }
+
+    @Override
+    public String getDeviceType() { return "redstone_controller"; }
+
+    @Override
+    public BlockPos getDevicePos() { return getBlockPos(); }
+
+    // ==================== Goggle Tooltip ====================
+
+    @Override
+    public boolean addToGoggleTooltip(List<Component> tooltip, boolean isPlayerSneaking) {
+        if (!hubLabel.isEmpty()) {
+            tooltip.add(Component.literal("    ")
+                .append(Component.literal("Label: ").withStyle(ChatFormatting.GRAY))
+                .append(Component.literal(hubLabel).withStyle(ChatFormatting.AQUA)));
+        }
+        tooltip.add(Component.literal("    ")
+            .append(Component.literal("Channels: ").withStyle(ChatFormatting.GRAY))
+            .append(Component.literal(String.valueOf(channels.size())).withStyle(ChatFormatting.WHITE))
+            .append(Component.literal(" active").withStyle(ChatFormatting.GRAY)));
+        return true;
+    }
+
+    // ==================== Client Sync ====================
+
+    @Override
+    public net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket getUpdatePacket() {
+        return net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    @Override
+    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+        CompoundTag tag = super.getUpdateTag(registries);
+        saveAdditional(tag, registries);
+        return tag;
     }
 
     // ==================== NBT Persistence ====================
@@ -296,6 +365,10 @@ public class RedstoneControllerBlockEntity extends BlockEntity {
     @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
+
+        if (!hubLabel.isEmpty()) {
+            tag.putString("HubLabel", hubLabel);
+        }
 
         ListTag channelList = new ListTag();
 
@@ -332,6 +405,9 @@ public class RedstoneControllerBlockEntity extends BlockEntity {
 
         // Clear live channels (will be re-registered on first tick)
         channels.clear();
+
+        hubLabel = tag.getString("HubLabel");
+        hubRegistered = false;
 
         if (tag.contains("Channels")) {
             ListTag channelList = tag.getList("Channels", Tag.TAG_COMPOUND);

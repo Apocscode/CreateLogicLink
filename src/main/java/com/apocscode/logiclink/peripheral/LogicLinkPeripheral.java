@@ -1,12 +1,18 @@
 package com.apocscode.logiclink.peripheral;
 
+import com.apocscode.logiclink.block.CreativeLogicMotorBlockEntity;
 import com.apocscode.logiclink.block.LogicLinkBlockEntity;
+import com.apocscode.logiclink.block.LogicDriveBlockEntity;
 import com.apocscode.logiclink.block.LogicSensorBlockEntity;
+import com.apocscode.logiclink.block.RedstoneControllerBlockEntity;
+import com.apocscode.logiclink.network.HubNetwork;
+import com.apocscode.logiclink.network.IHubDevice;
 import com.apocscode.logiclink.network.SensorNetwork;
 import com.simibubi.create.content.logistics.BigItemStack;
+import com.simibubi.create.content.logistics.BigItemStack;
 import com.simibubi.create.content.logistics.factoryBoard.FactoryPanelBehaviour;
-import com.simibubi.create.content.logistics.factoryBoard.FactoryPanelPosition;
-import com.simibubi.create.content.logistics.factoryBoard.FactoryPanelSupportBehaviour;
+import com.simibubi.create.content.logistics.factoryBoard.FactoryPanelBlock;
+import com.simibubi.create.content.logistics.factoryBoard.FactoryPanelBlockEntity;
 import com.simibubi.create.content.logistics.packager.InventorySummary;
 import com.simibubi.create.content.logistics.packagerLink.LogisticallyLinkedBehaviour;
 import com.simibubi.create.content.logistics.packagerLink.LogisticallyLinkedBehaviour.RequestType;
@@ -14,7 +20,6 @@ import com.simibubi.create.content.logistics.packagerLink.LogisticsManager;
 import com.simibubi.create.content.logistics.packagerLink.PackagerLinkBlockEntity;
 import com.simibubi.create.content.logistics.stockTicker.PackageOrder;
 import com.simibubi.create.content.logistics.stockTicker.PackageOrderWithCrafts;
-import com.simibubi.create.foundation.blockEntity.behaviour.BlockEntityBehaviour;
 
 import dan200.computercraft.api.lua.LuaException;
 import dan200.computercraft.api.lua.LuaFunction;
@@ -24,8 +29,11 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ItemLike;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.chunk.LevelChunk;
 
 import org.jetbrains.annotations.Nullable;
 import org.slf4j.Logger;
@@ -35,8 +43,10 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -237,66 +247,88 @@ public class LogicLinkPeripheral implements IPeripheral {
         List<Map<String, Object>> gauges = new ArrayList<>();
 
         try {
+            // Collect all link positions on our network as search anchors
             Collection<LogisticallyLinkedBehaviour> links =
                     LogisticallyLinkedBehaviour.getAllPresent(freqId, false);
 
+            // Search chunks near each link for FactoryPanelBlockEntity instances
+            Set<Long> searchedChunks = new HashSet<>();
+            int chunkRadius = 4; // 4 chunks = 64 blocks from each link
+
             for (LogisticallyLinkedBehaviour link : links) {
                 BlockPos linkPos = link.getPos();
+                int centerCX = linkPos.getX() >> 4;
+                int centerCZ = linkPos.getZ() >> 4;
 
-                // Check if this link has Factory Panel support
-                FactoryPanelSupportBehaviour support =
-                        BlockEntityBehaviour.get(level, linkPos, FactoryPanelSupportBehaviour.TYPE);
-                if (support == null) continue;
+                for (int dx = -chunkRadius; dx <= chunkRadius; dx++) {
+                    for (int dz = -chunkRadius; dz <= chunkRadius; dz++) {
+                        int cx = centerCX + dx;
+                        int cz = centerCZ + dz;
+                        long chunkKey = ChunkPos.asLong(cx, cz);
+                        if (!searchedChunks.add(chunkKey)) continue;
+                        if (!level.hasChunk(cx, cz)) continue;
 
-                for (FactoryPanelPosition panelPos : support.getLinkedPanels()) {
-                    try {
-                        FactoryPanelBehaviour panel = FactoryPanelBehaviour.at(level, panelPos);
-                        if (panel == null || !panel.isActive()) continue;
+                        LevelChunk chunk = (LevelChunk) level.getChunk(cx, cz);
+                        for (BlockEntity be : chunk.getBlockEntities().values()) {
+                            if (!(be instanceof FactoryPanelBlockEntity panelBE)) continue;
 
-                        Map<String, Object> gauge = new HashMap<>();
-                        ItemStack filter = panel.getFilter();
+                            for (Map.Entry<FactoryPanelBlock.PanelSlot, FactoryPanelBehaviour> entry
+                                    : panelBE.panels.entrySet()) {
+                                try {
+                                    FactoryPanelBehaviour panel = entry.getValue();
+                                    if (panel == null || !panel.isActive()) continue;
 
-                        // Item info
-                        if (!filter.isEmpty()) {
-                            gauge.put("item", filter.getItem().builtInRegistryHolder()
-                                    .key().location().toString());
-                            gauge.put("itemDisplayName", filter.getHoverName().getString());
-                        } else {
-                            gauge.put("item", "none");
-                            gauge.put("itemDisplayName", "");
+                                    // Check if panel's network matches our logistics frequency
+                                    if (panel.network == null || !panel.network.equals(freqId)) continue;
+
+                                    Map<String, Object> gauge = new HashMap<>();
+                                    ItemStack filter = panel.getFilter();
+
+                                    // Item info
+                                    if (!filter.isEmpty()) {
+                                        gauge.put("item", filter.getItem().builtInRegistryHolder()
+                                                .key().location().toString());
+                                        gauge.put("itemDisplayName", filter.getHoverName().getString());
+                                    } else {
+                                        gauge.put("item", "none");
+                                        gauge.put("itemDisplayName", "");
+                                    }
+
+                                    // Target and stock levels
+                                    gauge.put("targetAmount", panel.count);
+                                    gauge.put("currentStock", panel.getLevelInStorage());
+                                    gauge.put("promised", panel.getPromised());
+
+                                    // Status flags
+                                    gauge.put("satisfied", panel.satisfied);
+                                    gauge.put("promisedSatisfied", panel.promisedSatisfied);
+                                    gauge.put("waitingForNetwork", panel.waitingForNetwork);
+                                    gauge.put("redstonePowered", panel.redstonePowered);
+                                    gauge.put("missingAddress", panel.isMissingAddress());
+
+                                    // Configuration
+                                    gauge.put("address", panel.recipeAddress);
+                                    gauge.put("slot", entry.getKey().name());
+
+                                    // Position of the gauge panel
+                                    Map<String, Integer> pos = new HashMap<>();
+                                    pos.put("x", panelBE.getBlockPos().getX());
+                                    pos.put("y", panelBE.getBlockPos().getY());
+                                    pos.put("z", panelBE.getBlockPos().getZ());
+                                    gauge.put("position", pos);
+
+                                    gauges.add(gauge);
+                                } catch (Exception e) {
+                                    LOGGER.debug("[getGauges] Failed to read panel at {}: {}",
+                                            panelBE.getBlockPos(), e.getMessage());
+                                }
+                            }
                         }
-
-                        // Target and stock levels
-                        gauge.put("targetAmount", panel.count);
-                        gauge.put("currentStock", panel.getLevelInStorage());
-                        gauge.put("promised", panel.getPromised());
-
-                        // Status flags
-                        gauge.put("satisfied", panel.satisfied);
-                        gauge.put("promisedSatisfied", panel.promisedSatisfied);
-                        gauge.put("waitingForNetwork", panel.waitingForNetwork);
-                        gauge.put("redstonePowered", panel.redstonePowered);
-                        gauge.put("missingAddress", panel.isMissingAddress());
-
-                        // Configuration
-                        gauge.put("address", panel.recipeAddress);
-                        gauge.put("slot", panelPos.slot().name());
-
-                        // Position of the gauge panel
-                        Map<String, Integer> pos = new HashMap<>();
-                        pos.put("x", panelPos.pos().getX());
-                        pos.put("y", panelPos.pos().getY());
-                        pos.put("z", panelPos.pos().getZ());
-                        gauge.put("position", pos);
-
-                        gauges.add(gauge);
-                    } catch (Exception e) {
-                        LOGGER.debug("Failed to read gauge at {}: {}", panelPos, e.getMessage());
                     }
                 }
             }
         } catch (Exception e) {
-            LOGGER.warn("Failed to enumerate gauges: {}", e.getMessage());
+            LOGGER.warn("[getGauges] Failed to enumerate gauges: {}", e.getMessage(), e);
         }
 
         return gauges;
@@ -639,6 +671,502 @@ public class LogicLinkPeripheral implements IPeripheral {
             LOGGER.error("safeRequest: LogisticsManager call failed:", e);
             throw new LuaException("Request failed: " + e.getMessage());
         }
+    }
+
+    // ==================== Wireless Hub Methods ====================
+
+    /**
+     * Helper: resolves a device identifier (auto-ID like "sensor_0" or label) to a BlockEntity.
+     */
+    private BlockEntity resolveDevice(String id) throws LuaException {
+        Level level = blockEntity.getLevel();
+        if (level == null) throw new LuaException("World not available");
+
+        List<BlockEntity> devices = HubNetwork.getAllDevices();
+
+        // Build auto-ID counters
+        Map<String, Integer> typeCounters = new HashMap<>();
+        for (BlockEntity be : devices) {
+            if (!(be instanceof IHubDevice hub)) continue;
+            String type = hub.getDeviceType();
+            int idx = typeCounters.getOrDefault(type, 0);
+            typeCounters.put(type, idx + 1);
+
+            String autoId = type + "_" + idx;
+            String label = hub.getHubLabel();
+
+            if (autoId.equals(id) || (!label.isEmpty() && label.equals(id))) {
+                return be;
+            }
+        }
+        throw new LuaException("Device not found: " + id);
+    }
+
+    /**
+     * Returns a list of all hub devices within range.
+     * Each entry has id, type, label, and position.
+     *
+     * @return A list of device info tables.
+     */
+    @LuaFunction(mainThread = true)
+    public final List<Map<String, Object>> getDevices() {
+        Level level = blockEntity.getLevel();
+        if (level == null) return new ArrayList<>();
+
+        List<BlockEntity> devices = HubNetwork.getAllDevices();
+
+        List<Map<String, Object>> result = new ArrayList<>();
+        Map<String, Integer> typeCounters = new HashMap<>();
+
+        for (BlockEntity be : devices) {
+            if (!(be instanceof IHubDevice hub)) continue;
+
+            String type = hub.getDeviceType();
+            int idx = typeCounters.getOrDefault(type, 0);
+            typeCounters.put(type, idx + 1);
+
+            Map<String, Object> entry = new HashMap<>();
+            entry.put("id", type + "_" + idx);
+            entry.put("type", type);
+            entry.put("label", hub.getHubLabel());
+
+            // Dimension
+            if (be.getLevel() != null) {
+                entry.put("dimension", be.getLevel().dimension().location().toString());
+            }
+
+            Map<String, Integer> pos = new HashMap<>();
+            pos.put("x", hub.getDevicePos().getX());
+            pos.put("y", hub.getDevicePos().getY());
+            pos.put("z", hub.getDevicePos().getZ());
+            entry.put("position", pos);
+
+            // Distance from hub (only meaningful in same dimension)
+            if (be.getLevel() == blockEntity.getLevel()) {
+                double dist = Math.sqrt(blockEntity.getBlockPos().distSqr(hub.getDevicePos()));
+                entry.put("distance", Math.round(dist * 10.0) / 10.0);
+            } else {
+                entry.put("distance", -1); // cross-dimension
+            }
+
+            result.add(entry);
+        }
+        return result;
+    }
+
+    /**
+     * Gets the current hub scanning range in blocks.
+     *
+     * @return The range (1-256, default 64).
+     */
+    @LuaFunction(mainThread = true)
+    public final int getHubRange() {
+        return blockEntity.getHubRange();
+    }
+
+    /**
+     * Sets the hub scanning range in blocks.
+     *
+     * @param range The range (1-256).
+     * @throws LuaException if range is out of bounds.
+     */
+    @LuaFunction(mainThread = true)
+    public final void setHubRange(int range) throws LuaException {
+        if (range < 1 || range > HubNetwork.MAX_RANGE) {
+            throw new LuaException("Range must be 1-" + HubNetwork.MAX_RANGE);
+        }
+        blockEntity.setHubRange(range);
+    }
+
+    /**
+     * Sets a label on a hub device for easier identification.
+     *
+     * @param deviceId The device auto-ID (e.g. "sensor_0") or current label.
+     * @param label    The new label (max 32 chars, empty to clear).
+     * @throws LuaException if the device is not found.
+     */
+    @LuaFunction(mainThread = true)
+    public final void setDeviceLabel(String deviceId, String label) throws LuaException {
+        BlockEntity be = resolveDevice(deviceId);
+        if (!(be instanceof IHubDevice hub)) throw new LuaException("Not a hub device");
+        if (label.length() > 32) label = label.substring(0, 32);
+        hub.setHubLabel(label);
+        be.setChanged(); // Mark dirty for NBT save
+    }
+
+    /**
+     * Gets the label of a hub device.
+     *
+     * @param deviceId The device auto-ID or label.
+     * @return The label, or empty string if none set.
+     * @throws LuaException if the device is not found.
+     */
+    @LuaFunction(mainThread = true)
+    public final String getDeviceLabel(String deviceId) throws LuaException {
+        BlockEntity be = resolveDevice(deviceId);
+        if (!(be instanceof IHubDevice hub)) throw new LuaException("Not a hub device");
+        return hub.getHubLabel();
+    }
+
+    // ---- Remote Sensor Functions ----
+
+    /**
+     * Gets sensor data from a remote sensor via the hub.
+     *
+     * @param deviceId The sensor's auto-ID or label.
+     * @return A table with the sensor's cached data, or nil if no data.
+     * @throws LuaException if the device is not found or is not a sensor.
+     */
+    @LuaFunction(mainThread = true)
+    @Nullable
+    public final Map<String, Object> getRemoteSensorData(String deviceId) throws LuaException {
+        BlockEntity be = resolveDevice(deviceId);
+        if (!(be instanceof LogicSensorBlockEntity sensor)) {
+            throw new LuaException("Device '" + deviceId + "' is not a sensor");
+        }
+
+        Map<String, Object> result = new HashMap<>();
+        Map<String, Integer> pos = new HashMap<>();
+        pos.put("x", sensor.getBlockPos().getX());
+        pos.put("y", sensor.getBlockPos().getY());
+        pos.put("z", sensor.getBlockPos().getZ());
+        result.put("position", pos);
+
+        BlockPos targetPos = sensor.getTargetPos();
+        Map<String, Integer> target = new HashMap<>();
+        target.put("x", targetPos.getX());
+        target.put("y", targetPos.getY());
+        target.put("z", targetPos.getZ());
+        result.put("targetPosition", target);
+
+        Map<String, Object> data = sensor.getCachedData();
+        if (data != null) {
+            result.put("data", data);
+        }
+
+        return result;
+    }
+
+    /**
+     * Gets sensor data from all remote sensors within hub range.
+     *
+     * @return A list of sensor data tables.
+     */
+    @LuaFunction(mainThread = true)
+    public final List<Map<String, Object>> getAllRemoteSensorData() {
+        Level level = blockEntity.getLevel();
+        if (level == null) return new ArrayList<>();
+
+        List<BlockEntity> devices = HubNetwork.getAllDevices();
+
+        List<Map<String, Object>> result = new ArrayList<>();
+        int sensorIdx = 0;
+
+        for (BlockEntity be : devices) {
+            if (!(be instanceof LogicSensorBlockEntity sensor)) continue;
+
+            Map<String, Object> entry = new HashMap<>();
+            entry.put("id", "sensor_" + sensorIdx);
+            entry.put("label", sensor.getHubLabel());
+
+            // Dimension
+            if (sensor.getLevel() != null) {
+                entry.put("dimension", sensor.getLevel().dimension().location().toString());
+            }
+
+            Map<String, Integer> pos = new HashMap<>();
+            pos.put("x", sensor.getBlockPos().getX());
+            pos.put("y", sensor.getBlockPos().getY());
+            pos.put("z", sensor.getBlockPos().getZ());
+            entry.put("position", pos);
+
+            BlockPos targetPos = sensor.getTargetPos();
+            Map<String, Integer> target = new HashMap<>();
+            target.put("x", targetPos.getX());
+            target.put("y", targetPos.getY());
+            target.put("z", targetPos.getZ());
+            entry.put("targetPosition", target);
+
+            Map<String, Object> data = sensor.getCachedData();
+            if (data != null) {
+                entry.put("data", data);
+            }
+
+            result.add(entry);
+            sensorIdx++;
+        }
+        return result;
+    }
+
+    // ---- Remote Train Control Functions ----
+
+    /**
+     * Cycles a track switch (Steam 'n' Rails) to its next state via a sensor
+     * that is targeting a track switch block.
+     * <p>
+     * Usage: cycleTrackSwitch("sensor_7") -- where sensor_7 targets a track switch
+     *
+     * @param sensorId The sensor device ID or label targeting a track switch.
+     * @return true if the switch was cycled successfully.
+     * @throws LuaException if the sensor doesn't target a track switch.
+     */
+    @LuaFunction(mainThread = true)
+    public final boolean cycleTrackSwitch(String sensorId) throws LuaException {
+        BlockEntity be = resolveDevice(sensorId);
+        if (!(be instanceof LogicSensorBlockEntity sensor)) {
+            throw new LuaException("Device '" + sensorId + "' is not a sensor");
+        }
+
+        Level level = blockEntity.getLevel();
+        if (level == null) throw new LuaException("World not loaded");
+
+        BlockPos targetPos = sensor.getTargetPos();
+        if (!CreateBlockReader.isTrackSwitch(level, targetPos)) {
+            throw new LuaException("Sensor target is not a track switch");
+        }
+
+        return CreateBlockReader.cycleTrackSwitch(level, targetPos);
+    }
+
+    /**
+     * Gets the current state of a track switch (Steam 'n' Rails) via a sensor.
+     * <p>
+     * Returns a table with: switchState, automatic, locked, isNormal,
+     * isReverseLeft, isReverseRight, exitCount, analogOutput
+     *
+     * @param sensorId The sensor device ID or label targeting a track switch.
+     * @return A table of switch state data.
+     * @throws LuaException if the sensor doesn't target a track switch.
+     */
+    @LuaFunction(mainThread = true)
+    @Nullable
+    public final Map<String, Object> getTrackSwitchState(String sensorId) throws LuaException {
+        BlockEntity be = resolveDevice(sensorId);
+        if (!(be instanceof LogicSensorBlockEntity sensor)) {
+            throw new LuaException("Device '" + sensorId + "' is not a sensor");
+        }
+
+        Level level = blockEntity.getLevel();
+        if (level == null) throw new LuaException("World not loaded");
+
+        BlockPos targetPos = sensor.getTargetPos();
+        Map<String, Object> data = CreateBlockReader.readBlockData(level, targetPos);
+        if (data == null || !data.containsKey("isTrackSwitch")) {
+            throw new LuaException("Sensor target is not a track switch");
+        }
+        return data;
+    }
+
+    /**
+     * Gets detailed train data from a station, signal, or observer via a sensor.
+     * <p>
+     * For stations: stationName, trainPresent, trainImminent, presentTrainName,
+     * presentTrainSpeed, hasSchedule, assembling
+     * For signals: signalState (red/yellow/green/invalid), powered, overlay
+     * For observers: trainPassing, powered, filter, filterName
+     *
+     * @param sensorId The sensor device ID or label targeting a train block.
+     * @return A table of train block data.
+     * @throws LuaException if the sensor is invalid.
+     */
+    @LuaFunction(mainThread = true)
+    @Nullable
+    public final Map<String, Object> getTrainBlockData(String sensorId) throws LuaException {
+        BlockEntity be = resolveDevice(sensorId);
+        if (!(be instanceof LogicSensorBlockEntity sensor)) {
+            throw new LuaException("Device '" + sensorId + "' is not a sensor");
+        }
+
+        Level level = blockEntity.getLevel();
+        if (level == null) throw new LuaException("World not loaded");
+
+        BlockPos targetPos = sensor.getTargetPos();
+        Map<String, Object> data = CreateBlockReader.readBlockData(level, targetPos);
+        if (data == null) {
+            throw new LuaException("No block entity at sensor target");
+        }
+        return data;
+    }
+
+    // ---- Remote Motor Functions ----
+
+    /**
+     * Enables or disables a remote motor.
+     *
+     * @param deviceId The motor's auto-ID or label.
+     * @param enabled  true to enable, false to disable.
+     * @throws LuaException if the device is not found or is not a motor.
+     */
+    @LuaFunction(mainThread = true)
+    public final void enableRemote(String deviceId, boolean enabled) throws LuaException {
+        BlockEntity be = resolveDevice(deviceId);
+        if (be instanceof CreativeLogicMotorBlockEntity motor) {
+            motor.setEnabled(enabled);
+        } else if (be instanceof LogicDriveBlockEntity motor) {
+            motor.setMotorEnabled(enabled);
+        } else {
+            throw new LuaException("Device '" + deviceId + "' is not a motor");
+        }
+    }
+
+    /**
+     * Sets the speed of a remote creative motor.
+     *
+     * @param deviceId The creative motor's auto-ID or label.
+     * @param speed    RPM value (-256 to 256).
+     * @throws LuaException if the device is not a creative motor.
+     */
+    @LuaFunction(mainThread = true)
+    public final void setRemoteSpeed(String deviceId, int speed) throws LuaException {
+        BlockEntity be = resolveDevice(deviceId);
+        if (be instanceof CreativeLogicMotorBlockEntity motor) {
+            motor.setMotorSpeed(speed);
+        } else {
+            throw new LuaException("Device '" + deviceId + "' is not a creative motor (use setRemoteModifier for logic motors)");
+        }
+    }
+
+    /**
+     * Sets the speed modifier of a remote logic motor.
+     *
+     * @param deviceId The logic motor's auto-ID or label.
+     * @param modifier Multiplier (-16.0 to 16.0).
+     * @throws LuaException if the device is not a logic motor.
+     */
+    @LuaFunction(mainThread = true)
+    public final void setRemoteModifier(String deviceId, double modifier) throws LuaException {
+        BlockEntity be = resolveDevice(deviceId);
+        if (be instanceof LogicDriveBlockEntity motor) {
+            motor.setSpeedModifier((float) modifier);
+        } else {
+            throw new LuaException("Device '" + deviceId + "' is not a logic drive");
+        }
+    }
+
+    /**
+     * Sets the reversed state of a remote logic motor.
+     *
+     * @param deviceId The logic motor's auto-ID or label.
+     * @param reversed true to reverse rotation direction.
+     * @throws LuaException if the device is not a logic motor.
+     */
+    @LuaFunction(mainThread = true)
+    public final void setRemoteReversed(String deviceId, boolean reversed) throws LuaException {
+        BlockEntity be = resolveDevice(deviceId);
+        if (be instanceof LogicDriveBlockEntity motor) {
+            motor.setReversed(reversed);
+        } else {
+            throw new LuaException("Device '" + deviceId + "' is not a logic drive");
+        }
+    }
+
+    /**
+     * Gets comprehensive status info from a remote motor.
+     *
+     * @param deviceId The motor's auto-ID or label.
+     * @return A table with motor status (type, enabled, speed, stress, sequence info).
+     * @throws LuaException if the device is not a motor.
+     */
+    @LuaFunction(mainThread = true)
+    public final Map<String, Object> getRemoteMotorInfo(String deviceId) throws LuaException {
+        BlockEntity be = resolveDevice(deviceId);
+        Map<String, Object> info = new HashMap<>();
+
+        if (be instanceof CreativeLogicMotorBlockEntity motor) {
+            info.put("type", "creative_motor");
+            info.put("enabled", motor.isEnabled());
+            info.put("targetSpeed", motor.getMotorSpeed());
+            info.put("actualSpeed", (double) motor.getActualSpeed());
+            info.put("stressCapacity", (double) motor.getStressCapacityValue());
+            info.put("stressUsage", (double) motor.getStressUsageValue());
+            info.put("sequenceRunning", motor.isSequenceRunning());
+            info.put("sequenceSize", motor.getSequenceSize());
+        } else if (be instanceof LogicDriveBlockEntity motor) {
+            info.put("type", "drive");
+            info.put("enabled", motor.isMotorEnabled());
+            info.put("modifier", (double) motor.getSpeedModifier());
+            info.put("reversed", motor.isReversed());
+            info.put("inputSpeed", (double) motor.getInputSpeed());
+            info.put("outputSpeed", (double) motor.getOutputSpeed());
+            info.put("sequenceRunning", motor.isSequenceRunning());
+            info.put("sequenceSize", motor.getSequenceSize());
+        } else {
+            throw new LuaException("Device '" + deviceId + "' is not a motor");
+        }
+
+        return info;
+    }
+
+    // ---- Remote Redstone Functions ----
+
+    /**
+     * Sets a redstone output channel on a remote redstone controller.
+     *
+     * @param deviceId The controller's auto-ID or label.
+     * @param item1    First frequency item (e.g. "minecraft:red_dye").
+     * @param item2    Second frequency item.
+     * @param power    Signal strength (0-15).
+     * @throws LuaException if the device is not a redstone controller.
+     */
+    @LuaFunction(mainThread = true)
+    public final void setRemoteRedstoneOutput(String deviceId, String item1, String item2, int power)
+            throws LuaException {
+        BlockEntity be = resolveDevice(deviceId);
+        if (!(be instanceof RedstoneControllerBlockEntity controller)) {
+            throw new LuaException("Device '" + deviceId + "' is not a redstone controller");
+        }
+        controller.setOutput(item1, item2, power);
+    }
+
+    /**
+     * Gets a redstone input value from a channel on a remote redstone controller.
+     *
+     * @param deviceId The controller's auto-ID or label.
+     * @param item1    First frequency item.
+     * @param item2    Second frequency item.
+     * @return The signal strength (0-15).
+     * @throws LuaException if the device is not a redstone controller.
+     */
+    @LuaFunction(mainThread = true)
+    public final int getRemoteRedstoneInput(String deviceId, String item1, String item2)
+            throws LuaException {
+        BlockEntity be = resolveDevice(deviceId);
+        if (!(be instanceof RedstoneControllerBlockEntity controller)) {
+            throw new LuaException("Device '" + deviceId + "' is not a redstone controller");
+        }
+        return controller.getInput(item1, item2);
+    }
+
+    /**
+     * Gets all redstone channels on a remote redstone controller.
+     *
+     * @param deviceId The controller's auto-ID or label.
+     * @return A list of channel info tables (item1, item2, mode, power).
+     * @throws LuaException if the device is not a redstone controller.
+     */
+    @LuaFunction(mainThread = true)
+    public final List<Map<String, Object>> getRemoteRedstoneChannels(String deviceId) throws LuaException {
+        BlockEntity be = resolveDevice(deviceId);
+        if (!(be instanceof RedstoneControllerBlockEntity controller)) {
+            throw new LuaException("Device '" + deviceId + "' is not a redstone controller");
+        }
+        return controller.getChannelList();
+    }
+
+    /**
+     * Sets all transmit channels on a remote redstone controller to the same power level.
+     *
+     * @param deviceId The controller's auto-ID or label.
+     * @param power    Signal strength (0-15).
+     * @throws LuaException if the device is not a redstone controller.
+     */
+    @LuaFunction(mainThread = true)
+    public final void setAllRemoteRedstoneOutputs(String deviceId, int power) throws LuaException {
+        BlockEntity be = resolveDevice(deviceId);
+        if (!(be instanceof RedstoneControllerBlockEntity controller)) {
+            throw new LuaException("Device '" + deviceId + "' is not a redstone controller");
+        }
+        controller.setAllOutputs(power);
     }
 
     // ==================== Peripheral Equality ====================

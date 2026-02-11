@@ -4,7 +4,10 @@
     "block.logiclink.logic_sensor": "Logic Sensor",
     "block.logiclink.redstone_controller": "Redstone Controller",
     "block.logiclink.creative_logic_motor": "Creative Logic Motor",
-    "block.logiclink.logic_motor": "Logic Motor",
+    "block.logiclink.logic_drive": "Logic Drive",
+    "block.logiclink.train_controller": "Train Controller",
+    "block.logiclink.train_monitor": "Train Network Monitor",
+    "item.logiclink.signal_tablet": "Signal Diagnostic Tablet",
 
     "logiclink.linked.tooltip": "Logic Link : Linked",
     "logiclink.linked.tooltip_clear": "Right-click in air to clear",
@@ -65,7 +68,7 @@
     "logiclink.ponder.redstone_controller_overview.text_6": "8 Lua functions: setOutput, getInput, getChannels, setAllOutputs, and more",
 
     "logiclink.ponder.tag.motor_kinetics": "Rotation Output",
-    "logiclink.ponder.tag.motor_kinetics.description": "Logic Motors generate or modify rotational force controlled by CC:Tweaked computers",
+    "logiclink.ponder.tag.motor_kinetics.description": "Logic Motors and Drives generate or modify rotational force controlled by CC:Tweaked computers",
     "logiclink.ponder.tag.motor_computers": "Computer Control",
     "logiclink.ponder.tag.motor_computers.description": "Set speed, direction, and sequences from Lua programs",
     "logiclink.ponder.tag.motor_sequences": "Sequenced Operations",
@@ -79,11 +82,11 @@
     "logiclink.ponder.creative_logic_motor_overview.text_5": "Program sequences: rotate a set number of degrees, wait, then change speed",
     "logiclink.ponder.creative_logic_motor_overview.text_6": "16 Lua functions: setSpeed, stop, rotate, addSequenceStep, runSequence, and more",
 
-    "logiclink.ponder.logic_motor_overview.header": "Logic Motor — Programmable Rotation Modifier",
-    "logiclink.ponder.logic_motor_overview.text_1": "The Logic Motor modifies rotation passing through it — controlled by a CC:Tweaked computer",
-    "logiclink.ponder.logic_motor_overview.text_2": "The ORANGE-marked side is the DRIVE INPUT — connect your power source (shaft, water wheel, etc.) here",
-    "logiclink.ponder.logic_motor_overview.text_3": "The LIGHT BLUE side is the CC OUTPUT — modified rotation exits here to your machines",
-    "logiclink.ponder.logic_motor_overview.text_4": "Attach a CC:Tweaked computer to control the motor via Lua peripheral functions",
-    "logiclink.ponder.logic_motor_overview.text_5": "setModifier(2.0) doubles output speed, setModifier(-1.0) reverses it — like a programmable gearshift",
-    "logiclink.ponder.logic_motor_overview.text_6": "17 Lua functions: enable, disable, setReversed, setModifier, addRotateStep, runSequence, and more"
+    "logiclink.ponder.logic_drive_overview.header": "Logic Drive — Programmable Rotation Modifier",
+    "logiclink.ponder.logic_drive_overview.text_1": "The Logic Drive modifies rotation passing through it — controlled by a CC:Tweaked computer",
+    "logiclink.ponder.logic_drive_overview.text_2": "The ORANGE-marked side is the DRIVE INPUT — connect your power source (shaft, water wheel, etc.) here",
+    "logiclink.ponder.logic_drive_overview.text_3": "The LIGHT BLUE side is the CC OUTPUT — modified rotation exits here to your machines",
+    "logiclink.ponder.logic_drive_overview.text_4": "Attach a CC:Tweaked computer to control the drive via Lua peripheral functions",
+    "logiclink.ponder.logic_drive_overview.text_5": "setModifier(2.0) doubles output speed, setModifier(-1.0) reverses it — like a programmable gearshift",
+    "logiclink.ponder.logic_drive_overview.text_6": "17 Lua functions: enable, disable, setReversed, setModifier, addRotateStep, runSequence, and more"
 }

@@ -1,6 +1,6 @@
 package com.apocscode.logiclink.peripheral;
 
-import com.apocscode.logiclink.block.LogicMotorBlockEntity;
+import com.apocscode.logiclink.block.LogicDriveBlockEntity;
 
 import dan200.computercraft.api.lua.LuaException;
 import dan200.computercraft.api.lua.LuaFunction;
@@ -9,46 +9,46 @@ import dan200.computercraft.api.peripheral.IPeripheral;
 import org.jetbrains.annotations.Nullable;
 
 /**
- * CC:Tweaked peripheral for the Logic Motor (standard version).
+ * CC:Tweaked peripheral for the Logic Drive.
  * Controls a rotation modifier that takes external kinetic input and
  * allows Lua scripts to gate, reverse, and scale the rotation.
  * <p>
- * Peripheral type: {@code "logic_motor"}
+ * Peripheral type: {@code "logic_drive"}
  * </p>
  *
  * <h3>Example Lua usage:</h3>
  * <pre>{@code
- * local motor = peripheral.wrap("logic_motor")
- * motor.enable()                   -- pass rotation through
- * motor.disable()                  -- disconnect (clutch off)
- * motor.setReversed(true)          -- reverse direction
- * motor.setModifier(2.0)           -- double speed
+ * local drive = peripheral.wrap("logic_drive")
+ * drive.enable()                   -- pass rotation through
+ * drive.disable()                  -- disconnect (clutch off)
+ * drive.setReversed(true)          -- reverse direction
+ * drive.setModifier(2.0)           -- double speed
  *
  * -- Sequenced motion
- * motor.clearSequence()
- * motor.addRotateStep(90, 1.0)     -- 90° at 1× speed
- * motor.addWaitStep(20)            -- pause 1 second
- * motor.addRotateStep(-90, 2.0)    -- back 90° at 2× speed
- * motor.runSequence(false)         -- run once
+ * drive.clearSequence()
+ * drive.addRotateStep(90, 1.0)     -- 90° at 1× speed
+ * drive.addWaitStep(20)            -- pause 1 second
+ * drive.addRotateStep(-90, 2.0)    -- back 90° at 2× speed
+ * drive.runSequence(false)         -- run once
  * }</pre>
  */
-public class LogicMotorPeripheral implements IPeripheral {
+public class LogicDrivePeripheral implements IPeripheral {
 
-    private final LogicMotorBlockEntity blockEntity;
+    private final LogicDriveBlockEntity blockEntity;
 
-    public LogicMotorPeripheral(LogicMotorBlockEntity blockEntity) {
+    public LogicDrivePeripheral(LogicDriveBlockEntity blockEntity) {
         this.blockEntity = blockEntity;
     }
 
     @Override
     public String getType() {
-        return "logic_motor";
+        return "logic_drive";
     }
 
     // ==================== Basic Control ====================
 
     /**
-     * Enables the motor — allows rotation to pass through.
+     * Enables the drive — allows rotation to pass through.
      */
     @LuaFunction(mainThread = true)
     public final void enable() {
@@ -56,7 +56,7 @@ public class LogicMotorPeripheral implements IPeripheral {
     }
 
     /**
-     * Disables the motor — disconnects rotation (clutch off).
+     * Disables the drive — disconnects rotation (clutch off).
      */
     @LuaFunction(mainThread = true)
     public final void disable() {
@@ -64,7 +64,7 @@ public class LogicMotorPeripheral implements IPeripheral {
     }
 
     /**
-     * Checks whether the motor is enabled.
+     * Checks whether the drive is enabled.
      * @return true if rotation passes through.
      */
     @LuaFunction(mainThread = true)
@@ -82,7 +82,7 @@ public class LogicMotorPeripheral implements IPeripheral {
     }
 
     /**
-     * Checks if the motor is in reverse mode.
+     * Checks if the drive is in reverse mode.
      * @return true if reversed.
      */
     @LuaFunction(mainThread = true)
@@ -227,7 +227,7 @@ public class LogicMotorPeripheral implements IPeripheral {
 
     @Override
     public boolean equals(@Nullable IPeripheral other) {
-        return other instanceof LogicMotorPeripheral o
+        return other instanceof LogicDrivePeripheral o
                 && o.blockEntity.getBlockPos().equals(this.blockEntity.getBlockPos());
     }
 }

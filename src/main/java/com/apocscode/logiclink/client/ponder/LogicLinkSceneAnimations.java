@@ -360,12 +360,12 @@ public class LogicLinkSceneAnimations {
     }
 
     /**
-     * Logic Motor overview: shows a CC-controlled rotation modifier.
-     * Schematic (7x4x7): External shaft input from left, Logic Motor at (3,1,3),
+     * Logic Drive overview: shows a CC-controlled rotation modifier.
+     * Schematic (7x4x7): External shaft input from left, Logic Drive at (3,1,3),
      * CC Computer at (3,1,4), output shaft to the right.
      */
-    public static void logicMotorOverview(SceneBuilder scene, SceneBuildingUtil util) {
-        scene.title("logic_motor_overview", "Logic Motor — Programmable Rotation Modifier");
+    public static void logicDriveOverview(SceneBuilder scene, SceneBuildingUtil util) {
+        scene.title("logic_drive_overview", "Logic Drive — Programmable Rotation Modifier");
         scene.configureBasePlate(0, 0, 7);
 
         // Show base plate
@@ -378,7 +378,7 @@ public class LogicLinkSceneAnimations {
 
         scene.overlay().showOutline(PonderPalette.GREEN, "motor", util.select().position(3, 1, 3), 80);
         scene.overlay().showText(80)
-                .text("The Logic Motor modifies rotation passing through it — controlled by a CC:Tweaked computer")
+                .text("The Logic Drive modifies rotation passing through it — controlled by a CC:Tweaked computer")
                 .attachKeyFrame()
                 .placeNearTarget()
                 .pointAt(util.vector().blockSurface(new BlockPos(3, 1, 3), Direction.UP));
@@ -420,7 +420,7 @@ public class LogicLinkSceneAnimations {
 
         scene.overlay().showOutline(PonderPalette.OUTPUT, "computer", util.select().position(3, 1, 4), 60);
         scene.overlay().showText(80)
-                .text("Attach a CC:Tweaked computer to control the motor via Lua peripheral functions")
+                .text("Attach a CC:Tweaked computer to control the drive via Lua peripheral functions")
                 .placeNearTarget()
                 .pointAt(util.vector().blockSurface(new BlockPos(3, 1, 4), Direction.SOUTH));
         scene.idle(100);

@@ -12,7 +12,7 @@
         "S": { "item": "create:shaft" }
     },
     "result": {
-        "id": "logiclink:logic_motor",
+        "id": "logiclink:logic_drive",
         "count": 1
     }
 }

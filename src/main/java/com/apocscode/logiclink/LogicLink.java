@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 
 import com.apocscode.logiclink.block.LogicLinkBlockItem;
 import com.apocscode.logiclink.block.LogicSensorBlockItem;
+import com.apocscode.logiclink.network.HubNetwork;
 import com.apocscode.logiclink.network.LinkNetwork;
 import com.apocscode.logiclink.network.NetworkHighlightPayload;
 import com.apocscode.logiclink.network.SensorNetwork;
@@ -51,6 +52,7 @@ public class LogicLink {
         ModRegistry.BLOCKS.register(modEventBus);
         ModRegistry.ITEMS.register(modEventBus);
         ModRegistry.BLOCK_ENTITY_TYPES.register(modEventBus);
+        ModRegistry.MENU_TYPES.register(modEventBus);
         ModRegistry.CREATIVE_MODE_TABS.register(modEventBus);
 
         // Register for server/game events
@@ -118,8 +120,13 @@ public class LogicLink {
 
     @SubscribeEvent
     public void onServerStopping(ServerStoppingEvent event) {
-        SensorNetwork.clear();
-        LinkNetwork.clear();
-        LOGGER.info("{} networks cleared.", MOD_NAME);
+        try {
+            SensorNetwork.clear();
+            LinkNetwork.clear();
+            HubNetwork.clear();
+            LOGGER.info("{} networks cleared.", MOD_NAME);
+        } catch (Throwable t) {
+            LOGGER.warn("{} failed to clear networks on shutdown: {}", MOD_NAME, t.getMessage());
+        }
     }
 }

@@ -167,7 +167,7 @@ public class LogicLinkPonderPlugin implements PonderPlugin {
                 .addToIndex()
                 .item(createItem("shaft"), true, false)
                 .title("Rotation Output")
-                .description("Logic Motors generate or modify rotational force controlled by CC:Tweaked computers")
+                .description("Logic Motors and Drives generate or modify rotational force controlled by CC:Tweaked computers")
                 .register();
 
         // Computers tag — CC computer icon
@@ -268,20 +268,20 @@ public class LogicLinkPonderPlugin implements PonderPlugin {
                 .add(rl("create", "large_cogwheel"))
                 .add(rl("create", "gearbox"))
                 .add(rl(LogicLink.MOD_ID, "creative_logic_motor"))
-                .add(rl(LogicLink.MOD_ID, "logic_motor"));
+                .add(rl(LogicLink.MOD_ID, "logic_drive"));
 
         // Motor computers tag items
         helper.addToTag(TAG_MOTOR_COMPUTERS)
                 .add(rl("computercraft", "computer_normal"))
                 .add(rl("computercraft", "computer_advanced"))
                 .add(rl(LogicLink.MOD_ID, "creative_logic_motor"))
-                .add(rl(LogicLink.MOD_ID, "logic_motor"));
+                .add(rl(LogicLink.MOD_ID, "logic_drive"));
 
         // Motor sequences tag items
         helper.addToTag(TAG_MOTOR_SEQUENCES)
                 .add(rl("create", "sequenced_gearshift"))
                 .add(rl(LogicLink.MOD_ID, "creative_logic_motor"))
-                .add(rl(LogicLink.MOD_ID, "logic_motor"));
+                .add(rl(LogicLink.MOD_ID, "logic_drive"));
 
         // ================================================================
         // ASSOCIATE TAGS WITH OUR BLOCKS (controls LEFT-side panel icons)
@@ -311,8 +311,8 @@ public class LogicLinkPonderPlugin implements PonderPlugin {
                 .add(TAG_MOTOR_COMPUTERS)
                 .add(TAG_MOTOR_SEQUENCES);
 
-        // Logic Motor: show kinetics, computers, sequences on left
-        helper.addToComponent(rl(LogicLink.MOD_ID, "logic_motor"))
+        // Logic Drive: show kinetics, computers, sequences on left
+        helper.addToComponent(rl(LogicLink.MOD_ID, "logic_drive"))
                 .add(TAG_MOTOR_KINETICS)
                 .add(TAG_MOTOR_COMPUTERS)
                 .add(TAG_MOTOR_SEQUENCES);

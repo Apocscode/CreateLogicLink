@@ -2,18 +2,25 @@ package com.apocscode.logiclink.block;
 
 import com.apocscode.logiclink.LogicLink;
 import com.apocscode.logiclink.ModRegistry;
+import com.apocscode.logiclink.network.HubNetwork;
+import com.apocscode.logiclink.network.IHubDevice;
 import com.apocscode.logiclink.network.SensorNetwork;
 import com.apocscode.logiclink.peripheral.CreateBlockReader;
 
+import com.simibubi.create.api.equipment.goggles.IHaveGoggleInformation;
+
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -26,11 +33,17 @@ import java.util.UUID;
  * and caches it for both wired (direct peripheral) and wireless (Logic Link) access.
  * </p>
  */
-public class LogicSensorBlockEntity extends BlockEntity {
+public class LogicSensorBlockEntity extends BlockEntity implements IHubDevice, IHaveGoggleInformation {
 
     /** The frequency ID linking this sensor to a Create logistics network. */
     @Nullable
     private UUID networkFrequency = null;
+
+    /** User-assigned label for hub identification. */
+    private String hubLabel = "";
+
+    /** Whether this device has registered with HubNetwork. */
+    private boolean hubRegistered = false;
 
     /** Cached data from the target (adjacent) block. */
     @Nullable
@@ -127,6 +140,12 @@ public class LogicSensorBlockEntity extends BlockEntity {
             be.needsRegistration = false;
         }
 
+        // Register with hub network (proximity-based, no frequency needed)
+        if (!be.hubRegistered) {
+            HubNetwork.register(be);
+            be.hubRegistered = true;
+        }
+
         // Periodically refresh cached data
         be.refreshTimer++;
         if (be.refreshTimer >= REFRESH_INTERVAL) {
@@ -141,6 +160,72 @@ public class LogicSensorBlockEntity extends BlockEntity {
         if (networkFrequency != null) {
             SensorNetwork.unregister(networkFrequency, this);
         }
+        HubNetwork.unregister(this);
+    }
+
+    // ==================== IHubDevice ====================
+
+    @Override
+    public String getHubLabel() { return hubLabel; }
+
+    @Override
+    public void setHubLabel(String label) {
+        this.hubLabel = label != null ? label : "";
+        setChanged();
+        // Sync to client for goggle tooltip
+        if (level != null && !level.isClientSide()) {
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+        }
+    }
+
+    @Override
+    public String getDeviceType() { return "sensor"; }
+
+    @Override
+    public BlockPos getDevicePos() { return getBlockPos(); }
+
+    // ==================== Goggle Tooltip ====================
+
+    @Override
+    public boolean addToGoggleTooltip(List<Component> tooltip, boolean isPlayerSneaking) {
+        tooltip.add(Component.literal("    ")
+            .append(Component.literal("Logic Sensor").withStyle(ChatFormatting.WHITE)));
+
+        BlockPos pos = getBlockPos();
+        tooltip.add(Component.literal("    ")
+            .append(Component.literal("Pos: ").withStyle(ChatFormatting.GRAY))
+            .append(Component.literal(pos.getX() + ", " + pos.getY() + ", " + pos.getZ()).withStyle(ChatFormatting.WHITE)));
+
+        if (!hubLabel.isEmpty()) {
+            tooltip.add(Component.literal("    ")
+                .append(Component.literal("Label: ").withStyle(ChatFormatting.GRAY))
+                .append(Component.literal(hubLabel).withStyle(ChatFormatting.AQUA)));
+        }
+
+        BlockPos target = getTargetPos();
+        tooltip.add(Component.literal("    ")
+            .append(Component.literal("Target: ").withStyle(ChatFormatting.GRAY))
+            .append(Component.literal(target.getX() + ", " + target.getY() + ", " + target.getZ()).withStyle(ChatFormatting.WHITE)));
+        if (networkFrequency != null) {
+            tooltip.add(Component.literal("    ")
+                .append(Component.literal("Network: ").withStyle(ChatFormatting.GRAY))
+                .append(Component.literal("Linked").withStyle(ChatFormatting.GREEN)));
+        }
+        return true;
+    }
+
+    // ==================== Client Sync ====================
+
+    @Override
+    public net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket getUpdatePacket() {
+        return net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    @Override
+    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+        CompoundTag tag = super.getUpdateTag(registries);
+        saveAdditional(tag, registries);
+        return tag;
     }
 
     // ==================== NBT Persistence ====================
@@ -150,6 +235,9 @@ public class LogicSensorBlockEntity extends BlockEntity {
         super.saveAdditional(tag, registries);
         if (networkFrequency != null) {
             tag.putUUID("Freq", networkFrequency);
+        }
+        if (!hubLabel.isEmpty()) {
+            tag.putString("HubLabel", hubLabel);
         }
     }
 
@@ -163,6 +251,8 @@ public class LogicSensorBlockEntity extends BlockEntity {
         } else {
             networkFrequency = null;
         }
+        hubLabel = tag.getString("HubLabel");
+        hubRegistered = false;
         cachedData = null;
     }
 }

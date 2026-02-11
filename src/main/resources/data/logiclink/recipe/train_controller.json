@@ -1,0 +1,29 @@
+{
+    "type": "minecraft:crafting_shaped",
+    "pattern": [
+        "ERE",
+        "BAB",
+        " C "
+    ],
+    "key": {
+        "E": {
+            "item": "minecraft:ender_pearl"
+        },
+        "R": {
+            "item": "create:railway_casing"
+        },
+        "B": {
+            "item": "create:brass_ingot"
+        },
+        "A": {
+            "item": "create:andesite_casing"
+        },
+        "C": {
+            "item": "minecraft:comparator"
+        }
+    },
+    "result": {
+        "id": "logiclink:train_controller",
+        "count": 1
+    }
+}

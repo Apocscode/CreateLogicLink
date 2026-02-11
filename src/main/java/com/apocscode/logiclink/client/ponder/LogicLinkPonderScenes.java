@@ -45,11 +45,11 @@ public class LogicLinkPonderScenes {
                 LogicLinkPonderPlugin.TAG_MOTOR_KINETICS
         );
 
-        // Logic Motor — CC-controlled rotation modifier (highlights kinetics tag)
+        // Logic Drive — CC-controlled rotation modifier (highlights kinetics tag)
         helper.addStoryBoard(
-                ResourceLocation.fromNamespaceAndPath(LogicLink.MOD_ID, "logic_motor"),
-                "logic_motor/overview",
-                LogicLinkSceneAnimations::logicMotorOverview,
+                ResourceLocation.fromNamespaceAndPath(LogicLink.MOD_ID, "logic_drive"),
+                "logic_drive/overview",
+                LogicLinkSceneAnimations::logicDriveOverview,
                 LogicLinkPonderPlugin.TAG_MOTOR_KINETICS
         );
     }

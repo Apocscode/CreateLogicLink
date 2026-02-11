@@ -23,7 +23,7 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 /**
- * Logic Motor (standard) — a CC:Tweaked-controlled rotation modifier.
+ * Logic Drive — a CC:Tweaked-controlled rotation modifier.
  * Requires an external rotation source (shaft, water wheel, etc.) and
  * can modify, gate, or reverse that rotation via Lua scripts.
  * <p>
@@ -44,8 +44,8 @@ import net.minecraft.world.phys.shapes.VoxelShape;
  *   <li>Sequenced rotation — degree-based rotation steps</li>
  * </ul>
  */
-public class LogicMotorBlock extends KineticBlock
-        implements IBE<LogicMotorBlockEntity> {
+public class LogicDriveBlock extends KineticBlock
+        implements IBE<LogicDriveBlockEntity> {
 
     /**
      * The direction the output shaft faces. The opposite side is the input.
@@ -53,12 +53,12 @@ public class LogicMotorBlock extends KineticBlock
      */
     public static final DirectionProperty FACING = BlockStateProperties.HORIZONTAL_FACING;
 
-    /** Whether the motor is in its "active" visual state. */
+    /** Whether the drive is in its "active" visual state. */
     public static final BooleanProperty ACTIVE = BooleanProperty.create("active");
 
     private static final VoxelShape SHAPE = box(0, 0, 0, 16, 16, 16);
 
-    public LogicMotorBlock(Properties properties) {
+    public LogicDriveBlock(Properties properties) {
         super(properties);
         this.registerDefaultState(this.stateDefinition.any()
                 .setValue(FACING, Direction.NORTH)
@@ -99,13 +99,13 @@ public class LogicMotorBlock extends KineticBlock
     // ==================== IBE ====================
 
     @Override
-    public Class<LogicMotorBlockEntity> getBlockEntityClass() {
-        return LogicMotorBlockEntity.class;
+    public Class<LogicDriveBlockEntity> getBlockEntityClass() {
+        return LogicDriveBlockEntity.class;
     }
 
     @Override
-    public BlockEntityType<? extends LogicMotorBlockEntity> getBlockEntityType() {
-        return ModRegistry.LOGIC_MOTOR_BE.get();
+    public BlockEntityType<? extends LogicDriveBlockEntity> getBlockEntityType() {
+        return ModRegistry.LOGIC_DRIVE_BE.get();
     }
 
     // ==================== Kinetic equivalence ====================

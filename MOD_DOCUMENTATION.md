@@ -102,6 +102,56 @@ A CC:Tweaked-controlled rotation modifier that sits inline on a shaft. Functions
 
 ---
 
+## Train Monitor & Signal Diagnostics
+
+### Train Monitor Block
+
+A CTC-style train network overview block with a GUI that displays a real-time network map, train positions, station labels, and signal diagnostics.
+
+- **Appearance:** Full cube, industrial monitor style
+- **GUI:** Scrollable/zoomable network map with train dots, station labels, signal icons
+- **Diagnostics:** Scans for junction unsignaled, no-path, and signal conflict issues
+- **Data Source:** `TrainNetworkDataReader` — reads Create's internal train graph
+
+### Signal Diagnostic Tablet
+
+A handheld item for field debugging of train signal issues. Right-click to scan the network, then open the tablet GUI to view issues sorted by distance.
+
+- **Usage:** Right-click to scan → opens GUI with diagnostics sorted closest-first
+- **Highlight Buttons:** Each diagnostic row has clickable buttons to toggle in-world ghost box highlights
+- **Color Legend:** Displayed in the GUI header for quick reference
+
+### Signal Highlight Colors
+
+The tablet and in-world ghost box renderer use consistent color coding:
+
+| Color | Box Style | Meaning |
+|-------|-----------|--------|
+| **Green** | Solid outline | Place a regular signal here |
+| **Cyan** | Solid outline | Place a chain signal here |
+| **Red** | Pulsing outline + cross | Signal conflict — remove or fix |
+| **Yellow** | — (GUI only) | Warning severity (unsignaled junction) |
+
+### Ghost Box Rendering
+
+- Boxes render at real Minecraft world coordinates from Create's `TrackNodeLocation` / `SignalBoundary` data
+- Double-box style: outer box with slight padding + inner box for visual weight
+- Conflict markers include a cross pattern on top
+- Render distance: 128 blocks from camera
+- Pulsing alpha animation for visibility
+- Client-side only — managed by `SignalHighlightManager` singleton, read by `SignalGhostRenderer`
+- No dependency on Train Monitor block entity being chunk-loaded
+
+### Signal Diagnostic Types
+
+| Type | Severity | Description |
+|------|----------|-------------|
+| `JUNCTION_UNSIGNALED` | WARN | Junction node has no signals — trains may deadlock |
+| `NO_PATH` | CRIT | Train cannot find a path to its destination |
+| `SIGNAL_CONFLICT` | CRIT | Two signals on the same segment cause conflicts |
+
+---
+
 ## Network Highlight System
 
 When a player holds a tuned Logic Link or Logic Sensor item, all blocks on the same logistics network are highlighted with outlines matching Create's visual style.
@@ -597,7 +647,9 @@ All 5 blocks have Create-style animated Ponder tutorials, accessible by pressing
 | `logic_motor` | Logic Motor | 17 | Rotation modifier |
 | `storage_controller` | Storage Controller* | 14 | Storage network |
 | `storage_interface` | Storage Interface* | 10 | Storage access |
-| **Total** | **7 blocks** | **86** | |
+| `train_monitor` | Train Monitor | — | Train network map |
+| — | Signal Tablet (item) | — | Field signal diagnostics |
+| **Total** | **9 blocks + 1 item** | **86+** | |
 
 *\*Requires Create: Storage mod*
 

@@ -1,0 +1,23 @@
+{
+    "ambientocclusion": false,
+    "textures": {
+        "screen": "logiclink:block/train_monitor_screen",
+        "back": "create:block/andesite_casing",
+        "side": "logiclink:block/train_monitor_frame",
+        "particle": "logiclink:block/train_monitor_frame"
+    },
+    "elements": [
+        {
+            "from": [0, 0, 0],
+            "to": [16, 16, 16],
+            "faces": {
+                "north": {"texture": "#screen"},
+                "south": {"texture": "#back", "cullface": "south"},
+                "east":  {"texture": "#side", "cullface": "east"},
+                "west":  {"texture": "#side", "cullface": "west"},
+                "up":    {"texture": "#side", "cullface": "up"},
+                "down":  {"texture": "#side", "cullface": "down"}
+            }
+        }
+    ]
+}

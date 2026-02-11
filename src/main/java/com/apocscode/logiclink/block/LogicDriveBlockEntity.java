@@ -2,16 +2,20 @@ package com.apocscode.logiclink.block;
 
 import com.apocscode.logiclink.LogicLink;
 import com.apocscode.logiclink.ModRegistry;
+import com.apocscode.logiclink.network.HubNetwork;
+import com.apocscode.logiclink.network.IHubDevice;
 import com.simibubi.create.content.kinetics.base.KineticBlockEntity;
 import com.simibubi.create.content.kinetics.transmission.SplitShaftBlockEntity;
 import com.simibubi.create.foundation.blockEntity.behaviour.BlockEntityBehaviour;
 
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -19,7 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Block entity for the Logic Motor (standard version).
+ * Block entity for the Logic Drive.
  * Takes external rotation input and modifies the output — acting as a
  * programmable clutch, gearshift, and sequenced gearshift in one.
  * <p>
@@ -29,12 +33,12 @@ import java.util.List;
  * -1 = reverse, 2 = double speed, etc.
  * </p>
  */
-public class LogicMotorBlockEntity extends SplitShaftBlockEntity {
+public class LogicDriveBlockEntity extends SplitShaftBlockEntity implements IHubDevice {
 
     /** Speed multiplier applied to input rotation. */
     private float speedModifier = 1.0f;
 
-    /** Whether the motor is enabled (passes rotation through). */
+    /** Whether the drive is enabled (passes rotation through). */
     private boolean enabled = true;
 
     /** Whether to reverse input rotation. */
@@ -43,9 +47,15 @@ public class LogicMotorBlockEntity extends SplitShaftBlockEntity {
     /** Deferred kinetic network update — coalesces rapid Lua changes into one tick. */
     private boolean kinematicsNeedUpdate = false;
 
+    /** User-assigned label for hub identification. */
+    private String hubLabel = "";
+
+    /** Whether this device has registered with HubNetwork. */
+    private boolean hubRegistered = false;
+
     // ==================== Sequence System ====================
 
-    private final List<MotorInstruction> sequence = new ArrayList<>();
+    private final List<DriveInstruction> sequence = new ArrayList<>();
     private int sequenceIndex = -1;
     private int sequenceTimer = 0;
     private float sequenceDegreesRemaining = 0;
@@ -56,7 +66,7 @@ public class LogicMotorBlockEntity extends SplitShaftBlockEntity {
 
     // ==================== Constructor ====================
 
-    public LogicMotorBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
+    public LogicDriveBlockEntity(BlockEntityType<?> type, BlockPos pos, BlockState state) {
         super(type, pos, state);
     }
 
@@ -85,11 +95,11 @@ public class LogicMotorBlockEntity extends SplitShaftBlockEntity {
 
         // If running a sequence, use the sequence's modifier
         if (sequenceIndex >= 0 && sequenceIndex < sequence.size()) {
-            MotorInstruction instr = sequence.get(sequenceIndex);
-            if (instr.type == MotorInstruction.Type.ROTATE) {
+            DriveInstruction instr = sequence.get(sequenceIndex);
+            if (instr.type == DriveInstruction.Type.ROTATE) {
                 return sequenceModifierOverride;
             }
-            if (instr.type == MotorInstruction.Type.WAIT) {
+            if (instr.type == DriveInstruction.Type.WAIT) {
                 return 0; // Stop during wait
             }
         }
@@ -101,6 +111,15 @@ public class LogicMotorBlockEntity extends SplitShaftBlockEntity {
         // gets the modifier. SplitShaftBlockEntity already handles which
         // side is which via getSourceFacing().
         if (face == getSourceFacing()) return 1.0f;
+
+        // Clamp so output never exceeds Create's 256 RPM hard limit
+        float inputSpeed = Math.abs(getSpeed());
+        if (inputSpeed > 0 && Math.abs(mod) > 1.0f) {
+            float maxMod = 256.0f / inputSpeed;
+            if (mod > maxMod) mod = maxMod;
+            else if (mod < -maxMod) mod = -maxMod;
+        }
+
         return mod;
     }
 
@@ -169,17 +188,17 @@ public class LogicMotorBlockEntity extends SplitShaftBlockEntity {
     }
 
     public void addRotateStep(float degrees, float modifier) {
-        sequence.add(new MotorInstruction(MotorInstruction.Type.ROTATE, degrees, modifier));
+        sequence.add(new DriveInstruction(DriveInstruction.Type.ROTATE, degrees, modifier));
         setChanged();
     }
 
     public void addWaitStep(int ticks) {
-        sequence.add(new MotorInstruction(MotorInstruction.Type.WAIT, ticks, 0));
+        sequence.add(new DriveInstruction(DriveInstruction.Type.WAIT, ticks, 0));
         setChanged();
     }
 
     public void addModifierStep(float modifier) {
-        sequence.add(new MotorInstruction(MotorInstruction.Type.SET_MODIFIER, 0, modifier));
+        sequence.add(new DriveInstruction(DriveInstruction.Type.SET_MODIFIER, 0, modifier));
         setChanged();
     }
 
@@ -222,6 +241,12 @@ public class LogicMotorBlockEntity extends SplitShaftBlockEntity {
 
         if (level == null || level.isClientSide) return;
 
+        // Register with hub network on first server tick
+        if (!hubRegistered) {
+            HubNetwork.register(this);
+            hubRegistered = true;
+        }
+
         // Coalesce rapid Lua property changes into a single kinetic update per tick
         if (kinematicsNeedUpdate) {
             kinematicsNeedUpdate = false;
@@ -231,7 +256,7 @@ public class LogicMotorBlockEntity extends SplitShaftBlockEntity {
 
         if (sequenceIndex < 0 || sequenceIndex >= sequence.size()) return;
 
-        MotorInstruction instr = sequence.get(sequenceIndex);
+        DriveInstruction instr = sequence.get(sequenceIndex);
 
         switch (instr.type) {
             case ROTATE:
@@ -261,7 +286,7 @@ public class LogicMotorBlockEntity extends SplitShaftBlockEntity {
 
     private void startCurrentStep() {
         if (sequenceIndex < 0 || sequenceIndex >= sequence.size()) return;
-        MotorInstruction instr = sequence.get(sequenceIndex);
+        DriveInstruction instr = sequence.get(sequenceIndex);
         switch (instr.type) {
             case ROTATE:
                 sequenceDegreesRemaining = Math.abs(instr.degreesOrTicks);
@@ -299,10 +324,68 @@ public class LogicMotorBlockEntity extends SplitShaftBlockEntity {
     private void updateBlockState() {
         if (level != null && !level.isClientSide) {
             BlockState state = getBlockState();
-            if (state.hasProperty(LogicMotorBlock.ACTIVE)) {
-                level.setBlock(worldPosition, state.setValue(LogicMotorBlock.ACTIVE, enabled), 3);
+            if (state.hasProperty(LogicDriveBlock.ACTIVE)) {
+                level.setBlock(worldPosition, state.setValue(LogicDriveBlock.ACTIVE, enabled), 3);
             }
         }
+    }
+
+    // ==================== IHubDevice ====================
+
+    @Override
+    public String getHubLabel() { return hubLabel; }
+
+    @Override
+    public void setHubLabel(String label) {
+        this.hubLabel = label != null ? label : "";
+        setChanged();
+        notifyUpdate();  // Sync to client for goggle tooltip
+    }
+
+    @Override
+    public String getDeviceType() { return "drive"; }
+
+    @Override
+    public BlockPos getDevicePos() { return getBlockPos(); }
+
+    // ==================== Goggle Tooltip ====================
+
+    @Override
+    public boolean addToGoggleTooltip(List<Component> tooltip, boolean isPlayerSneaking) {
+        super.addToGoggleTooltip(tooltip, isPlayerSneaking);
+
+        // Always show Logic Drive status
+        tooltip.add(Component.literal("    ")
+            .append(Component.literal("Logic Drive").withStyle(ChatFormatting.WHITE)));
+
+        BlockPos pos = getBlockPos();
+        tooltip.add(Component.literal("    ")
+            .append(Component.literal("Pos: ").withStyle(ChatFormatting.GRAY))
+            .append(Component.literal(pos.getX() + ", " + pos.getY() + ", " + pos.getZ()).withStyle(ChatFormatting.WHITE)));
+
+        if (!hubLabel.isEmpty()) {
+            tooltip.add(Component.literal("    ")
+                .append(Component.literal("Label: ").withStyle(ChatFormatting.GRAY))
+                .append(Component.literal(hubLabel).withStyle(ChatFormatting.AQUA)));
+        }
+
+        String state = enabled ? (reversed ? "Reversed" : "Active") : "Disabled";
+        ChatFormatting stateColor = enabled ? (reversed ? ChatFormatting.GOLD : ChatFormatting.GREEN) : ChatFormatting.RED;
+        tooltip.add(Component.literal("    ")
+            .append(Component.literal("State: ").withStyle(ChatFormatting.GRAY))
+            .append(Component.literal(state).withStyle(stateColor)));
+
+        tooltip.add(Component.literal("    ")
+            .append(Component.literal("Modifier: ").withStyle(ChatFormatting.GRAY))
+            .append(Component.literal("x" + speedModifier).withStyle(ChatFormatting.AQUA)));
+
+        return true;
+    }
+
+    // ==================== Cleanup ====================
+
+    public void onRemoved() {
+        HubNetwork.unregister(this);
     }
 
     // ==================== NBT Persistence ====================
@@ -313,6 +396,9 @@ public class LogicMotorBlockEntity extends SplitShaftBlockEntity {
         tag.putFloat("SpeedModifier", speedModifier);
         tag.putBoolean("Enabled", enabled);
         tag.putBoolean("Reversed", reversed);
+        if (!hubLabel.isEmpty()) {
+            tag.putString("HubLabel", hubLabel);
+        }
         tag.putBoolean("SequenceLoop", sequenceLoop);
         tag.putInt("SequenceIndex", sequenceIndex);
         tag.putInt("SequenceTimer", sequenceTimer);
@@ -320,7 +406,7 @@ public class LogicMotorBlockEntity extends SplitShaftBlockEntity {
         tag.putFloat("SequenceModifierOverride", sequenceModifierOverride);
 
         ListTag instrList = new ListTag();
-        for (MotorInstruction instr : sequence) {
+        for (DriveInstruction instr : sequence) {
             CompoundTag instrTag = new CompoundTag();
             instrTag.putString("Type", instr.type.name());
             instrTag.putFloat("Value", instr.degreesOrTicks);
@@ -336,6 +422,8 @@ public class LogicMotorBlockEntity extends SplitShaftBlockEntity {
         speedModifier = tag.getFloat("SpeedModifier");
         enabled = tag.getBoolean("Enabled");
         reversed = tag.getBoolean("Reversed");
+        hubLabel = tag.getString("HubLabel");
+        hubRegistered = false;
         sequenceLoop = tag.getBoolean("SequenceLoop");
         sequenceIndex = tag.getInt("SequenceIndex");
         sequenceTimer = tag.getInt("SequenceTimer");
@@ -346,23 +434,23 @@ public class LogicMotorBlockEntity extends SplitShaftBlockEntity {
         ListTag instrList = tag.getList("Sequence", Tag.TAG_COMPOUND);
         for (int i = 0; i < instrList.size(); i++) {
             CompoundTag instrTag = instrList.getCompound(i);
-            MotorInstruction.Type type = MotorInstruction.Type.valueOf(instrTag.getString("Type"));
+            DriveInstruction.Type type = DriveInstruction.Type.valueOf(instrTag.getString("Type"));
             float value = instrTag.getFloat("Value");
             float modifier = instrTag.getFloat("Modifier");
-            sequence.add(new MotorInstruction(type, value, modifier));
+            sequence.add(new DriveInstruction(type, value, modifier));
         }
     }
 
     // ==================== Instruction Data Class ====================
 
-    public static class MotorInstruction {
+    public static class DriveInstruction {
         public enum Type { ROTATE, WAIT, SET_MODIFIER }
 
         public final Type type;
         public final float degreesOrTicks;
         public final float modifierOrValue;
 
-        public MotorInstruction(Type type, float degreesOrTicks, float modifierOrValue) {
+        public DriveInstruction(Type type, float degreesOrTicks, float modifierOrValue) {
             this.type = type;
             this.degreesOrTicks = degreesOrTicks;
             this.modifierOrValue = modifierOrValue;

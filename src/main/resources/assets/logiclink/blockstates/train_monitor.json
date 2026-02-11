@@ -1,0 +1,8 @@
+﻿{
+    "variants": {
+        "facing=north": { "model": "logiclink:block/train_monitor" },
+        "facing=south": { "model": "logiclink:block/train_monitor", "y": 180 },
+        "facing=east":  { "model": "logiclink:block/train_monitor", "y": 90 },
+        "facing=west":  { "model": "logiclink:block/train_monitor", "y": 270 }
+    }
+}

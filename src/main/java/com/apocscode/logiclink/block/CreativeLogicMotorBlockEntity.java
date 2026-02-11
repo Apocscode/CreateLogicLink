@@ -2,15 +2,19 @@ package com.apocscode.logiclink.block;
 
 import com.apocscode.logiclink.LogicLink;
 import com.apocscode.logiclink.ModRegistry;
+import com.apocscode.logiclink.network.HubNetwork;
+import com.apocscode.logiclink.network.IHubDevice;
 import com.simibubi.create.content.kinetics.base.GeneratingKineticBlockEntity;
 import com.simibubi.create.foundation.blockEntity.behaviour.BlockEntityBehaviour;
 import com.simibubi.create.foundation.blockEntity.behaviour.scrollValue.ScrollValueBehaviour;
 
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -33,7 +37,7 @@ import java.util.List;
  *   <li>Event-driven — fires CC events on sequence completion</li>
  * </ul>
  */
-public class CreativeLogicMotorBlockEntity extends GeneratingKineticBlockEntity {
+public class CreativeLogicMotorBlockEntity extends GeneratingKineticBlockEntity implements IHubDevice {
 
     public static final int MAX_SPEED = 256;
 
@@ -42,6 +46,12 @@ public class CreativeLogicMotorBlockEntity extends GeneratingKineticBlockEntity 
 
     /** Whether the motor is enabled. */
     private boolean enabled = false;
+
+    /** User-assigned label for hub identification. */
+    private String hubLabel = "";
+
+    /** Whether this device has registered with HubNetwork. */
+    private boolean hubRegistered = false;
 
     // ==================== Sequence System ====================
 
@@ -210,6 +220,13 @@ public class CreativeLogicMotorBlockEntity extends GeneratingKineticBlockEntity 
         super.tick();
 
         if (level == null || level.isClientSide) return;
+
+        // Register with hub network on first server tick
+        if (!hubRegistered) {
+            HubNetwork.register(this);
+            hubRegistered = true;
+        }
+
         if (sequenceIndex < 0 || sequenceIndex >= sequence.size()) return;
 
         MotorInstruction instr = sequence.get(sequenceIndex);
@@ -275,6 +292,64 @@ public class CreativeLogicMotorBlockEntity extends GeneratingKineticBlockEntity 
         startCurrentStep();
     }
 
+    // ==================== IHubDevice ====================
+
+    @Override
+    public String getHubLabel() { return hubLabel; }
+
+    @Override
+    public void setHubLabel(String label) {
+        this.hubLabel = label != null ? label : "";
+        setChanged();
+        notifyUpdate();  // Sync to client for goggle tooltip
+    }
+
+    @Override
+    public String getDeviceType() { return "creative_motor"; }
+
+    @Override
+    public BlockPos getDevicePos() { return getBlockPos(); }
+
+    // ==================== Goggle Tooltip ====================
+
+    @Override
+    public boolean addToGoggleTooltip(List<Component> tooltip, boolean isPlayerSneaking) {
+        super.addToGoggleTooltip(tooltip, isPlayerSneaking);
+
+        // Always show Creative Logic Motor status
+        tooltip.add(Component.literal("    ")
+            .append(Component.literal("Creative Logic Motor").withStyle(ChatFormatting.WHITE)));
+
+        BlockPos pos = getBlockPos();
+        tooltip.add(Component.literal("    ")
+            .append(Component.literal("Pos: ").withStyle(ChatFormatting.GRAY))
+            .append(Component.literal(pos.getX() + ", " + pos.getY() + ", " + pos.getZ()).withStyle(ChatFormatting.WHITE)));
+
+        if (!hubLabel.isEmpty()) {
+            tooltip.add(Component.literal("    ")
+                .append(Component.literal("Label: ").withStyle(ChatFormatting.GRAY))
+                .append(Component.literal(hubLabel).withStyle(ChatFormatting.AQUA)));
+        }
+
+        String state = enabled ? "Active" : "Disabled";
+        ChatFormatting stateColor = enabled ? ChatFormatting.GREEN : ChatFormatting.RED;
+        tooltip.add(Component.literal("    ")
+            .append(Component.literal("State: ").withStyle(ChatFormatting.GRAY))
+            .append(Component.literal(state).withStyle(stateColor)));
+
+        tooltip.add(Component.literal("    ")
+            .append(Component.literal("Target: ").withStyle(ChatFormatting.GRAY))
+            .append(Component.literal(targetSpeed + " RPM").withStyle(ChatFormatting.AQUA)));
+
+        return true;
+    }
+
+    // ==================== Cleanup ====================
+
+    public void onRemoved() {
+        HubNetwork.unregister(this);
+    }
+
     // ==================== NBT Persistence ====================
 
     @Override
@@ -282,6 +357,9 @@ public class CreativeLogicMotorBlockEntity extends GeneratingKineticBlockEntity 
         super.write(tag, registries, clientPacket);
         tag.putInt("TargetSpeed", targetSpeed);
         tag.putBoolean("Enabled", enabled);
+        if (!hubLabel.isEmpty()) {
+            tag.putString("HubLabel", hubLabel);
+        }
         tag.putBoolean("SequenceLoop", sequenceLoop);
         tag.putInt("SequenceIndex", sequenceIndex);
         tag.putInt("SequenceTimer", sequenceTimer);
@@ -305,6 +383,8 @@ public class CreativeLogicMotorBlockEntity extends GeneratingKineticBlockEntity 
         super.read(tag, registries, clientPacket);
         targetSpeed = tag.getInt("TargetSpeed");
         enabled = tag.getBoolean("Enabled");
+        hubLabel = tag.getString("HubLabel");
+        hubRegistered = false;
         sequenceLoop = tag.getBoolean("SequenceLoop");
         sequenceIndex = tag.getInt("SequenceIndex");
         sequenceTimer = tag.getInt("SequenceTimer");
