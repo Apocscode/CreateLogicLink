@@ -1,0 +1,12 @@
+{
+    "name": "\u2200 CreateLogicLink Guide",
+    "landing_text": "$(l:getting_started/overview)$(bold)\u2200$()$(/l) Welcome to the $(thing)CreateLogicLink$() guide!$(br2)The $(bold)\u2200$() symbol — the universal quantifier from formal logic — is the emblem of this mod. \"For all machines, for all control.\"$(br2)This mod bridges $(thing)Create$() factory automation with $(thing)CC:Tweaked$() computers, giving you full Lua control over logistics networks, kinetic machinery, redstone links, trains, and storage.$(br2)Browse the categories to learn about each block, its peripheral API, and see practical Lua examples.$(br2)$(italic)Tip: Place any LogicLink block next to a CC:Tweaked computer and use peripheral.find() to get started!$()",
+    "subtitle": "\u2200 Factory Automation with Lua",
+    "version": "1",
+    "creative_tab": "logiclink:logiclink_tab",
+    "model": "patchouli:book_brown",
+    "book_texture": "patchouli:textures/gui/book_brown.png",
+    "show_progress": false,
+    "i18n": false,
+    "use_resource_pack": false
+}

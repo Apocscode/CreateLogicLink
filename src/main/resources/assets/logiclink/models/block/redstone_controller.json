@@ -1,7 +1,7 @@
 {
     "parent": "minecraft:block/cube_bottom_top",
     "textures": {
-        "top": "minecraft:block/polished_blackstone",
+        "top": "logiclink:block/redstone_controller_top",
         "bottom": "create:block/andesite_casing",
         "side": "create:block/andesite_casing"
     }

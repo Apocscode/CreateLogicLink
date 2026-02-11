@@ -1,0 +1,23 @@
+{
+    "name": "Wireless Hub System",
+    "icon": "logiclink:logic_link",
+    "category": "logiclink:getting_started",
+    "sortnum": 1,
+    "pages": [
+        {
+            "type": "patchouli:text",
+            "title": "Wireless Hub",
+            "text": "The $(item)Logic Link$() can act as a $(thing)wireless hub$(), discovering and controlling nearby LogicLink devices without wired connections.$(br2)The hub scans for Logic Sensors, Creative Logic Motors, Logic Drives, and Redstone Controllers within range (default 64 blocks, max 256)."
+        },
+        {
+            "type": "patchouli:text",
+            "title": "Using the Hub",
+            "text": "$(bold)Discover devices:$()$(br)$(#4488CC)local link = peripheral.find(\"logiclink\")$(br)local devs = link.getDevices()$(br)for _, d in ipairs(devs) do$(br)  print(d.id .. \" \" .. d.type)$(br)end$()$(br2)Devices get auto-IDs like $(thing)sensor_0$(), $(thing)motor_1$(). You can set labels:$(br)$(#4488CC)link.setDeviceLabel(\"sensor_0\", \"Furnace\")$()"
+        },
+        {
+            "type": "patchouli:text",
+            "title": "Remote Control",
+            "text": "Control any device in range through the hub:$(br2)$(bold)Remote Motor:$()$(br)$(#4488CC)link.setRemoteSpeed(\"motor_0\", 128)$(br)link.enableRemote(\"motor_0\", true)$()$(br2)$(bold)Remote Sensor:$()$(br)$(#4488CC)local data = link.getRemoteSensorData(\"sensor_0\")$(br)print(data.data.speed)$()$(br2)$(bold)Remote Redstone:$()$(br)$(#4488CC)link.setRemoteRedstoneOutput(\"rc_0\", \"minecraft:redstone\", \"minecraft:redstone\", 15)$()"
+        }
+    ]
+}

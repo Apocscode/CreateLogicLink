@@ -1,0 +1,6 @@
+{
+    "name": "Storage",
+    "description": "Access Create Storage networks through CC:Tweaked. Query inventories, search items, and transfer between storage boxes and other inventories.",
+    "icon": "minecraft:chest",
+    "sortnum": 4
+}

@@ -1,0 +1,6 @@
+{
+    "name": "Peripherals",
+    "description": "The core networking peripherals: Logic Link for inventory and logistics, Logic Sensor for reading machine data, and Redstone Controller for wireless redstone.",
+    "icon": "logiclink:logic_sensor",
+    "sortnum": 1
+}

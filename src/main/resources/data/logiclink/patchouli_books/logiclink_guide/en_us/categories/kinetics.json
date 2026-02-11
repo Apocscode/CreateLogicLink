@@ -1,0 +1,6 @@
+{
+    "name": "Kinetics",
+    "description": "Lua-controlled rotation sources and modifiers. The Creative Logic Motor generates rotation, while the Logic Drive gates and scales external kinetic input.",
+    "icon": "logiclink:creative_logic_motor",
+    "sortnum": 2
+}

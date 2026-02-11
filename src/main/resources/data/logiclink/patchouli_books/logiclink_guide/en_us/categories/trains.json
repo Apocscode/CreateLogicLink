@@ -1,0 +1,6 @@
+{
+    "name": "Train Network",
+    "description": "Monitor and interact with Create's global train network. View all trains, stations, signals, and use the Signal Tablet for in-world diagnostics.",
+    "icon": "logiclink:train_monitor",
+    "sortnum": 3
+}
