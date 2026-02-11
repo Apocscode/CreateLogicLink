@@ -1,5 +1,5 @@
 {
-    "type": "minecraft:crafting_shapeless",
+    "type": "patchouli:shapeless_book_recipe",
     "ingredients": [
         {
             "item": "minecraft:book"
@@ -8,11 +8,5 @@
             "item": "create:brass_ingot"
         }
     ],
-    "result": {
-        "id": "patchouli:guide_book",
-        "count": 1,
-        "components": {
-            "patchouli:book": "logiclink:logiclink_guide"
-        }
-    }
+    "book": "logiclink:logiclink_guide"
 }
