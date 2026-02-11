@@ -1,0 +1,13 @@
+{
+    "type": "patchouli:shapeless_book_recipe",
+    "category": "misc",
+    "ingredients": [
+        {
+            "item": "minecraft:book"
+        },
+        {
+            "item": "create:brass_ingot"
+        }
+    ],
+    "book": "logiclink:logiclink_guide"
+}

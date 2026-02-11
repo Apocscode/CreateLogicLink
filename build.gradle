@@ -129,6 +129,10 @@ dependencies {
     // Full CC:Tweaked for runtime testing
     localRuntime("cc.tweaked:cc-tweaked-${minecraft_version}-forge:${cc_tweaked_version}")
 
+    // ==================== Patchouli (optional) ====================
+    // Compile against Patchouli API for guide book integration
+    compileOnly("vazkii.patchouli:Patchouli:1.21.1-92-NEOFORGE")
+
     // ==================== Create Storage (optional) ====================
     // Compile against Create Storage for peripheral integration
     compileOnly(files("libs/fxntstorage-1.1.7+mc-1.21.1-neoforge.jar"))

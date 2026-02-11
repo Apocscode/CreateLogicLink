@@ -1,3 +1,12 @@
 {
-    "parent": "logiclink:block/train_monitor"
+    "parent": "minecraft:block/cube",
+    "textures": {
+        "north": "logiclink:block/train_monitor_screen",
+        "south": "create:block/andesite_casing",
+        "east": "logiclink:block/train_monitor_frame",
+        "west": "logiclink:block/train_monitor_frame",
+        "up": "logiclink:block/train_monitor_frame",
+        "down": "logiclink:block/train_monitor_frame",
+        "particle": "logiclink:block/train_monitor_frame"
+    }
 }
