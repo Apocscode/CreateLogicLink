@@ -26,7 +26,6 @@ import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraft.world.item.Item;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.SoundType;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockBehaviour;
@@ -317,19 +316,9 @@ public class ModRegistry {
                         output.accept(TRAIN_CONTROLLER_ITEM.get());
                         output.accept(TRAIN_MONITOR_ITEM.get());
                         output.accept(SIGNAL_TABLET_ITEM.get());
-
-                        // Add Patchouli guide book (Patchouli's own creative tab hook
-                        // has a timing issue on NeoForge, so we add it manually)
-                        try {
-                            ItemStack book = vazkii.patchouli.api.PatchouliAPI.get().getBookStack(
-                                    net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(
-                                            "logiclink", "logiclink_guide"));
-                            if (!book.isEmpty()) {
-                                output.accept(book);
-                            }
-                        } catch (Exception e) {
-                            // Patchouli not installed — skip guide book
-                        }
+                        // Patchouli guide book is added automatically by
+                        // Patchouli's processCreativeTabs event via the
+                        // "creative_tab" field in book.json
                     })
                     .build()
             );
