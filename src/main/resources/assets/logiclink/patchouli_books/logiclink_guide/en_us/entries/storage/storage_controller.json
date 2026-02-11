@@ -22,7 +22,7 @@
         {
             "type": "patchouli:text",
             "title": "Item Transfer",
-            "text": "$(li)$(thing)pushItems(toName, fromSlot, limit?, toSlot?)$() → int — extract items to adjacent inventory$(br)$(li)$(thing)pullItems(fromName, fromSlot, limit?, toSlot?)$() → int — insert from adjacent inventory$(br2)The $(thing)toName$() / $(thing)fromName$() is the peripheral name of an adjacent inventory (e.g., a chest).$(br2)$(#4488CC)-- Push 64 items from slot 1 to a chest$(br)local moved = sc.pushItems($(br)  \"minecraft:chest_0\", 1, 64)$(br)print(\"Moved: \" .. moved)$()"
+            "text": "$(li)$(thing)pushItems(toName, fromSlot, limit?, toSlot?)$() → int — extract items to adjacent inventory$(br)$(li)$(thing)pullItems(fromName, fromSlot, limit?, toSlot?)$() — $(bold)not yet implemented$() (will throw an error)$(br2)The $(thing)toName$() is the peripheral name of an adjacent inventory (e.g., a chest). Currently only $(thing)pushItems$() is functional.$(br2)$(#4488CC)-- Push 64 items from slot 1 to a chest$(br)local moved = sc.pushItems($(br)  "minecraft:chest_0", 1, 64)$(br)print("Moved: " .. moved)$()"
         }
     ]
 }

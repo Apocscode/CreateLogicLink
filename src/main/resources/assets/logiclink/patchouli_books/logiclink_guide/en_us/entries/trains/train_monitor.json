@@ -24,7 +24,7 @@
         {
             "type": "patchouli:text",
             "title": "Display Modes",
-            "text": "The monitor renders a $(thing)real-time schematic$() of the entire train network, similar to a Centralized Traffic Control (CTC) board.$(br2)$(bold)Color Legend:$()$(br)$(li)$(#AAAAAA)Gray lines$() — track segments$(br)$(li)$(#55FF55)Green dots$() — stations$(br)$(li)$(#FFAA00)Orange icons$() — moving trains$(br)$(li)$(#FF5555)Red signals$() — occupied blocks$(br)$(li)$(#55FF55)Green signals$() — clear$(br2)The map auto-updates as trains move and signals change."
+            "text": "The monitor renders a $(thing)real-time schematic$() of the entire train network, similar to a Centralized Traffic Control (CTC) board.$(br2)$(bold)Display Modes:$()$(br)$(li)$(thing)MAP$() — graphical track topology view$(br)$(li)$(thing)LIST$() — text list of trains and stations$(br)$(bold)Sneak + right-click$() to toggle between modes.$(br2)$(bold)Color Legend:$()$(br)$(li)$(#AAAAAA)Gray lines$() — track segments$(br)$(li)$(#55FF55)Green dots$() — stations$(br)$(li)$(#FFAA00)Orange icons$() — moving trains$(br)$(li)$(#FF5555)Red signals$() — occupied blocks$(br)$(li)$(#55FF55)Green signals$() — clear"
         }
     ]
 }

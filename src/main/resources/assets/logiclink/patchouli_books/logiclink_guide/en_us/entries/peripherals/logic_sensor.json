@@ -9,12 +9,12 @@
             "item": "logiclink:logic_sensor",
             "link_recipe": true,
             "title": "Logic Sensor",
-            "text": "A thin wireless sensor that reads data from any $(thing)Create machine$() it's pointed at — speeds, temperatures, fluid levels, inventories, and more. Links to a logistics network via frequency.$(br2)Peripheral type: $(thing)\"logicsensor\"$()"
+            "text": "A thin sensor block that reads data from the $(thing)Create machine$() it's attached to — speeds, temperatures, fluid levels, inventories, and more. Links to a logistics network via frequency.$(br2)Peripheral type: $(thing)\"logicsensor\"$()"
         },
         {
             "type": "patchouli:crafting",
             "recipe": "logiclink:logic_sensor",
-            "text": "$(bold)To connect:$() Right-click on any Create linked block (Stock Link, etc.) to join that logistics network. Then right-click a target machine to aim the sensor at it."
+            "text": "$(bold)Targeting:$() Place the sensor directly on the face of a Create machine — it automatically reads the block it's attached to. $(bold)Linking:$() Right-click the sensor item on a Create linked block (Stock Link, etc.) to copy the network frequency before placing."
         },
         {
             "type": "patchouli:text",

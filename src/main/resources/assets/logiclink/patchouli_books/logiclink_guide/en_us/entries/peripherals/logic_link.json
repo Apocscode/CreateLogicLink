@@ -14,7 +14,7 @@
         {
             "type": "patchouli:crafting",
             "recipe": "logiclink:logic_link",
-            "text": "$(bold)To connect:$() Right-click the Logic Link on any Create linked block (Stock Link, Package Link, etc.) to join that logistics network. Then place it next to a CC computer."
+            "text": "$(bold)Linking:$() Right-click the Logic Link $(italic)item$() on any Create linked block (Stock Link, Package Link, etc.) to copy the network frequency. Then place it next to a CC:Tweaked computer. Right-click in air to clear the stored frequency. Sneak+right-click to place without linking."
         },
         {
             "type": "patchouli:text",
@@ -29,7 +29,7 @@
         {
             "type": "patchouli:text",
             "title": "Logistics Data",
-            "text": "$(li)$(thing)getGauges()$() → [{item, target, stock, status, address, position}] — Factory Gauge panels$(br)$(li)$(thing)getLinks()$() → [{position, type, redstonePower}] — Stock Links$(br)$(li)$(thing)getSensors()$() → [{position, targetPosition, data}] — Logic Sensors on network$(br2)$(bold)Item Requests$()$(br)$(li)$(thing)requestItem(name, count, address)$() → boolean$(br)$(li)$(thing)requestItems(items, address)$() → boolean$(br2)$(#4488CC)link.requestItem(\"minecraft:iron_ingot\", 64, \"Smeltery\")$()"
+            "text": "$(li)$(thing)getGauges()$() → [{item, itemDisplayName, targetAmount, currentStock, promised, satisfied, address, slot, position}]$(br)$(li)$(thing)getLinks()$() → [{x, y, z, type, redstonePower}]$(br)$(li)$(thing)getSensors()$() → [{position, targetPosition, data}]$(br2)$(bold)Item Requests$()$(br)$(li)$(thing)requestItem(name, count, address)$() → boolean$(br)$(li)$(thing)requestItems(items, address)$() → boolean$(br2)$(#4488CC)link.requestItem(\"minecraft:iron_ingot\", 64, \"Smeltery\")$()"
         },
         {
             "type": "patchouli:text",

@@ -19,7 +19,7 @@
         {
             "type": "patchouli:text",
             "title": "Using the Tablet",
-            "text": "$(bold)Features:$()$(br)$(li)View all signal states at a glance$(br)$(li)See which trains occupy which track segments$(br)$(li)Monitor track observer activation$(br)$(li)Diagnose signal conflicts$(br)$(li)Identify derailed trains$(br2)The Signal Tablet provides the same network data as the Train Controller peripheral but in a visual handheld format, useful for walking around your rail network and checking signal states."
+            "text": "$(bold)Features:$()$(br)$(li)View signal diagnostic data at a glance$(br)$(li)See which signals have issues or conflicts$(br)$(li)Identify problem areas in your rail network$(br)$(li)Portable — walk around and debug$(br2)The Signal Tablet uses a diagnostic-only scan of the train network, highlighting signal issues and conflicts. Unlike the Train Controller peripheral, it does not expose full train/station data — it focuses on signal health and troubleshooting."
         }
     ]
 }

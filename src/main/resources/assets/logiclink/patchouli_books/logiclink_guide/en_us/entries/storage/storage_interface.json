@@ -17,7 +17,7 @@
         {
             "type": "patchouli:text",
             "title": "Usage Example",
-            "text": "$(bold)Remote inventory display:$()$(br2)$(#4488CC)local si = peripheral.find(\"storage_interface\")$(br)local summary = si.getItemSummary()$(br)for _, item in ipairs(summary) do$(br)  print(item.displayName)$(br)  print(\"  Count: \" .. item.count)$(br)  print(\"  Boxes: \" .. item.boxes)$(br)end$()$(br2)The interface provides the same query methods as the Storage Controller but can be placed remotely — useful for building monitoring stations away from the main storage area."
+            "text": "$(bold)Remote inventory display:$()$(br2)$(#4488CC)local si = peripheral.find("storage_interface")$(br)local summary = si.getItemSummary()$(br)for _, item in ipairs(summary) do$(br)  print(item.displayName)$(br)  print("  Count: " .. item.count)$(br)  print("  Boxes: " .. item.boxes)$(br)end$()$(br2)The interface provides a $(thing)subset$() of Storage Controller queries (no pushItems/pullItems, no getTotalCapacity, no getTotalItemCount). Ideal for building monitoring stations away from the main storage area."
         }
     ]
 }

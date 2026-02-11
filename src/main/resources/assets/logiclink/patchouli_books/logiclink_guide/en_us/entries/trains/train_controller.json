@@ -19,17 +19,17 @@
         {
             "type": "patchouli:text",
             "title": "Network Overview",
-            "text": "$(li)$(thing)getNetworkOverview()$() → {trainCount, stationCount, signalCount, observerCount, graphCount, trainsMoving, trainsStopped, trainsDerailed}$(br)$(li)$(thing)getTrainCount()$() → int$(br)$(li)$(thing)getRefreshInterval()$() → int (ticks)$(br)$(li)$(thing)setRefreshInterval(ticks)$() — 1-200$(br)$(li)$(thing)refresh()$() — force immediate refresh$(br2)$(#4488CC)local tc = peripheral.find(\"train_controller\")$(br)local o = tc.getNetworkOverview()$(br)print(o.trainCount .. \" trains\")$()"
+            "text": "$(li)$(thing)getNetworkOverview()$() → {trainCount, stationCount, signalCount, signalGroupCount, observerCount, graphCount, trainsMoving, trainsStopped, trainsDerailed}$(br)$(li)$(thing)getTrainCount()$() → int$(br)$(li)$(thing)getRefreshInterval()$() → int (ticks)$(br)$(li)$(thing)setRefreshInterval(ticks)$() — 1-200$(br)$(li)$(thing)refresh()$() — force immediate refresh$(br2)$(#4488CC)local tc = peripheral.find("train_controller")$(br)local o = tc.getNetworkOverview()$(br)print(o.trainCount .. " trains")$()"
         },
         {
             "type": "patchouli:text",
             "title": "Train Data",
-            "text": "$(li)$(thing)getTrains()$() → list of all trains$(br)$(li)$(thing)getTrain(name)$() → single train by name (partial match)$(br2)Each train has: $(item)name, id, speed, throttle, maxSpeed, derailed, fuelTicks, carriages, station, position, dimension, schedule, navigation$()$(br2)$(#4488CC)local trains = tc.getTrains()$(br)for _, t in ipairs(trains) do$(br)  print(t.name .. \" @ \" .. (t.station or \"moving\"))$(br)end$()"
+            "text": "$(li)$(thing)getTrains()$() → list of all trains$(br)$(li)$(thing)getTrain(name)$() → single train by name (partial match)$(br2)Each train has: $(item)name, id, speed, targetSpeed, throttle, maxSpeed, derailed, stalled, fuelTicks, carriageCount, currentStation, owner, position, dimension$()$(br)Schedule: $(item)hasSchedule, schedulePaused, scheduleIndex, scheduleEntries$()$(br)Navigation: $(item)navigating, destination, distanceToDestination$()$(br2)$(#4488CC)local trains = tc.getTrains()$(br)for _, t in ipairs(trains) do$(br)  print(t.name .. " @ " .. (t.currentStation or "moving"))$(br)end$()"
         },
         {
             "type": "patchouli:text",
             "title": "Stations, Signals, Observers",
-            "text": "$(li)$(thing)getStations()$() → [{name, position, dimension, assembling, presentTrain, imminentTrain}]$(br2)$(li)$(thing)getSignals()$() → [{id, states, types, positions}] — signal boundary data$(br2)$(li)$(thing)getObservers()$() → [{id, activated, currentTrain, position, dimension, filter}]$(br2)$(#4488CC)local stations = tc.getStations()$(br)for _, s in ipairs(stations) do$(br)  if s.presentTrain then$(br)    print(s.name .. \": \" .. s.presentTrain)$(br)  end$(br)end$()"
+            "text": "$(li)$(thing)getStations()$() → [{name, position, dimension, assembling, trainPresent, presentTrainName, imminentTrainName}]$(br2)$(li)$(thing)getSignals()$() → [{id, stateForward, stateBackward, typeForward, typeBackward, positions}] — signal boundary data$(br2)$(li)$(thing)getObservers()$() → [{id, activated, currentTrainId, position, dimension, filter}]$(br2)$(#4488CC)local stations = tc.getStations()$(br)for _, s in ipairs(stations) do$(br)  if s.trainPresent then$(br)    print(s.name .. \": \" .. s.presentTrainName)$(br)  end$(br)end$()"
         }
     ]
 }
