@@ -9,27 +9,42 @@
             "item": "logiclink:train_controller",
             "link_recipe": true,
             "title": "Train Controller",
-            "text": "Provides $(thing)global read access$() to Create's entire train network. Query every train, station, signal, and observer from a single block — no wired connections needed.$(br2)Peripheral type: $(thing)\"train_controller\"$()"
+            "text": "Provides $(thing)global read access$() to Create's entire train network from Lua. Query every train, station, signal, and observer from a single block — no wired connections to rails needed.$(br2)Peripheral type: $(thing)\"train_controller\"$()$(br2)Uses Create's internal Railway Manager via reflection. Data is cached server-side and refreshes every 20 ticks (1 second) by default."
         },
         {
             "type": "patchouli:crafting",
             "recipe": "logiclink:train_controller",
-            "text": "Place next to a computer. Works anywhere — no rail connection required."
+            "text": "Place next to a CC:Tweaked computer. Works $(bold)anywhere$() in any dimension — no rail connection required. The block entity ticks server-side to cache train network data."
         },
         {
             "type": "patchouli:text",
             "title": "Network Overview",
-            "text": "$(li)$(thing)getNetworkOverview()$() → {trainCount, stationCount, signalCount, signalGroupCount, observerCount, graphCount, trainsMoving, trainsStopped, trainsDerailed}$(br)$(li)$(thing)getTrainCount()$() → int$(br)$(li)$(thing)getRefreshInterval()$() → int (ticks)$(br)$(li)$(thing)setRefreshInterval(ticks)$() — 1-200$(br)$(li)$(thing)refresh()$() — force immediate refresh$(br2)$(#4488CC)local tc = peripheral.find("train_controller")$(br)local o = tc.getNetworkOverview()$(br)print(o.trainCount .. " trains")$()"
+            "text": "$(bold)getNetworkOverview()$() → table$(br)$(li)$(thing)trainCount$() — total trains$(br)$(li)$(thing)stationCount$() — total stations$(br)$(li)$(thing)signalCount$() — total signals$(br)$(li)$(thing)signalGroupCount$() — signal groups$(br)$(li)$(thing)observerCount$() — track observers$(br)$(li)$(thing)graphCount$() — separate track graphs$(br)$(li)$(thing)trainsMoving$() — speed > 0, not derailed$(br)$(li)$(thing)trainsStopped$() — speed ≈ 0, not derailed$(br)$(li)$(thing)trainsDerailed$() — derailed trains$(br2)$(bold)getTrainCount()$() → int$(br)$(bold)refresh()$() — force immediate cache clear$(br)$(bold)getRefreshInterval()$() → int (ticks)$(br)$(bold)setRefreshInterval(ticks)$() — 1 to 200"
         },
         {
             "type": "patchouli:text",
-            "title": "Train Data",
-            "text": "$(li)$(thing)getTrains()$() → list of all trains$(br)$(li)$(thing)getTrain(name)$() → single train by name (partial match)$(br2)Each train has: $(item)name, id, speed, targetSpeed, throttle, maxSpeed, derailed, stalled, fuelTicks, carriageCount, currentStation, owner, position, dimension$()$(br)Schedule: $(item)hasSchedule, schedulePaused, scheduleIndex, scheduleEntries$()$(br)Navigation: $(item)navigating, destination, distanceToDestination$()$(br2)$(#4488CC)local trains = tc.getTrains()$(br)for _, t in ipairs(trains) do$(br)  print(t.name .. " @ " .. (t.currentStation or "moving"))$(br)end$()"
+            "title": "getTrains() — Core Fields",
+            "text": "$(bold)getTrains()$() → list of all trains (sorted by name)$(br)$(bold)getTrain(name)$() → single train (case-insensitive partial match)$(br2)$(bold)Core fields per train:$()$(br)$(li)$(thing)name$() — train name$(br)$(li)$(thing)id$() — UUID string$(br)$(li)$(thing)speed$() — current speed$(br)$(li)$(thing)targetSpeed$() — target speed$(br)$(li)$(thing)throttle$() — throttle value$(br)$(li)$(thing)maxSpeed$() — maximum speed$(br)$(li)$(thing)derailed$() — boolean$(br)$(li)$(thing)fuelTicks$() — remaining fuel$(br)$(li)$(thing)carriageCount$() — number of carriages$(br)$(li)$(thing)currentStation$() — station name or nil$(br)$(li)$(thing)owner$() — UUID string or nil$(br)$(li)$(thing)dimensions$() — list of dimension IDs"
         },
         {
             "type": "patchouli:text",
-            "title": "Stations, Signals, Observers",
-            "text": "$(li)$(thing)getStations()$() → [{name, position, dimension, assembling, trainPresent, presentTrainName, imminentTrainName}]$(br2)$(li)$(thing)getSignals()$() → [{id, stateForward, stateBackward, typeForward, typeBackward, positions}] — signal boundary data$(br2)$(li)$(thing)getObservers()$() → [{id, activated, currentTrainId, position, dimension, filter}]$(br2)$(#4488CC)local stations = tc.getStations()$(br)for _, s in ipairs(stations) do$(br)  if s.trainPresent then$(br)    print(s.name .. \": \" .. s.presentTrainName)$(br)  end$(br)end$()"
+            "title": "getTrains() — Position & Schedule",
+            "text": "$(bold)Position:$()$(br)$(li)$(thing)position$() → {x, y, z, dimension}$(br2)$(bold)Schedule fields:$()$(br)$(li)$(thing)hasSchedule$() — boolean$(br)$(li)$(thing)schedulePaused$() — boolean$(br)$(li)$(thing)scheduleCompleted$() — boolean$(br)$(li)$(thing)scheduleEntry$() — current entry index$(br)$(li)$(thing)scheduleEntryCount$() — total entries$(br)$(li)$(thing)scheduleTitle$() — schedule name$(br)$(li)$(thing)scheduleState$() — lowercase state name$(br)$(li)$(thing)scheduleCyclic$() — loops?$(br2)$(bold)Navigation fields:$()$(br)$(li)$(thing)navigating$() — boolean$(br)$(li)$(thing)destination$() — target station name$(br)$(li)$(thing)distanceToDestination$() — blocks (1 decimal)"
+        },
+        {
+            "type": "patchouli:text",
+            "title": "getStations()",
+            "text": "$(bold)getStations()$() → list of all stations (sorted by name)$(br2)$(bold)Fields per station:$()$(br)$(li)$(thing)name$() — station name$(br)$(li)$(thing)position$() → {x, y, z}$(br)$(li)$(thing)dimension$() — resource location$(br)$(li)$(thing)assembling$() — boolean$(br)$(li)$(thing)trainPresent$() — boolean$(br)$(li)$(thing)presentTrainName$() — name (if present)$(br)$(li)$(thing)presentTrainId$() — UUID (if present)$(br)$(li)$(thing)trainImminent$() — boolean$(br)$(li)$(thing)imminentTrainName$() — name (if imminent)$(br)$(li)$(thing)imminentTrainId$() — UUID (if imminent)$(br2)$(#4488CC)for _, s in ipairs(tc.getStations()) do$(br)  if s.trainPresent then$(br)    print(s.name..\" : \"..s.presentTrainName)$(br)  end$(br)end$()"
+        },
+        {
+            "type": "patchouli:text",
+            "title": "getSignals()",
+            "text": "$(bold)getSignals()$() → list of all signal boundaries$(br2)$(bold)Fields per signal:$()$(br)$(li)$(thing)id$() — UUID string$(br)$(li)$(thing)stateForward$() — \"green\", \"red\", etc.$(br)$(li)$(thing)stateBackward$() — signal state$(br)$(li)$(thing)typeForward$() — signal type$(br)$(li)$(thing)typeBackward$() — signal type$(br)$(li)$(thing)positions$() → list of {x, y, z}$(br2)$(#4488CC)for _, sig in ipairs(tc.getSignals()) do$(br)  if sig.stateForward == \"red\" then$(br)    print(\"Blocked: \" .. sig.id)$(br)  end$(br)end$()"
+        },
+        {
+            "type": "patchouli:text",
+            "title": "getObservers() + Example",
+            "text": "$(bold)getObservers()$() → list of all track observers$(br2)$(bold)Fields per observer:$()$(br)$(li)$(thing)id$() — UUID string$(br)$(li)$(thing)activated$() — boolean$(br)$(li)$(thing)currentTrainId$() — UUID or nil$(br)$(li)$(thing)position$() → {x, y, z}$(br)$(li)$(thing)dimension$() — resource location$(br)$(li)$(thing)filter$() — filter string$(br2)$(bold)Full example:$()$(br)$(#4488CC)local tc = peripheral.find(\"train_controller\")$(br)local o = tc.getNetworkOverview()$(br)print(o.trainCount..\" trains, \"..o.trainsDerailed..\" derailed\")$(br)for _, t in ipairs(tc.getTrains()) do$(br)  print(t.name..\" spd:\"..t.speed)$(br)end$()"
         }
     ]
 }

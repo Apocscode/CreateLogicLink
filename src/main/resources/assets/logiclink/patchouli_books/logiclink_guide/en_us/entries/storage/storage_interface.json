@@ -7,17 +7,27 @@
         {
             "type": "patchouli:text",
             "title": "Storage Interface",
-            "text": "A $(thing)remote access point$() that connects to a Storage Controller's network. Place anywhere and link to a controller to query items without being adjacent.$(br2)Peripheral type: $(thing)\"storage_interface\"$()$(br2)$(bold)Requires:$() Functional Storage mod (fxntstorage).$(br2)$(#4488CC)local si = peripheral.find(\"storage_interface\")$(br)if si.isConnected() then$(br)  print(si.getBoxCount() .. \" boxes\")$(br)end$()"
+            "text": "A $(thing)remote access point$() into a Functional Storage network. Place anywhere and link to a Storage Controller to query items remotely — no need to be next to the controller.$(br2)Peripheral type: $(thing)\"storage_interface\"$()$(br2)$(bold)Requires:$() The $(thing)Functional Storage$() mod (fxntstorage) must be installed. LogicLink auto-detects its presence and registers the peripheral only when the mod is loaded.$(br2)This attaches to an existing $(thing)Storage Interface$() block from Functional Storage."
         },
         {
             "type": "patchouli:text",
-            "title": "Lua API",
-            "text": "$(li)$(thing)isConnected()$() → boolean — linked to a controller?$(br)$(li)$(thing)getPosition()$() → {x, y, z}$(br)$(li)$(thing)getControllerPosition()$() → {x, y, z} or nil$(br)$(li)$(thing)size()$() → int — slot count$(br)$(li)$(thing)list()$() → {slot → {name, count, displayName, maxCount}}$(br)$(li)$(thing)getItemDetail(slot)$() → detailed info with tags$(br)$(li)$(thing)getBoxCount()$() → int$(br)$(li)$(thing)getItemCount(itemId)$() → int$(br)$(li)$(thing)getItemSummary()$() → [{name, displayName, count, boxes}]$(br)$(li)$(thing)findItems(query)$() → search by partial name/ID"
+            "title": "How to Use",
+            "text": "$(bold)Setup:$()$(br)$(li)Build a Functional Storage network with a Controller$(br)$(li)Place a Functional Storage Interface block linked to the network$(br)$(li)Place a CC:Tweaked computer next to the Interface$(br)$(li)Wrap: $(#4488CC)peripheral.find(\"storage_interface\")$()$(br2)$(bold)Connection Methods:$()$(br)$(li)$(thing)isConnected()$() → boolean$(br)  True if linked to a controller$(br)$(li)$(thing)getPosition()$() → {x, y, z}$(br)  Position of the interface block$(br)$(li)$(thing)getControllerPosition()$() → {x, y, z} or nil$(br)  Position of the linked controller$(br)$(li)$(thing)getBoxCount()$() → int$(br)  Number of boxes in the linked network"
         },
         {
             "type": "patchouli:text",
-            "title": "Usage Example",
-            "text": "$(bold)Remote inventory display:$()$(br2)$(#4488CC)local si = peripheral.find("storage_interface")$(br)local summary = si.getItemSummary()$(br)for _, item in ipairs(summary) do$(br)  print(item.displayName)$(br)  print("  Count: " .. item.count)$(br)  print("  Boxes: " .. item.boxes)$(br)end$()$(br2)The interface provides a $(thing)subset$() of Storage Controller queries (no pushItems/pullItems, no getTotalCapacity, no getTotalItemCount). Ideal for building monitoring stations away from the main storage area."
+            "title": "Inventory Queries",
+            "text": "$(li)$(thing)size()$() → int$(br)  Total slot count in linked network$(br)$(li)$(thing)getItemCount(itemId)$() → int$(br)  Count of specific item by registry ID$(br2)$(bold)list()$() → {slot → item}$(br)1-based slots, empty slots omitted.$(br)$(bold)Fields:$() $(thing)name$(), $(thing)displayName$(), $(thing)count$(), $(thing)maxCount$()$(br2)$(bold)getItemDetail(slot)$() → table or nil$(br)Detailed info for one 1-based slot.$(br)$(bold)Fields:$() $(thing)name$(), $(thing)displayName$(), $(thing)count$(), $(thing)maxCount$(), $(thing)maxStackSize$(), $(thing)tags$() (list of tag IDs)"
+        },
+        {
+            "type": "patchouli:text",
+            "title": "Search & Summary",
+            "text": "$(bold)getItemSummary()$() → list of unique items$(br)$(bold)Fields:$() $(thing)name$(), $(thing)displayName$(), $(thing)count$() (total), $(thing)boxes$() (box count)$(br2)$(bold)findItems(query)$() → list of matching items$(br)Case-insensitive partial match. Throws if query is empty.$(br)$(bold)Fields:$() $(thing)name$(), $(thing)displayName$(), $(thing)count$(), $(thing)maxCount$(), $(thing)slot$()$(br2)$(#4488CC)local si = peripheral.find(\"storage_interface\")$(br)if si.isConnected() then$(br)  for _, item in ipairs(si.findItems(\"diamond\")) do$(br)    print(item.displayName..\" x\"..item.count)$(br)  end$(br)end$()"
+        },
+        {
+            "type": "patchouli:text",
+            "title": "vs. Storage Controller",
+            "text": "The Interface provides a $(thing)read-only subset$() of the Storage Controller's methods. It does $(bold)not$() have:$(br)$(li)$(thing)getTotalItemCount()$()$(br)$(li)$(thing)getTotalCapacity()$()$(br)$(li)$(thing)getBoxes()$() — detailed box data$(br)$(li)$(thing)pushItems()$() — item transfer$(br)$(li)$(thing)pullItems()$()$(br2)Use the Interface for $(bold)remote monitoring$() — checking stock levels, searching items, displaying inventory on distant screens.$(br2)Use the Controller directly when you need $(bold)full access$() — box details, capacity tracking, or item transfers.$(br2)$(#4488CC)-- Remote warehouse monitor$(br)local si = peripheral.find(\"storage_interface\")$(br)local ctrl = si.getControllerPosition()$(br)print(\"Controller at: \"..ctrl.x..\",\"..ctrl.y..\",\"..ctrl.z)$()"
         }
     ]
 }

@@ -7,22 +7,37 @@
         {
             "type": "patchouli:text",
             "title": "Storage Controller",
-            "text": "Provides Lua access to a $(thing)Simple Storage$() network. Query inventories, search items, and transfer between storage boxes and adjacent inventories.$(br2)Peripheral type: $(thing)\"storage_controller\"$()$(br2)$(bold)Requires:$() Functional Storage mod (fxntstorage). This peripheral attaches to existing Simple Storage Controller blocks.$(br2)$(#4488CC)local sc = peripheral.find(\"storage_controller\")$(br)print(sc.getBoxCount() .. \" boxes\")$()"
+            "text": "Exposes a $(thing)Functional Storage$() (Create: Storage) network to Lua. Query every box, search items, view capacities, and push items out to adjacent inventories.$(br2)Peripheral type: $(thing)\"storage_controller\"$()$(br2)$(bold)Requires:$() The $(thing)Functional Storage$() mod (fxntstorage) must be installed. LogicLink auto-detects its presence and registers the peripheral only when the mod is loaded.$(br2)This peripheral attaches to an existing $(thing)Simple Storage Controller$() block from Functional Storage — no new block needed."
         },
         {
             "type": "patchouli:text",
-            "title": "Connection & Info",
-            "text": "$(li)$(thing)isConnected()$() → boolean — any boxes connected?$(br)$(li)$(thing)getBoxCount()$() → int — connected boxes$(br)$(li)$(thing)getPosition()$() → {x, y, z}$(br)$(li)$(thing)size()$() → int — slot count in network$(br)$(li)$(thing)getTotalItemCount()$() → int — all items$(br)$(li)$(thing)getTotalCapacity()$() → long — max capacity$(br)$(li)$(thing)getItemCount(itemId)$() → int — count of specific item$(br2)$(#4488CC)local total = sc.getTotalItemCount()$(br)local cap = sc.getTotalCapacity()$(br)print(total .. \"/\" .. cap)$()"
+            "title": "How to Use",
+            "text": "$(bold)Setup:$()$(br)$(li)Build a Functional Storage network (Controller + Storage Boxes)$(br)$(li)Place a CC:Tweaked computer next to the Simple Storage Controller block$(br)$(li)Wrap as peripheral: $(#4488CC)peripheral.find(\"storage_controller\")$()$(br2)$(bold)Connection Methods:$()$(br)$(li)$(thing)isConnected()$() → boolean$(br)  Returns true if the storage network has boxes$(br)$(li)$(thing)getPosition()$() → {x, y, z}$(br)  Position of the controller block$(br)$(li)$(thing)getBoxCount()$() → int$(br)  Number of connected storage boxes"
         },
         {
             "type": "patchouli:text",
-            "title": "Inventory Access",
-            "text": "$(li)$(thing)list()$() → {slot → {name, count, displayName, maxCount}}$(br)$(li)$(thing)getItemDetail(slot)$() → detailed item info with tags (1-based)$(br)$(li)$(thing)getBoxes()$() → [{position, storedAmount, maxCapacity, upgrades, filter, item}]$(br)$(li)$(thing)getItemSummary()$() → [{name, displayName, count, boxes}]$(br)$(li)$(thing)findItems(query)$() → search by partial name/ID$(br2)$(#4488CC)local results = sc.findItems(\"iron\")$(br)for _, r in ipairs(results) do$(br)  print(r.displayName .. \": \" .. r.count)$(br)end$()"
+            "title": "Capacity & Counting",
+            "text": "$(li)$(thing)size()$() → int$(br)  Total slot count across entire network$(br)$(li)$(thing)getTotalItemCount()$() → int$(br)  Sum of all item stacks in network$(br)$(li)$(thing)getTotalCapacity()$() → long$(br)  Max capacity across all boxes$(br)$(li)$(thing)getItemCount(itemId)$() → int$(br)  Count of a specific item by registry ID$(br2)$(#4488CC)local sc = peripheral.find(\"storage_controller\")$(br)print(\"Boxes: \" .. sc.getBoxCount())$(br)print(\"Items: \" .. sc.getTotalItemCount())$(br)print(\"Capacity: \" .. sc.getTotalCapacity())$(br)local iron = sc.getItemCount(\"minecraft:iron_ingot\")$(br)print(\"Iron: \" .. iron)$()"
+        },
+        {
+            "type": "patchouli:text",
+            "title": "list() & getItemDetail()",
+            "text": "$(bold)list()$() → {slot → item}$(br)Returns a table keyed by 1-based slot number. Empty slots are omitted.$(br)$(bold)Per-item fields:$() $(thing)name$(), $(thing)displayName$(), $(thing)count$(), $(thing)maxCount$()$(br2)$(bold)getItemDetail(slot)$() → table or nil$(br)Detailed info for one slot (1-based). Returns nil if empty. Throws error if slot out of range.$(br)$(bold)Fields:$() $(thing)name$(), $(thing)displayName$(), $(thing)count$(), $(thing)maxCount$(), $(thing)maxStackSize$(), $(thing)tags$() (list of tag IDs)$(br2)$(#4488CC)local items = sc.list()$(br)for slot, item in pairs(items) do$(br)  print(slot..\": \"..item.displayName..\" x\"..item.count)$(br)end$()"
+        },
+        {
+            "type": "patchouli:text",
+            "title": "getBoxes()",
+            "text": "$(bold)getBoxes()$() → list of box info tables$(br2)$(bold)Fields per box:$()$(br)$(li)$(thing)slot$() — 1-based index$(br)$(li)$(thing)position$() → {x, y, z}$(br)$(li)$(thing)storedAmount$() — items stored$(br)$(li)$(thing)maxCapacity$() — max item capacity$(br)$(li)$(thing)capacityUpgrades$() — upgrade count$(br)$(li)$(thing)hasVoidUpgrade$() — boolean$(br)$(li)$(thing)filter$() — registry ID of filter item$(br)$(li)$(thing)filterDisplayName$() — display name$(br)$(li)$(thing)item$() — registry ID of stored item$(br)$(li)$(thing)itemDisplayName$() — display name$(br)$(li)$(thing)count$() — current stack count"
+        },
+        {
+            "type": "patchouli:text",
+            "title": "Search & Summary",
+            "text": "$(bold)getItemSummary()$() → list of unique items$(br)$(bold)Fields:$() $(thing)name$(), $(thing)displayName$(), $(thing)count$() (total), $(thing)boxes$() (box count)$(br2)$(bold)findItems(query)$() → list of matching items$(br)Case-insensitive partial match on name or ID. Throws error if query is empty.$(br)$(bold)Fields:$() $(thing)name$(), $(thing)displayName$(), $(thing)count$(), $(thing)maxCount$(), $(thing)slot$()$(br2)$(#4488CC)local results = sc.findItems(\"iron\")$(br)for _, r in ipairs(results) do$(br)  print(r.displayName .. \": \" .. r.count)$(br)end$(br)$(br)local summary = sc.getItemSummary()$(br)for _, s in ipairs(summary) do$(br)  print(s.displayName..\" x\"..s.count..\" in \"..s.boxes..\" boxes\")$(br)end$()"
         },
         {
             "type": "patchouli:text",
             "title": "Item Transfer",
-            "text": "$(li)$(thing)pushItems(toName, fromSlot, limit?, toSlot?)$() → int — extract items to adjacent inventory$(br)$(li)$(thing)pullItems(fromName, fromSlot, limit?, toSlot?)$() — $(bold)not yet implemented$() (will throw an error)$(br2)The $(thing)toName$() is the peripheral name of an adjacent inventory (e.g., a chest). Currently only $(thing)pushItems$() is functional.$(br2)$(#4488CC)-- Push 64 items from slot 1 to a chest$(br)local moved = sc.pushItems($(br)  "minecraft:chest_0", 1, 64)$(br)print("Moved: " .. moved)$()"
+            "text": "$(bold)pushItems(toName, fromSlot, [limit], [toSlot])$() → int$(br)Extracts items from storage network slot and pushes to an adjacent inventory peripheral. Returns number transferred.$(br)$(li)$(thing)toName$() — peripheral name (e.g., \"minecraft:chest_0\")$(br)$(li)$(thing)fromSlot$() — 1-based source slot$(br)$(li)$(thing)limit$() — optional max items$(br)$(li)$(thing)toSlot$() — optional target slot$(br2)$(bold)pullItems()$() — $(#FF5555)Not yet implemented$(). Will throw an error. Coming in a future update.$(br2)$(#4488CC)local moved = sc.pushItems(\"minecraft:chest_0\", 1, 64)$(br)print(\"Transferred: \" .. moved)$()"
         }
     ]
 }
