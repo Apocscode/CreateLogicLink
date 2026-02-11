@@ -9,22 +9,32 @@
             "item": "logiclink:redstone_controller",
             "link_recipe": true,
             "title": "Redstone Controller",
-            "text": "Lua-controlled $(thing)wireless redstone$() via Create's Redstone Link frequency system. Transmit and receive redstone signals on any frequency channel from code.$(br2)Peripheral type: $(thing)\"redstone_controller\"$()"
+            "text": "One block that replaces $(bold)unlimited$() physical $(thing)Create Redstone Links$(). Place next to a CC:Tweaked computer and control Create's entire Redstone Link network from Lua — no physical links needed.$(br2)Peripheral type: $(thing)\"redstone_controller\"$()"
         },
         {
             "type": "patchouli:crafting",
             "recipe": "logiclink:redstone_controller",
-            "text": "Channels use two item IDs as the frequency pair, matching Create's Redstone Link system."
+            "text": "$(bold)No frequency linking required.$() Place next to a computer. Channels are created dynamically from your Lua scripts on first use."
+        },
+        {
+            "type": "patchouli:text",
+            "title": "How It Works",
+            "text": "Create's $(thing)Redstone Links$() use a two-item frequency system — two items in the link's slots define a channel. Any link tuned to the same pair receives the signal.$(br2)The Redstone Controller creates $(thing)virtual$() Redstone Links from code. When you call $(thing)setOutput(item1, item2, 15)$(), it registers a transmitter on that frequency. Any physical Redstone Link in range tuned to those same two items will receive the signal.$(br2)With ~1200 items in modded Minecraft, that gives you over $(bold)1.4 million$() unique channel combinations — all from one block."
         },
         {
             "type": "patchouli:text",
             "title": "Lua API",
-            "text": "$(li)$(thing)setOutput(item1, item2, power)$() — transmit signal (0-15) on channel$(br)$(li)$(thing)getInput(item1, item2)$() → int — received signal on channel$(br)$(li)$(thing)getOutput(item1, item2)$() → int — current transmit power$(br)$(li)$(thing)removeChannel(item1, item2)$() — remove a channel$(br)$(li)$(thing)getChannels()$() → [{item1, item2, mode, power}]$(br)$(li)$(thing)setAllOutputs(power)$() — set all transmit channels$(br)$(li)$(thing)clearChannels()$() — remove all channels$(br)$(li)$(thing)getPosition()$() → {x, y, z}"
+            "text": "$(li)$(thing)setOutput(item1, item2, power)$() — create/update a transmitter channel (0-15)$(br)$(li)$(thing)getInput(item1, item2)$() → int — create a receiver and read incoming signal$(br)$(li)$(thing)getOutput(item1, item2)$() → int — read current transmit power (no side effects)$(br)$(li)$(thing)removeChannel(item1, item2)$() — unregister one channel$(br)$(li)$(thing)getChannels()$() → [{item1, item2, mode, power}] — all active channels$(br)$(li)$(thing)setAllOutputs(power)$() — set every transmit channel to one value$(br)$(li)$(thing)clearChannels()$() — unregister all channels$(br)$(li)$(thing)getPosition()$() → {x, y, z}"
         },
         {
             "type": "patchouli:text",
-            "title": "Usage Examples",
-            "text": "$(bold)Toggle a door:$()$(br)$(#4488CC)local rc = peripheral.find(\"redstone_controller\")$(br)rc.setOutput($(br)  \"minecraft:redstone\",$(br)  \"minecraft:redstone\", 15)$()$(br2)$(bold)Read a sensor:$()$(br)$(#4488CC)local power = rc.getInput($(br)  \"minecraft:iron_ingot\",$(br)  \"minecraft:gold_ingot\")$(br)print(\"Signal: \" .. power)$()$(br2)Frequency pairs match Create's Redstone Links — any two item IDs form a channel."
+            "title": "Transmitting",
+            "text": "$(bold)Power a Redstone Link receiver:$()$(br)$(#4488CC)local rc = peripheral.find(\"redstone_controller\")$(br)-- This sends signal 15 to any Create$(br)-- Redstone Link tuned to redstone + lever$(br)rc.setOutput($(br)  \"minecraft:redstone\",$(br)  \"minecraft:lever\", 15)$()$(br2)The physical Redstone Link block with a $(item)Redstone$() and a $(item)Lever$() in its slots (set to receive) will now output signal 15. No wires, no physical links on this end."
+        },
+        {
+            "type": "patchouli:text",
+            "title": "Receiving & Managing",
+            "text": "$(bold)Read a physical link's transmit signal:$()$(br)$(#4488CC)local power = rc.getInput($(br)  \"minecraft:blue_dye\",$(br)  \"minecraft:stick\")$(br)print(\"Signal: \" .. power)$()$(br2)$(bold)Kill switch — zero all outputs:$()$(br)$(#4488CC)rc.setAllOutputs(0)$()$(br2)$(bold)List active channels:$()$(br)$(#4488CC)for _, ch in ipairs(rc.getChannels()) do$(br)  print(ch.item1 .. \"+\" .. ch.item2$(br)    .. \" \" .. ch.mode .. \"=\" .. ch.power)$(br)end$()$(br2)Channels persist across server restarts."
         }
     ]
 }
