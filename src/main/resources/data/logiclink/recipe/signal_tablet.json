@@ -1,0 +1,18 @@
+{
+    "type": "minecraft:crafting_shaped",
+    "pattern": [
+        " G ",
+        "BRB",
+        " C "
+    ],
+    "key": {
+        "G": { "item": "minecraft:tinted_glass" },
+        "B": { "item": "create:brass_ingot" },
+        "R": { "item": "create:railway_casing" },
+        "C": { "item": "minecraft:comparator" }
+    },
+    "result": {
+        "id": "logiclink:signal_tablet",
+        "count": 1
+    }
+}

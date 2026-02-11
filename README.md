@@ -296,6 +296,98 @@ When the **Create: Storage** mod (`fxntstorage`) is installed, two additional pe
 | `getItemSummary()` | [item] | Unique items with totals |
 | `findItems(query)` | [item] | Search by partial name |
 
+## Crafting Recipes
+
+All blocks and items use shaped crafting recipes with Create and vanilla ingredients.
+
+### Logic Link
+```
+┌─────────────┬─────────────────┬─────────────┐
+│             │   Ender Pearl   │             │
+├─────────────┼─────────────────┼─────────────┤
+│ Brass Ingot │ Andesite Casing │ Brass Ingot │
+├─────────────┼─────────────────┼─────────────┤
+│             │   Comparator    │             │
+└─────────────┴─────────────────┴─────────────┘
+```
+
+### Logic Sensor
+```
+┌──────────────┬─────────────────┬──────────────┐
+│              │    Observer     │              │
+├──────────────┼─────────────────┼──────────────┤
+│ Copper Ingot │ Andesite Casing │ Copper Ingot │
+├──────────────┼─────────────────┼──────────────┤
+│              │  Nether Quartz  │              │
+└──────────────┴─────────────────┴──────────────┘
+```
+
+### Redstone Controller
+```
+┌─────────────┬─────────────────┬─────────────┐
+│             │   Ender Pearl   │             │
+├─────────────┼─────────────────┼─────────────┤
+│ Brass Ingot │ Andesite Casing │ Brass Ingot │
+├─────────────┼─────────────────┼─────────────┤
+│             │ Redstone Block  │             │
+└─────────────┴─────────────────┴─────────────┘
+```
+
+### Creative Logic Motor
+```
+┌─────────────┬───────────────┬─────────────┐
+│             │  Ender Pearl  │             │
+├─────────────┼───────────────┼─────────────┤
+│ Brass Ingot │ Electron Tube │ Brass Ingot │
+├─────────────┼───────────────┼─────────────┤
+│             │     Shaft     │             │
+└─────────────┴───────────────┴─────────────┘
+```
+
+### Logic Drive
+```
+┌─────────────┬─────────────────┬─────────────┐
+│             │   Comparator    │             │
+├─────────────┼─────────────────┼─────────────┤
+│ Brass Ingot │ Andesite Casing │ Brass Ingot │
+├─────────────┼─────────────────┼─────────────┤
+│             │      Shaft      │             │
+└─────────────┴─────────────────┴─────────────┘
+```
+
+### Train Controller
+```
+┌─────────────┬─────────────────┬─────────────┐
+│ Ender Pearl │ Railway Casing  │ Ender Pearl │
+├─────────────┼─────────────────┼─────────────┤
+│ Brass Ingot │ Andesite Casing │ Brass Ingot │
+├─────────────┼─────────────────┼─────────────┤
+│             │   Comparator    │             │
+└─────────────┴─────────────────┴─────────────┘
+```
+
+### Train Monitor
+```
+┌──────────────┬─────────────────┬──────────────┐
+│ Tinted Glass │  Tinted Glass   │ Tinted Glass │
+├──────────────┼─────────────────┼──────────────┤
+│ Tinted Glass │ Railway Casing  │ Tinted Glass │
+├──────────────┼─────────────────┼──────────────┤
+│ Brass Ingot  │ Andesite Casing │  Brass Ingot │
+└──────────────┴─────────────────┴──────────────┘
+```
+
+### Signal Diagnostic Tablet
+```
+┌─────────────┬────────────────┬─────────────┐
+│             │  Tinted Glass  │             │
+├─────────────┼────────────────┼─────────────┤
+│ Brass Ingot │ Railway Casing │ Brass Ingot │
+├─────────────┼────────────────┼─────────────┤
+│             │  Comparator    │             │
+└─────────────┴────────────────┴─────────────┘
+```
+
 ## Building from Source
 
 ```bash

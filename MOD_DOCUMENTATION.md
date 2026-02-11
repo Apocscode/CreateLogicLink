@@ -566,29 +566,116 @@ F:\Controller\CreateLogicLink\
 
 ## Crafting Recipes
 
+All blocks and items use shaped crafting recipes with Create and vanilla ingredients.
+
 ### Logic Link
 ```
-     [ ]         [Ender Pearl]    [ ]
-[Brass Ingot] [Andesite Casing] [Brass Ingot]
-     [ ]         [Comparator]     [ ]
+┌─────────────┬─────────────────┬─────────────┐
+│             │   Ender Pearl   │             │
+├─────────────┼─────────────────┼─────────────┤
+│ Brass Ingot │ Andesite Casing │ Brass Ingot │
+├─────────────┼─────────────────┼─────────────┤
+│             │   Comparator    │             │
+└─────────────┴─────────────────┴─────────────┘
+→ Logic Link ×1
 ```
 
 ### Logic Sensor
 ```
-     [ ]          [Observer]       [ ]
-[Copper Ingot] [Andesite Casing] [Copper Ingot]
-     [ ]        [Nether Quartz]    [ ]
+┌──────────────┬─────────────────┬──────────────┐
+│              │    Observer     │              │
+├──────────────┼─────────────────┼──────────────┤
+│ Copper Ingot │ Andesite Casing │ Copper Ingot │
+├──────────────┼─────────────────┼──────────────┤
+│              │  Nether Quartz  │              │
+└──────────────┴─────────────────┴──────────────┘
+→ Logic Sensor ×1
 ```
 
 ### Redstone Controller
 ```
-     [ ]         [Ender Pearl]      [ ]
-[Brass Ingot] [Andesite Casing] [Brass Ingot]
-     [ ]       [Redstone Block]     [ ]
+┌─────────────┬─────────────────┬─────────────┐
+│             │   Ender Pearl   │             │
+├─────────────┼─────────────────┼─────────────┤
+│ Brass Ingot │ Andesite Casing │ Brass Ingot │
+├─────────────┼─────────────────┼─────────────┤
+│             │ Redstone Block  │             │
+└─────────────┴─────────────────┴─────────────┘
+→ Redstone Controller ×1
 ```
 
-### Creative Logic Motor & Logic Drive
-*(Recipes defined in data/logiclink/recipe/)*
+### Creative Logic Motor
+```
+┌─────────────┬───────────────┬─────────────┐
+│             │  Ender Pearl  │             │
+├─────────────┼───────────────┼─────────────┤
+│ Brass Ingot │ Electron Tube │ Brass Ingot │
+├─────────────┼───────────────┼─────────────┤
+│             │     Shaft     │             │
+└─────────────┴───────────────┴─────────────┘
+→ Creative Logic Motor ×1
+```
+
+### Logic Drive
+```
+┌─────────────┬─────────────────┬─────────────┐
+│             │   Comparator    │             │
+├─────────────┼─────────────────┼─────────────┤
+│ Brass Ingot │ Andesite Casing │ Brass Ingot │
+├─────────────┼─────────────────┼─────────────┤
+│             │      Shaft      │             │
+└─────────────┴─────────────────┴─────────────┘
+→ Logic Drive ×1
+```
+
+### Train Controller
+```
+┌─────────────┬─────────────────┬─────────────┐
+│ Ender Pearl │ Railway Casing  │ Ender Pearl │
+├─────────────┼─────────────────┼─────────────┤
+│ Brass Ingot │ Andesite Casing │ Brass Ingot │
+├─────────────┼─────────────────┼─────────────┤
+│             │   Comparator    │             │
+└─────────────┴─────────────────┴─────────────┘
+→ Train Controller ×1
+```
+
+### Train Monitor
+```
+┌──────────────┬─────────────────┬──────────────┐
+│ Tinted Glass │  Tinted Glass   │ Tinted Glass │
+├──────────────┼─────────────────┼──────────────┤
+│ Tinted Glass │ Railway Casing  │ Tinted Glass │
+├──────────────┼─────────────────┼──────────────┤
+│ Brass Ingot  │ Andesite Casing │  Brass Ingot │
+└──────────────┴─────────────────┴──────────────┘
+→ Train Monitor ×1
+```
+
+### Signal Diagnostic Tablet
+```
+┌─────────────┬────────────────┬─────────────┐
+│             │  Tinted Glass  │             │
+├─────────────┼────────────────┼─────────────┤
+│ Brass Ingot │ Railway Casing │ Brass Ingot │
+├─────────────┼────────────────┼─────────────┤
+│             │  Comparator    │             │
+└─────────────┴────────────────┴─────────────┘
+→ Signal Diagnostic Tablet ×1
+```
+
+### Recipe Summary
+
+| Item | Top | Middle | Bottom |
+|------|-----|--------|--------|
+| Logic Link | Ender Pearl | Brass + Andesite Casing + Brass | Comparator |
+| Logic Sensor | Observer | Copper + Andesite Casing + Copper | Nether Quartz |
+| Redstone Controller | Ender Pearl | Brass + Andesite Casing + Brass | Redstone Block |
+| Creative Logic Motor | Ender Pearl | Brass + Electron Tube + Brass | Shaft |
+| Logic Drive | Comparator | Brass + Andesite Casing + Brass | Shaft |
+| Train Controller | Ender Pearl + Railway Casing + Ender Pearl | Brass + Andesite Casing + Brass | Comparator |
+| Train Monitor | Tinted Glass ×3 | Tinted Glass + Railway Casing + Tinted Glass | Brass + Andesite Casing + Brass |
+| Signal Tablet | Tinted Glass | Brass + Railway Casing + Brass | Comparator |
 
 ---
 
