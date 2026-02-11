@@ -8,7 +8,7 @@ A Minecraft NeoForge mod that bridges **Create mod's** logistics system with **C
 - **Logic Sensor Block** — Thin surface-mount sensor that reads Create machine data (inventory, fluids, kinetic speed/stress, Blaze Burner heat). Attaches to any surface like a Stock Link (7 functions).
 - **Redstone Controller Block** — Programmatic control over Create's Redstone Link wireless network. One block manages unlimited frequency channels from Lua — no GUI, no physical Redstone Links needed (8 functions).
 - **Creative Logic Motor** — CC-controlled rotation source with unlimited stress capacity. Set speed, direction, and run timed sequences from Lua (16 functions).
-- **Logic Motor** — CC-controlled rotation modifier that sits inline on a shaft. Acts as a programmable clutch + gearshift + sequenced gearshift. Orange-marked input side, light-blue output side (17 functions).
+- **Logic Drive** — CC-controlled rotation modifier that sits inline on a shaft. Acts as a programmable clutch + gearshift + sequenced gearshift. Orange-marked input side, light-blue output side (17 functions).
 - **Create Storage Integration** *(optional)* — Storage Controller peripheral (14 functions) and Storage Interface peripheral (10 functions) for the Create: Storage mod. Automatically available when that mod is installed.
 - **Train Monitor Block** — CTC-style train network overview with real-time map display, signal diagnostics, and conflict detection. Renders a scrollable/zoomable network map on a Create-themed GUI.
 - **Signal Diagnostic Tablet** — Handheld item for field debugging. Right-click to scan the train network, then view diagnostics sorted by distance. Click per-issue highlight buttons to toggle in-world ghost boxes at signal locations.
@@ -212,12 +212,12 @@ motor.runSequence(false)      -- Run once (true = loop)
 | `isSequenceRunning()` | boolean | Whether a sequence is active |
 | `getSequenceSize()` | number | Number of queued steps |
 
-## Logic Motor
+## Logic Drive
 
 A CC-controlled rotation modifier that sits inline on a shaft. Combines clutch + gearshift + sequenced gearshift in one block. The **orange-marked** side is the drive input, the **light-blue** side is the CC-controlled output.
 
 ```lua
-local motor = peripheral.wrap("logic_motor")
+local motor = peripheral.wrap("logic_drive")
 
 -- Basic control
 motor.enable()                 -- Pass rotation through
@@ -236,7 +236,7 @@ motor.addRotateStep(-180, 2.0)   -- Rotate back at 2× speed
 motor.runSequence(true)          -- Loop forever
 ```
 
-## Lua API — `logic_motor`
+## Lua API — `logic_drive`
 
 | Function | Returns | Description |
 |----------|---------|-------------|
@@ -325,20 +325,6 @@ src/main/java/com/apocscode/logiclink/
 │   ├── RedstoneControllerBlockEntity.java # Virtual redstone link channels
 │   ├── CreativeLogicMotorBlock.java       # Creative Motor (DirectionalKineticBlock)
 │   ├── CreativeLogicMotorBlockEntity.java # Speed control, sequences (GeneratingKineticBE)
-│   ├── LogicMotorBlock.java               # Logic Motor (KineticBlock, HORIZONTAL_FACING)
-│   └── LogicMotorBlockEntity.java         # Modifier, clutch, sequences (SplitShaftBE)
-├── peripheral/
-│   ├── LogicLinkPeripheral.java           # 14 Lua functions
-│   ├── LogicLinkPeripheralProvider.java   # Registers all peripherals with CC
-│   ├── LogicSensorPeripheral.java         # 7 Lua functions
-│   ├── RedstoneControllerPeripheral.java  # 8 Lua functions
-│   ├── CreativeLogicMotorPeripheral.java  # 16 Lua functions
-│   ├── LogicMotorPeripheral.java          # 17 Lua functions
-│   ├── CreateBlockReader.java             # Reads Create block data via reflection
-│   ├── StoragePeripheralCompat.java       # Soft-dependency guard for Create Storage
-│   └── storage/
-│       ├── StorageControllerPeripheral.java  # 14 Lua functions (Create Storage)
-│       └── StorageInterfacePeripheral.java   # 10 Lua functions (Create Storage)
 │   ├── TrainMonitorBlock.java             # Train Monitor block
 │   ├── TrainMonitorBlockEntity.java       # Train network data, diagnostics cache
 │   ├── TrainMonitorMenu.java              # Container menu for monitor GUI
@@ -353,9 +339,9 @@ src/main/java/com/apocscode/logiclink/
 │   ├── LogicSensorPeripheral.java         # 7 Lua functions
 │   ├── RedstoneControllerPeripheral.java  # 8 Lua functions
 │   ├── CreativeLogicMotorPeripheral.java  # 16 Lua functions
+│   ├── LogicDrivePeripheral.java          # Logic Drive Lua functions (17 functions)
 │   ├── TrainControllerPeripheral.java     # Train controller Lua functions
 │   ├── TrainNetworkDataReader.java        # Train network scanner & diagnostics engine
-│   ├── LogicDrivePeripheral.java          # Logic Drive Lua functions
 │   ├── CreateBlockReader.java             # Reads Create block data via reflection
 │   ├── StoragePeripheralCompat.java       # Soft-dependency guard for Create Storage
 │   └── storage/

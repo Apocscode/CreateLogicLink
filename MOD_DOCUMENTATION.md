@@ -82,14 +82,14 @@ A CC:Tweaked-controlled rotation source with unlimited stress capacity. Generate
 - **Stress:** Unlimited capacity (creative-tier)
 - **Sequences:** Supports timed rotation steps (rotate X degrees at Y RPM), wait steps, and speed-change steps with optional looping
 
-### Logic Motor
+### Logic Drive
 
 A CC:Tweaked-controlled rotation modifier that sits inline on a shaft. Functions as a programmable clutch + gearshift + sequenced gearshift in one block.
 
 - **Appearance:** Uses Create's sequenced gearshift model with colored directional markers:
   - **Orange stripes** = INPUT (drive) side — connect your power source here
   - **Light blue stripes** = OUTPUT side — CC-controlled modified rotation exits here
-- **Base Class:** `KineticBlock` with `IBE<LogicMotorBlockEntity>`
+- **Base Class:** `KineticBlock` with `IBE<LogicDriveBlockEntity>`
 - **Block Entity:** Extends `SplitShaftBlockEntity` — splits rotation into two halves with a configurable ratio
 - **Block State:** `HORIZONTAL_FACING` (N/S/E/W) indicates output direction + `ACTIVE` boolean
 - **Placement:** Horizontal only, FACING = output direction, opposite = input
@@ -304,9 +304,9 @@ Wrap with: `local motor = peripheral.wrap("creative_logic_motor")`
 
 ---
 
-## Lua API — `logic_motor` peripheral (17 functions)
+## Lua API — `logic_drive` peripheral (17 functions)
 
-Wrap with: `local motor = peripheral.wrap("logic_motor")`
+Wrap with: `local motor = peripheral.wrap("logic_drive")`
 
 | Function | Parameters | Returns | Description |
 |----------|-----------|---------|-------------|
@@ -328,9 +328,9 @@ Wrap with: `local motor = peripheral.wrap("logic_motor")`
 | `isSequenceRunning()` | — | `boolean` | Whether a sequence is active |
 | `getSequenceSize()` | — | `number` | Number of queued steps |
 
-### Logic Motor vs Create's Sequenced Gearshift
+### Logic Drive vs Create's Sequenced Gearshift
 
-| Feature | Sequenced Gearshift | Logic Motor |
+| Feature | Sequenced Gearshift | Logic Drive |
 |---------|---------------------|-------------|
 | Configuration | Manual GUI, fixed cards | Lua scripts, dynamic at runtime |
 | Trigger | Redstone signal | Any Lua condition (sensor data, time, etc.) |
@@ -410,15 +410,15 @@ F:\Controller\CreateLogicLink\
 │   │   ├── RedstoneControllerBlockEntity.java -- Manages virtual redstone link channels
 │   │   ├── CreativeLogicMotorBlock.java  -- Creative Motor (DirectionalKineticBlock)
 │   │   ├── CreativeLogicMotorBlockEntity.java -- Speed control, sequences (GeneratingKineticBE)
-│   │   ├── LogicMotorBlock.java          -- Logic Motor (KineticBlock, HORIZONTAL_FACING)
-│   │   └── LogicMotorBlockEntity.java    -- Modifier, clutch, sequences (SplitShaftBE)
+│   │   ├── LogicDriveBlock.java          -- Logic Drive (KineticBlock, HORIZONTAL_FACING)
+│   │   └── LogicDriveBlockEntity.java    -- Modifier, clutch, sequences (SplitShaftBE)
 │   ├── peripheral/
 │   │   ├── LogicLinkPeripheral.java      -- CC:Tweaked peripheral (14 Lua functions)
 │   │   ├── LogicLinkPeripheralProvider.java -- Registers all peripherals with CC
 │   │   ├── LogicSensorPeripheral.java    -- CC:Tweaked peripheral (7 Lua functions)
 │   │   ├── RedstoneControllerPeripheral.java -- CC:Tweaked peripheral (8 Lua functions)
 │   │   ├── CreativeLogicMotorPeripheral.java -- CC:Tweaked peripheral (16 Lua functions)
-│   │   ├── LogicMotorPeripheral.java     -- CC:Tweaked peripheral (17 Lua functions)
+│   │   ├── LogicDrivePeripheral.java     -- CC:Tweaked peripheral (17 Lua functions)
 │   │   ├── CreateBlockReader.java        -- Reads Create block data via reflection
 │   │   ├── StoragePeripheralCompat.java  -- Soft-dependency guard for Create Storage
 │   │   └── storage/
@@ -443,7 +443,7 @@ F:\Controller\CreateLogicLink\
 │   │   │   ├── logic_sensor.json         -- 12 face+facing variants
 │   │   │   ├── redstone_controller.json  -- 4 horizontal variants
 │   │   │   ├── creative_logic_motor.json -- 6 directional variants (Create creative motor)
-│   │   │   └── logic_motor.json          -- Multipart: base gearshift + input/output markers
+│   │   │   └── logic_drive.json          -- Multipart: base gearshift + input/output markers
 │   │   ├── models/block/
 │   │   │   ├── logic_link.json           -- Cube: polished andesite top, andesite casing sides
 │   │   │   ├── logic_sensor.json         -- Thin pad: smooth stone top, polished andesite sides
@@ -453,7 +453,7 @@ F:\Controller\CreateLogicLink\
 │   │   ├── models/item/
 │   │   │   ├── creative_logic_motor.json
 │   │   │   ├── logic_link.json
-│   │   │   ├── logic_motor.json
+│   │   │   ├── logic_drive.json
 │   │   │   ├── logic_sensor.json
 │   │   │   └── redstone_controller.json
 │   │   ├── lang/en_us.json               -- English translations + Ponder lang keys
@@ -462,7 +462,7 @@ F:\Controller\CreateLogicLink\
 │   │       ├── logic_sensor/overview.nbt          -- 7×4×7 schematic
 │   │       ├── redstone_controller/overview.nbt   -- 7×3×7 schematic
 │   │       ├── creative_logic_motor/overview.nbt  -- 7×4×7 schematic
-│   │       └── logic_motor/overview.nbt           -- 7×4×7 schematic
+│   │       └── logic_drive/overview.nbt           -- 7×4×7 schematic
 │   └── data/logiclink/
 │       ├── loot_table/blocks/            -- All 5 blocks drop themselves
 │       └── recipe/                       -- All 5 blocks have shaped crafting recipes
@@ -535,14 +535,14 @@ F:\Controller\CreateLogicLink\
 31. **Sequence system** — Rotate steps (degrees at RPM), wait steps, speed-change steps with optional looping.
 32. **CreativeLogicMotorPeripheral** — 16 Lua functions.
 
-### Phase 11 — Logic Motor (Rotation Modifier)
+### Phase 11 — Logic Drive (Rotation Modifier)
 
-33. **LogicMotorBlock** — `KineticBlock` with `HORIZONTAL_FACING` + `ACTIVE` properties.
-34. **LogicMotorBlockEntity** — Extends `SplitShaftBlockEntity`, speed modifier -16× to 16×.
+33. **LogicDriveBlock** — `KineticBlock` with `HORIZONTAL_FACING` + `ACTIVE` properties.
+34. **LogicDriveBlockEntity** — Extends `SplitShaftBlockEntity`, speed modifier -16× to 16×.
 35. **Clutch + Gearshift + Sequenced Gearshift** — All in one block controlled from Lua.
 36. **Directional markers** — Orange input stripes + light blue output stripes via multipart blockstate with overlay models.
 37. **Kinematics debounce** — Rapid Lua changes coalesced to one kinetic update per tick.
-38. **LogicMotorPeripheral** — 17 Lua functions.
+38. **LogicDrivePeripheral** — 17 Lua functions.
 
 ### Phase 12 — Create Storage Integration (Optional)
 
@@ -554,7 +554,7 @@ F:\Controller\CreateLogicLink\
 
 42. **Motor Ponder schematics** — Generated `.nbt` files for both motor scenes.
 43. **Motor Ponder tags** — 3 new tags: Rotation Output, Computer Control, Sequenced Operations.
-44. **Motor Ponder scenes** — Creative motor overview + Logic motor overview with drive/output side explanation.
+44. **Motor Ponder scenes** — Creative motor overview + Logic drive overview with drive/output side explanation.
 
 ### Phase 14 — `mainThread` Fix & Stability
 
@@ -587,7 +587,7 @@ F:\Controller\CreateLogicLink\
      [ ]       [Redstone Block]     [ ]
 ```
 
-### Creative Logic Motor & Logic Motor
+### Creative Logic Motor & Logic Drive
 *(Recipes defined in data/logiclink/recipe/)*
 
 ---
@@ -632,7 +632,7 @@ All 5 blocks have Create-style animated Ponder tutorials, accessible by pressing
 
 **Creative Logic Motor Overview** (7×4×7) — Rotation source with shaft chain and machine
 
-**Logic Motor Overview** (7×4×7) — Shows orange input side, light blue output side, modifier/sequence concepts
+**Logic Drive Overview** (7×4×7) — Shows orange input side, light blue output side, modifier/sequence concepts
 
 ---
 
@@ -644,7 +644,7 @@ All 5 blocks have Create-style animated Ponder tutorials, accessible by pressing
 | `logicsensor` | Logic Sensor | 7 | Machine data |
 | `redstone_controller` | Redstone Controller | 8 | Wireless redstone |
 | `creative_logic_motor` | Creative Logic Motor | 16 | Rotation source |
-| `logic_motor` | Logic Motor | 17 | Rotation modifier |
+| `logic_drive` | Logic Drive | 17 | Rotation modifier |
 | `storage_controller` | Storage Controller* | 14 | Storage network |
 | `storage_interface` | Storage Interface* | 10 | Storage access |
 | `train_monitor` | Train Monitor | — | Train network map |
@@ -704,9 +704,9 @@ sleep(2)
 motor.stop()
 ```
 
-### Use Logic Motor as a programmable gearshift
+### Use Logic Drive as a programmable gearshift
 ```lua
-local motor = peripheral.wrap("logic_motor")
+local motor = peripheral.wrap("logic_drive")
 motor.enable()
 motor.setModifier(2.0)    -- Double speed
 sleep(5)
