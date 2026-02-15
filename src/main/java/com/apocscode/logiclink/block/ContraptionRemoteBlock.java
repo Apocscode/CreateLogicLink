@@ -1,10 +1,15 @@
 package com.apocscode.logiclink.block;
 
 import com.apocscode.logiclink.ModRegistry;
+import com.apocscode.logiclink.compat.TweakedControllerCompat;
+import com.apocscode.logiclink.compat.TweakedControllerReader;
+import com.apocscode.logiclink.network.IHubDevice;
 
 import com.mojang.serialization.MapCodec;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
@@ -25,6 +30,8 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.fml.loading.FMLEnvironment;
 
 import org.jetbrains.annotations.Nullable;
 
@@ -101,29 +108,57 @@ public class ContraptionRemoteBlock extends HorizontalDirectionalBlock implement
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player,
                                                 BlockHitResult hitResult) {
-        if (level.isClientSide) return InteractionResult.SUCCESS;
-
-        BlockEntity be = level.getBlockEntity(pos);
-        if (be instanceof ContraptionRemoteBlockEntity remote) {
-            if (player instanceof ServerPlayer sp) {
-                // Send status message showing current bindings
-                remote.sendStatusToPlayer(sp);
+        if (player.isShiftKeyDown()) {
+            // Sneak + right-click = show status in chat
+            if (!level.isClientSide) {
+                BlockEntity be = level.getBlockEntity(pos);
+                if (be instanceof ContraptionRemoteBlockEntity remote && player instanceof ServerPlayer sp) {
+                    remote.sendStatusToPlayer(sp);
+                }
             }
+            return InteractionResult.SUCCESS;
         }
-        return InteractionResult.CONSUME;
+
+        // Right-click = open control GUI
+        if (level.isClientSide) {
+            openBlockScreen(pos);
+        }
+        return InteractionResult.SUCCESS;
     }
 
     @Override
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
                                                Player player, InteractionHand hand, BlockHitResult hitResult) {
-        if (level.isClientSide) return ItemInteractionResult.SUCCESS;
+        if (!level.isClientSide && player instanceof ServerPlayer sp) {
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be instanceof ContraptionRemoteBlockEntity remote) {
+                // Holding a Logic Remote? Let the item handle binding
+                if (stack.getItem() instanceof LogicRemoteItem) {
+                    return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+                }
 
-        BlockEntity be = level.getBlockEntity(pos);
-        if (be instanceof ContraptionRemoteBlockEntity remote) {
-            if (player instanceof ServerPlayer sp) {
-                remote.sendStatusToPlayer(sp);
+                if (player.isShiftKeyDown()) {
+                    remote.sendStatusToPlayer(sp);
+                    return ItemInteractionResult.SUCCESS;
+                }
             }
         }
-        return ItemInteractionResult.CONSUME;
+
+        if (!player.isShiftKeyDown() && level.isClientSide) {
+            openBlockScreen(pos);
+            return ItemInteractionResult.SUCCESS;
+        }
+
+        return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+    }
+
+    /**
+     * Opens the remote control screen for this block's position.
+     * Called only on the client side.
+     */
+    private void openBlockScreen(BlockPos pos) {
+        if (FMLEnvironment.dist == Dist.CLIENT) {
+            ContraptionRemoteScreenOpener.open(pos);
+        }
     }
 }

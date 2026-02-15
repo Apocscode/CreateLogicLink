@@ -50,7 +50,7 @@ public class ContraptionRemoteBlockEntity extends BlockEntity {
     /** Target drive/motor positions and types. */
     private final List<TargetEntry> targets = new ArrayList<>();
 
-    /** Whether this block is actively controlling (has valid lectern + targets). */
+    /** Whether this block is actively controlling (has valid input + targets). */
     private boolean active = false;
 
     /** Tick counter for throttling updates. */
@@ -58,6 +58,20 @@ public class ContraptionRemoteBlockEntity extends BlockEntity {
 
     /** User-assigned label. */
     private String label = "";
+
+    // ==================== Direct Control State (standalone, no CTC needed) ====================
+    /** Current drive speed modifier set via GUI. */
+    private float directDriveModifier = 0f;
+    /** Current drive enabled state set via GUI. */
+    private boolean directDriveEnabled = false;
+    /** Current drive reversed state set via GUI. */
+    private boolean directDriveReversed = false;
+    /** Current motor speed set via GUI. */
+    private int directMotorSpeed = 0;
+    /** Current motor enabled state set via GUI. */
+    private boolean directMotorEnabled = false;
+    /** Whether direct control values have been updated and need applying. */
+    private boolean directControlDirty = false;
 
     public ContraptionRemoteBlockEntity(BlockPos pos, BlockState state) {
         super(ModRegistry.CONTRAPTION_REMOTE_BE.get(), pos, state);
@@ -72,24 +86,41 @@ public class ContraptionRemoteBlockEntity extends BlockEntity {
         if (tickCounter < 2) return; // every 2 ticks
         tickCounter = 0;
 
-        if (!TweakedControllerCompat.isLoaded()) return;
-        if (lecternPos == null || targets.isEmpty()) {
+        if (targets.isEmpty()) {
             active = false;
             return;
         }
 
-        // Read controller input
-        TweakedControllerReader.ControllerData data = TweakedControllerReader.readFromLectern(level, lecternPos);
-        if (data == null || !data.hasUser()) {
-            active = false;
+        // Priority 1: CTC gamepad input (when CTC is installed and lectern is linked)
+        if (TweakedControllerCompat.isLoaded() && lecternPos != null) {
+            TweakedControllerReader.ControllerData data = TweakedControllerReader.readFromLectern(level, lecternPos);
+            if (data != null && data.hasUser()) {
+                active = true;
+                for (TargetEntry target : targets) {
+                    applyToTarget(data, target);
+                }
+                return;
+            }
+        }
+
+        // Priority 2: Direct control from GUI (standalone)
+        if (directControlDirty) {
+            active = true;
+            directControlDirty = false;
+            for (TargetEntry target : targets) {
+                applyDirectControl(target);
+            }
             return;
         }
 
-        active = true;
-
-        // Apply to all targets
-        for (TargetEntry target : targets) {
-            applyToTarget(data, target);
+        // If we had direct controls set, keep applying them
+        if (directDriveEnabled || directMotorEnabled || directDriveModifier != 0 || directMotorSpeed != 0) {
+            active = true;
+            for (TargetEntry target : targets) {
+                applyDirectControl(target);
+            }
+        } else {
+            active = false;
         }
     }
 
@@ -116,6 +147,56 @@ public class ContraptionRemoteBlockEntity extends BlockEntity {
             motor.setMotorSpeed((int) speed);
             motor.setEnabled(data.getButton(1));
         }
+    }
+
+    /**
+     * Apply direct control state (from GUI) to a target.
+     */
+    private void applyDirectControl(TargetEntry target) {
+        if (level == null) return;
+        BlockEntity be = level.getBlockEntity(target.pos);
+        if (be == null || be.isRemoved()) return;
+
+        if (be instanceof LogicDriveBlockEntity drive) {
+            drive.setSpeedModifier(directDriveModifier);
+            drive.setMotorEnabled(directDriveEnabled);
+            drive.setReversed(directDriveReversed);
+        } else if (be instanceof CreativeLogicMotorBlockEntity motor) {
+            motor.setMotorSpeed(directMotorSpeed);
+            motor.setEnabled(directMotorEnabled);
+        }
+    }
+
+    // ==================== Direct Control Setters (called from packet handler) ====================
+
+    public void setDirectDriveModifier(float modifier) {
+        this.directDriveModifier = modifier;
+        this.directControlDirty = true;
+        setChanged();
+    }
+
+    public void setDirectDriveEnabled(boolean enabled) {
+        this.directDriveEnabled = enabled;
+        this.directControlDirty = true;
+        setChanged();
+    }
+
+    public void setDirectDriveReversed(boolean reversed) {
+        this.directDriveReversed = reversed;
+        this.directControlDirty = true;
+        setChanged();
+    }
+
+    public void setDirectMotorSpeed(int speed) {
+        this.directMotorSpeed = speed;
+        this.directControlDirty = true;
+        setChanged();
+    }
+
+    public void setDirectMotorEnabled(boolean enabled) {
+        this.directMotorEnabled = enabled;
+        this.directControlDirty = true;
+        setChanged();
     }
 
     // ==================== Binding Management ====================
@@ -189,9 +270,20 @@ public class ContraptionRemoteBlockEntity extends BlockEntity {
         player.displayClientMessage(Component.literal("  Status: " + (active ? "ACTIVE" : "IDLE"))
             .withStyle(active ? ChatFormatting.GREEN : ChatFormatting.GRAY), false);
 
-        if (!TweakedControllerCompat.isLoaded()) {
-            player.displayClientMessage(Component.literal("  Warning: Create Tweaked Controllers not installed!")
-                .withStyle(ChatFormatting.RED), false);
+        if (lecternPos != null && TweakedControllerCompat.isLoaded()) {
+            player.displayClientMessage(Component.literal("  Mode: CTC Gamepad (via Lectern)")
+                .withStyle(ChatFormatting.LIGHT_PURPLE), false);
+        } else {
+            player.displayClientMessage(Component.literal("  Mode: GUI Direct Control")
+                .withStyle(ChatFormatting.AQUA), false);
+            if (directDriveModifier != 0 || directDriveEnabled || directMotorSpeed != 0 || directMotorEnabled) {
+                player.displayClientMessage(Component.literal("  Drive: mod=" + String.format("%.1f", directDriveModifier)
+                    + " en=" + directDriveEnabled + " rev=" + directDriveReversed)
+                    .withStyle(ChatFormatting.YELLOW), false);
+                player.displayClientMessage(Component.literal("  Motor: spd=" + directMotorSpeed
+                    + " en=" + directMotorEnabled)
+                    .withStyle(ChatFormatting.AQUA), false);
+            }
         }
     }
 

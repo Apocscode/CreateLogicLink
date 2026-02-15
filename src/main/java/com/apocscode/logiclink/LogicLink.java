@@ -7,6 +7,7 @@ import com.apocscode.logiclink.block.LogicSensorBlockItem;
 import com.apocscode.logiclink.network.HubNetwork;
 import com.apocscode.logiclink.network.LinkNetwork;
 import com.apocscode.logiclink.network.NetworkHighlightPayload;
+import com.apocscode.logiclink.network.RemoteControlPayload;
 import com.apocscode.logiclink.network.SensorNetwork;
 import com.mojang.logging.LogUtils;
 
@@ -71,6 +72,11 @@ public class LogicLink {
                 NetworkHighlightPayload.TYPE,
                 NetworkHighlightPayload.STREAM_CODEC,
                 NetworkHighlightPayload::handle
+        );
+        registrar.playToServer(
+                RemoteControlPayload.TYPE,
+                RemoteControlPayload.STREAM_CODEC,
+                RemoteControlPayload::handle
         );
     }
 

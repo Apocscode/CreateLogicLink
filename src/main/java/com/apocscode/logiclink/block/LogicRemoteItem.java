@@ -3,18 +3,15 @@ package com.apocscode.logiclink.block;
 import com.apocscode.logiclink.LogicLink;
 import com.apocscode.logiclink.compat.TweakedControllerCompat;
 import com.apocscode.logiclink.compat.TweakedControllerReader;
-import com.apocscode.logiclink.network.HubNetwork;
 import com.apocscode.logiclink.network.IHubDevice;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.HolderLookup;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.InteractionResultHolder;
@@ -27,40 +24,42 @@ import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.fml.loading.FMLEnvironment;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Logic Remote — a handheld item that bridges CTC controller input to LogicLink drives/motors.
+ * Logic Remote — a handheld controller for LogicLink drives and motors.
+ * <p>
+ * Works standalone (opens a GUI with virtual controls) and optionally
+ * integrates with Create: Tweaked Controllers for gamepad input.
  * <p>
  * Usage:
  * <ol>
- *   <li>Sneak + right-click a CTC Tweaked Lectern to link it as input source</li>
- *   <li>Right-click a Logic Drive or Creative Logic Motor to add it as a target</li>
+ *   <li>Right-click a Logic Drive or Creative Logic Motor to add it as a target (up to 8)</li>
+ *   <li>Right-click air to open the control GUI</li>
  *   <li>Sneak + right-click air to clear all bindings</li>
+ *   <li>(Optional) Sneak + right-click a CTC Tweaked Lectern to link gamepad input</li>
  * </ol>
  * <p>
- * While held, the remote reads controller input from the linked lectern and
- * applies mapped axis/button values to bound drives and motors every tick.
- * </p>
- * <p>
- * Default mappings (configurable via CC peripheral):
+ * The GUI provides virtual sliders and buttons to control bound devices:
  * <ul>
- *   <li>Left stick Y (axis 2) → Drive speed modifier (-16 to 16)</li>
- *   <li>Right trigger (axis 5) → Motor speed (0 to 256)</li>
- *   <li>Button 1 (A) → Drive enable/disable</li>
- *   <li>Button 2 (B) → Motor enable/disable</li>
- *   <li>Button 4 (Y) → Drive reverse toggle</li>
+ *   <li>Drive speed modifier slider (-16 to 16)</li>
+ *   <li>Drive enable/disable and reverse toggles</li>
+ *   <li>Motor speed slider (-256 to 256 RPM)</li>
+ *   <li>Motor enable/disable toggle</li>
+ *   <li>Emergency stop</li>
  * </ul>
+ * <p>
+ * When CTC is installed and a lectern is linked, the remote also reads
+ * gamepad axis/button input and applies it continuously while held.
  */
 public class LogicRemoteItem extends Item {
 
     /** Maximum number of drive/motor targets that can be bound. */
     public static final int MAX_TARGETS = 8;
-
-    /** Hub scan range for discovering targets. */
-    public static final int SCAN_RANGE = 64;
 
     public LogicRemoteItem(Properties properties) {
         super(properties);
@@ -77,12 +76,12 @@ public class LogicRemoteItem extends Item {
 
         if (level.isClientSide || player == null) return InteractionResult.PASS;
 
-        // Sneak + right-click a lectern = link as input source
+        // Sneak + right-click a CTC lectern = link as gamepad input source (optional)
         if (player.isShiftKeyDown()) {
             if (TweakedControllerCompat.isLoaded() && TweakedControllerReader.isTweakedLectern(level, pos)) {
                 setLinkedLectern(stack, pos);
                 player.displayClientMessage(
-                    Component.literal("Linked to Tweaked Lectern at " + pos.toShortString())
+                    Component.literal("Linked gamepad input from Lectern at " + pos.toShortString())
                         .withStyle(ChatFormatting.GREEN), true);
                 return InteractionResult.SUCCESS;
             }
@@ -114,36 +113,52 @@ public class LogicRemoteItem extends Item {
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
 
-        if (level.isClientSide) return InteractionResultHolder.pass(stack);
-
         // Sneak + right-click air = clear bindings
         if (player.isShiftKeyDown()) {
-            clearBindings(stack);
-            player.displayClientMessage(
-                Component.literal("Cleared all remote bindings")
-                    .withStyle(ChatFormatting.YELLOW), true);
+            if (!level.isClientSide) {
+                clearBindings(stack);
+                player.displayClientMessage(
+                    Component.literal("Cleared all remote bindings")
+                        .withStyle(ChatFormatting.YELLOW), true);
+            }
             return InteractionResultHolder.success(stack);
         }
 
-        return InteractionResultHolder.pass(stack);
+        // Right-click air = open control GUI (client-side)
+        if (level.isClientSide) {
+            openRemoteScreen();
+        }
+        return InteractionResultHolder.success(stack);
     }
 
-    // ==================== Tick Logic ====================
+    /**
+     * Opens the Logic Remote control screen on the client.
+     * Called only on the client side via a separate class to avoid
+     * loading client-only classes on the server.
+     */
+    private void openRemoteScreen() {
+        if (FMLEnvironment.dist == Dist.CLIENT) {
+            LogicRemoteScreenOpener.open();
+        }
+    }
+
+    // ==================== CTC Gamepad Tick (Optional) ====================
 
     @Override
     public void inventoryTick(ItemStack stack, Level level, Entity entity, int slot, boolean selected) {
         if (level.isClientSide || !(entity instanceof Player player)) return;
-        if (!selected && player.getOffhandItem() != stack) return; // only active in hand 
+        if (!selected && player.getOffhandItem() != stack) return;
 
         // Throttle to every 2 ticks
         if (level.getGameTime() % 2 != 0) return;
 
+        // CTC gamepad integration only when CTC is installed and lectern is linked
         if (!TweakedControllerCompat.isLoaded()) return;
 
         BlockPos lecternPos = getLinkedLectern(stack);
         if (lecternPos == null) return;
 
-        // Read controller state from lectern
+        // Read controller state from CTC lectern
         TweakedControllerReader.ControllerData data = TweakedControllerReader.readFromLectern(level, lecternPos);
         if (data == null || !data.hasUser()) return;
 
@@ -166,50 +181,37 @@ public class LogicRemoteItem extends Item {
     }
 
     private void applyToDrive(TweakedControllerReader.ControllerData data, LogicDriveBlockEntity drive) {
-        // Left stick Y (axis 1, 0-indexed) → speed modifier (-16 to 16)
         float axisY = data.getAxis(1);
         float modifier = axisY * 16.0f;
-        // Quantize to 0.5 steps to reduce kinetic network thrashing
         modifier = Math.round(modifier * 2.0f) / 2.0f;
         if (Math.abs(modifier) < 0.25f) modifier = 0;
-
         drive.setSpeedModifier(modifier);
-
-        // Button A (index 0) → enable toggle (only on press edge, handled by state)
         drive.setMotorEnabled(data.getButton(0));
-
-        // Button Y (index 3) → reverse
         drive.setReversed(data.getButton(3));
     }
 
     private void applyToMotor(TweakedControllerReader.ControllerData data, CreativeLogicMotorBlockEntity motor) {
-        // Right trigger (axis 5, 0-indexed) → speed (0 to 256)
         float trigger = data.getAxis(5);
         float speed = trigger * 256.0f;
-        // Left trigger (axis 4) → negative speed
         float leftTrigger = data.getAxis(4);
         if (leftTrigger > 0.1f) {
             speed = -leftTrigger * 256.0f;
         }
-        // Quantize to whole RPM
         speed = Math.round(speed);
         if (Math.abs(speed) < 4) speed = 0;
-
         motor.setMotorSpeed((int) speed);
-
-        // Button B (index 1) → enable
         motor.setEnabled(data.getButton(1));
     }
 
     // ==================== NBT Storage ====================
 
     private CompoundTag getOrCreateTag(ItemStack stack) {
-        CustomData customData = stack.getOrDefault(net.minecraft.core.component.DataComponents.CUSTOM_DATA, CustomData.EMPTY);
+        CustomData customData = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY);
         return customData.copyTag();
     }
 
     private void saveTag(ItemStack stack, CompoundTag tag) {
-        stack.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA, CustomData.of(tag));
+        stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
     }
 
     public void setLinkedLectern(ItemStack stack, BlockPos pos) {
@@ -231,11 +233,10 @@ public class LogicRemoteItem extends Item {
         ListTag targets = tag.getList("Targets", Tag.TAG_COMPOUND);
         if (targets.size() >= MAX_TARGETS) return false;
 
-        // Check for duplicates
         for (int i = 0; i < targets.size(); i++) {
             CompoundTag t = targets.getCompound(i);
             if (t.getInt("X") == pos.getX() && t.getInt("Y") == pos.getY() && t.getInt("Z") == pos.getZ()) {
-                return true; // Already bound
+                return true;
             }
         }
 
@@ -279,37 +280,39 @@ public class LogicRemoteItem extends Item {
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
         super.appendHoverText(stack, context, tooltip, flag);
 
-        BlockPos lectern = getLinkedLectern(stack);
-        if (lectern != null) {
-            tooltip.add(Component.literal("Input: Lectern at " + lectern.toShortString())
-                .withStyle(ChatFormatting.GREEN));
-        } else {
-            tooltip.add(Component.literal("No input linked")
-                .withStyle(ChatFormatting.GRAY));
-            tooltip.add(Component.literal("Sneak + click a Tweaked Lectern to link")
-                .withStyle(ChatFormatting.DARK_GRAY));
-        }
-
         List<TargetBinding> targets = getTargets(stack);
         if (!targets.isEmpty()) {
             tooltip.add(Component.literal("Targets: " + targets.size())
                 .withStyle(ChatFormatting.AQUA));
             for (TargetBinding t : targets) {
-                tooltip.add(Component.literal("  " + t.type + " at " + t.pos.toShortString())
+                String icon = "drive".equals(t.type) ? "\u25B6" : "\u2699";
+                tooltip.add(Component.literal("  " + icon + " " + t.type + " at " + t.pos.toShortString())
                     .withStyle(ChatFormatting.DARK_AQUA));
             }
         } else {
             tooltip.add(Component.literal("No targets bound")
                 .withStyle(ChatFormatting.GRAY));
-            tooltip.add(Component.literal("Click a Drive or Motor to bind")
-                .withStyle(ChatFormatting.DARK_GRAY));
         }
 
-        tooltip.add(Component.literal("Sneak + click air to clear")
+        tooltip.add(Component.empty());
+        tooltip.add(Component.literal("Right-click: Open control GUI")
             .withStyle(ChatFormatting.DARK_GRAY));
+        tooltip.add(Component.literal("Click Drive/Motor: Add target")
+            .withStyle(ChatFormatting.DARK_GRAY));
+        tooltip.add(Component.literal("Sneak + click air: Clear all")
+            .withStyle(ChatFormatting.DARK_GRAY));
+
+        BlockPos lectern = getLinkedLectern(stack);
+        if (lectern != null) {
+            tooltip.add(Component.literal("Gamepad: Lectern at " + lectern.toShortString())
+                .withStyle(ChatFormatting.GREEN));
+        } else if (TweakedControllerCompat.isLoaded()) {
+            tooltip.add(Component.literal("Sneak + click Lectern: Link gamepad")
+                .withStyle(ChatFormatting.DARK_GRAY));
+        }
     }
 
-    // ==================== Data Classes ====================
+    // ==================== Data ====================
 
     public record TargetBinding(BlockPos pos, String type) {}
 }
