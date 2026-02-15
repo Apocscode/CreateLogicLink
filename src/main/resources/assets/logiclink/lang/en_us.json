@@ -88,5 +88,22 @@
     "logiclink.ponder.logic_drive_overview.text_3": "The LIGHT BLUE side is the CC OUTPUT — modified rotation exits here to your machines",
     "logiclink.ponder.logic_drive_overview.text_4": "Attach a CC:Tweaked computer to control the drive via Lua peripheral functions",
     "logiclink.ponder.logic_drive_overview.text_5": "setModifier(2.0) doubles output speed, setModifier(-1.0) reverses it — like a programmable gearshift",
-    "logiclink.ponder.logic_drive_overview.text_6": "17 Lua functions: enable, disable, setReversed, setModifier, addRotateStep, runSequence, and more"
+    "logiclink.ponder.logic_drive_overview.text_6": "17 Lua functions: enable, disable, setReversed, setModifier, addRotateStep, runSequence, and more",
+
+    "block.logiclink.contraption_remote": "Contraption Remote",
+    "item.logiclink.logic_remote": "Logic Remote",
+
+    "logiclink.logic_remote.tooltip.linked": "§aLinked to Lectern at %s",
+    "logiclink.logic_remote.tooltip.unlinked": "§7Not linked to a lectern",
+    "logiclink.logic_remote.tooltip.targets": "§bTargets: %d bound",
+    "logiclink.logic_remote.tooltip.instructions": "§eSNEAK+CLICK lectern to link input",
+    "logiclink.logic_remote.tooltip.instructions2": "§eCLICK drive/motor to add target",
+    "logiclink.logic_remote.tooltip.instructions3": "§eSNEAK+CLICK air to clear all",
+
+    "logiclink.contraption_remote.status.header": "§6=== Contraption Remote Status ===",
+    "logiclink.contraption_remote.status.lectern": "§aLectern: %s",
+    "logiclink.contraption_remote.status.no_lectern": "§7No lectern linked",
+    "logiclink.contraption_remote.status.targets": "§bTargets: %d",
+    "logiclink.contraption_remote.status.active": "§aActive — reading controller",
+    "logiclink.contraption_remote.status.inactive": "§7Inactive"
 }

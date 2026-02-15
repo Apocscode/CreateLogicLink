@@ -1,0 +1,8 @@
+{
+    "parent": "minecraft:block/orientable",
+    "textures": {
+        "top": "create:block/andesite_casing",
+        "front": "logiclink:block/contraption_remote_front",
+        "side": "logiclink:block/contraption_remote_side"
+    }
+}

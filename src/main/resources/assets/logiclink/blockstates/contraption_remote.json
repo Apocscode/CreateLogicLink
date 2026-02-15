@@ -1,0 +1,8 @@
+{
+    "variants": {
+        "facing=north": { "model": "logiclink:block/contraption_remote" },
+        "facing=south": { "model": "logiclink:block/contraption_remote", "y": 180 },
+        "facing=west":  { "model": "logiclink:block/contraption_remote", "y": 270 },
+        "facing=east":  { "model": "logiclink:block/contraption_remote", "y": 90 }
+    }
+}

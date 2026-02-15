@@ -2,11 +2,14 @@ package com.apocscode.logiclink;
 
 import com.apocscode.logiclink.block.CreativeLogicMotorBlock;
 import com.apocscode.logiclink.block.CreativeLogicMotorBlockEntity;
+import com.apocscode.logiclink.block.ContraptionRemoteBlock;
+import com.apocscode.logiclink.block.ContraptionRemoteBlockEntity;
 import com.apocscode.logiclink.block.LogicLinkBlock;
 import com.apocscode.logiclink.block.LogicLinkBlockEntity;
 import com.apocscode.logiclink.block.LogicLinkBlockItem;
 import com.apocscode.logiclink.block.LogicDriveBlock;
 import com.apocscode.logiclink.block.LogicDriveBlockEntity;
+import com.apocscode.logiclink.block.LogicRemoteItem;
 import com.apocscode.logiclink.block.LogicSensorBlock;
 import com.apocscode.logiclink.block.LogicSensorBlockEntity;
 import com.apocscode.logiclink.block.LogicSensorBlockItem;
@@ -150,6 +153,21 @@ public class ModRegistry {
                     .noOcclusion())
     );
 
+    /**
+     * Contraption Remote Control — placeable on contraptions or stationary.
+     * Bridges CTC controller input to Logic Drives and Motors.
+     * CC:Tweaked peripheral type: "contraption_remote".
+     */
+    public static final DeferredBlock<ContraptionRemoteBlock> CONTRAPTION_REMOTE_BLOCK = BLOCKS.register(
+            "contraption_remote",
+            () -> new ContraptionRemoteBlock(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.COLOR_LIGHT_BLUE)
+                    .strength(3.5F)
+                    .requiresCorrectToolForDrops()
+                    .sound(SoundType.NETHERITE_BLOCK)
+                    .noOcclusion())
+    );
+
     // ==================== Items ====================
 
     /**
@@ -215,6 +233,23 @@ public class ModRegistry {
     public static final DeferredItem<SignalTabletItem> SIGNAL_TABLET_ITEM = ITEMS.register(
             "signal_tablet",
             () -> new SignalTabletItem(new Item.Properties())
+    );
+
+    /**
+     * Logic Remote — handheld controller that bridges CTC input to drives/motors.
+     * Sneak+click lectern to link input, click drive/motor to add target.
+     */
+    public static final DeferredItem<LogicRemoteItem> LOGIC_REMOTE_ITEM = ITEMS.register(
+            "logic_remote",
+            () -> new LogicRemoteItem(new Item.Properties().stacksTo(1))
+    );
+
+    /**
+     * BlockItem for the Contraption Remote Control block.
+     */
+    public static final DeferredItem<BlockItem> CONTRAPTION_REMOTE_ITEM = ITEMS.register(
+            "contraption_remote",
+            () -> new BlockItem(CONTRAPTION_REMOTE_BLOCK.get(), new Item.Properties())
     );
 
     // ==================== Block Entities ====================
@@ -290,6 +325,15 @@ public class ModRegistry {
                     ).build(null)
             );
 
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<ContraptionRemoteBlockEntity>> CONTRAPTION_REMOTE_BE =
+            BLOCK_ENTITY_TYPES.register(
+                    "contraption_remote",
+                    () -> BlockEntityType.Builder.of(
+                            ContraptionRemoteBlockEntity::new,
+                            CONTRAPTION_REMOTE_BLOCK.get()
+                    ).build(null)
+            );
+
     // ==================== Menu Types ====================
 
     public static final DeferredHolder<MenuType<?>, MenuType<TrainMonitorMenu>> TRAIN_MONITOR_MENU =
@@ -316,6 +360,8 @@ public class ModRegistry {
                         output.accept(TRAIN_CONTROLLER_ITEM.get());
                         output.accept(TRAIN_MONITOR_ITEM.get());
                         output.accept(SIGNAL_TABLET_ITEM.get());
+                        output.accept(LOGIC_REMOTE_ITEM.get());
+                        output.accept(CONTRAPTION_REMOTE_ITEM.get());
                         // Patchouli guide book is added automatically by
                         // Patchouli's processCreativeTabs event via the
                         // "creative_tab" field in book.json

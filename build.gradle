@@ -136,6 +136,10 @@ dependencies {
     // ==================== Create Storage (optional) ====================
     // Compile against Create Storage for peripheral integration
     compileOnly(files("libs/fxntstorage-1.1.7+mc-1.21.1-neoforge.jar"))
+
+    // ==================== Create: Tweaked Controllers (optional) ====================
+    // Compile against CTC for controller integration (remote drive/motor control)
+    compileOnly(files("libs/CreateTweakedControllers-1.21.1-1.3.0.jar"))
 }
 
 // Expand properties into resource templates (neoforge.mods.toml etc.)

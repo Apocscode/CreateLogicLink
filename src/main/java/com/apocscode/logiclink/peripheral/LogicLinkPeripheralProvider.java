@@ -2,6 +2,7 @@ package com.apocscode.logiclink.peripheral;
 
 import com.apocscode.logiclink.LogicLink;
 import com.apocscode.logiclink.ModRegistry;
+import com.apocscode.logiclink.block.ContraptionRemoteBlockEntity;
 import com.apocscode.logiclink.block.CreativeLogicMotorBlockEntity;
 import com.apocscode.logiclink.block.LogicLinkBlockEntity;
 import com.apocscode.logiclink.block.LogicDriveBlockEntity;
@@ -75,7 +76,14 @@ public class LogicLinkPeripheralProvider {
                 LogicLinkPeripheralProvider::getTrainControllerPeripheral
         );
 
-        LogicLink.LOGGER.info("Registered all peripherals with CC:Tweaked (Logic Link, Sensor, Redstone Controller, Creative Motor, Drive, Train Controller)");
+        LogicLink.LOGGER.info("Registered all peripherals with CC:Tweaked (Logic Link, Sensor, Redstone Controller, Creative Motor, Drive, Train Controller, Contraption Remote)");
+
+        // Register Contraption Remote peripheral
+        event.registerBlockEntity(
+                PeripheralCapability.get(),
+                ModRegistry.CONTRAPTION_REMOTE_BE.get(),
+                LogicLinkPeripheralProvider::getContraptionRemotePeripheral
+        );
 
         // ==================== Optional: Create Storage Peripherals ====================
         if (ModList.get().isLoaded("fxntstorage")) {
@@ -112,5 +120,10 @@ public class LogicLinkPeripheralProvider {
     @Nullable
     private static IPeripheral getLogicDrivePeripheral(LogicDriveBlockEntity blockEntity, @Nullable Direction direction) {
         return new LogicDrivePeripheral(blockEntity);
+    }
+
+    @Nullable
+    private static IPeripheral getContraptionRemotePeripheral(ContraptionRemoteBlockEntity blockEntity, @Nullable Direction direction) {
+        return new ContraptionRemotePeripheral(blockEntity);
     }
 }
