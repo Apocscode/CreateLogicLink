@@ -8,6 +8,8 @@ import com.apocscode.logiclink.network.HubNetwork;
 import com.apocscode.logiclink.network.IHubDevice;
 import com.simibubi.create.AllBlocks;
 import com.simibubi.create.content.redstone.link.RedstoneLinkNetworkHandler.Frequency;
+import com.simibubi.create.content.redstone.link.controller.LinkedControllerItemRenderer;
+import com.simibubi.create.foundation.item.render.SimpleCustomRenderer;
 import net.createmod.catnip.data.Couple;
 import net.createmod.catnip.platform.CatnipServices;
 
@@ -37,10 +39,12 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
+import net.neoforged.neoforge.client.extensions.common.IClientItemExtensions;
 import net.neoforged.neoforge.items.ItemStackHandler;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 /**
  * Logic Remote — a handheld gamepad controller for Create's Redstone Link
@@ -65,6 +69,14 @@ public class LogicRemoteItem extends Item implements MenuProvider {
 
     public LogicRemoteItem(Properties properties) {
         super(properties);
+    }
+
+    // ==================== Client Renderer ====================
+
+    @Override
+    @OnlyIn(Dist.CLIENT)
+    public void initializeClient(Consumer<IClientItemExtensions> consumer) {
+        consumer.accept(SimpleCustomRenderer.create(this, new LinkedControllerItemRenderer()));
     }
 
     // ==================== Interaction (CTC-style) ====================

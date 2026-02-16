@@ -21,6 +21,7 @@ public class GenerateTextures {
         generateRedstoneControllerTop();
         generateForallOverlay();
         generateBookCover();
+        generateContraptionRemoteTop();
 
         System.out.println("All textures generated!");
     }
@@ -267,8 +268,179 @@ public class GenerateTextures {
         System.out.println("  Created patchouli/book_cover.png");
     }
 
+    // ─── Contraption Remote Top (32x32) ──────────────────────────────
+    // Top-down view of a gamepad/controller sitting in the block tray.
+    // The block model UV samples pixels x:1-25, y:0-16 (UV [0.5,0,12.5,8]).
+    // Layout is designed so the full controller fits within that viewport.
+    // 3D button/joystick elements overlay this — it serves as the body base.
+    //
+    // Visible viewport (24×16 px):
+    //   y 0-1:   tray background above controller
+    //   y 2:     body edge top
+    //   y 3:     body highlight
+    //   y 4-5:   ∀ branding + left stick area + XYAB area
+    //   y 6-7:   left joystick + XYAB buttons center
+    //   y 8:     start/select buttons
+    //   y 9-10:  d-pad area + right joystick area
+    //   y 11-12: d-pad center + right joystick
+    //   y 13-14: body lower
+    //   y 15:    body edge bottom
+    //   y 16:    tray below controller
+    static void generateContraptionRemoteTop() throws Exception {
+        int W = 32;
+        BufferedImage img = new BufferedImage(W, W, BufferedImage.TYPE_INT_ARGB);
+
+        // --- Color palette ---
+        int bodyBase   = 0xFF3C3C3C; // dark grey controller body
+        int bodyLight  = 0xFF484848; // body highlight
+        int bodyDark   = 0xFF2E2E2E; // body shadow/edge
+        int bodyEdge   = 0xFF222222; // outline
+        int trayBg     = 0xFF505050; // tray/casing background
+
+        int stickBase  = 0xFF555555; // joystick base ring
+        int stickTop   = 0xFF6A6A6A; // joystick cap
+        int stickDot   = 0xFF787878; // joystick highlight dot
+        int stickRim   = 0xFF444444; // joystick rim shadow
+
+        int dpadCol    = 0xFF585858; // d-pad color
+        int dpadLight  = 0xFF666666; // d-pad highlight
+        int dpadDark   = 0xFF464646; // d-pad shadow
+        int dpadCenter = 0xFF4C4C4C; // d-pad center indent
+
+        int btnY       = 0xFFD4C432; // Yellow - Y
+        int btnX       = 0xFF3264C8; // Blue   - X
+        int btnB       = 0xFFCC3232; // Red    - B
+        int btnA       = 0xFF32B432; // Green  - A
+        int btnYH      = 0xFFE8D848; // Y highlight
+        int btnXH      = 0xFF4878E0; // X highlight
+        int btnBH      = 0xFFE04848; // B highlight
+        int btnAH      = 0xFF48CC48; // A highlight
+
+        int startSel   = 0xFF5A5A5A; // start/select button
+        int startSelH  = 0xFF6A6A6A; // highlight
+
+        int brass      = 0xFFD4A833; // brass accent
+        int brassD     = 0xFFC09020; // brass shadow
+
+        // Fill entire image with tray background
+        for (int y = 0; y < W; y++)
+            for (int x = 0; x < W; x++)
+                img.setRGB(x, y, trayBg);
+
+        // === Controller body (compact, fits within viewport y:2-15, x:2-28) ===
+        // Main body fill
+        for (int y = 3; y <= 14; y++)
+            for (int x = 3; x <= 28; x++)
+                set32(img, x, y, bodyBase);
+        // Rounded corners: top row
+        for (int x = 4; x <= 27; x++) set32(img, x, 2, bodyBase);
+        // Rounded corners: bottom row
+        for (int x = 4; x <= 27; x++) set32(img, x, 15, bodyBase);
+
+        // Left grip bulge (y:5-12, x:1-2)
+        for (int y = 5; y <= 12; y++) set32(img, 2, y, bodyBase);
+        for (int y = 6; y <= 11; y++) set32(img, 1, y, bodyBase);
+        // Right grip bulge
+        for (int y = 5; y <= 12; y++) set32(img, 29, y, bodyBase);
+        for (int y = 6; y <= 11; y++) set32(img, 30, y, bodyBase);
+
+        // --- Body shading ---
+        for (int x = 4; x <= 27; x++) set32(img, x, 2, bodyLight);
+        for (int x = 3; x <= 28; x++) set32(img, x, 3, bodyLight);
+        for (int x = 4; x <= 27; x++) set32(img, x, 15, bodyDark);
+        for (int x = 3; x <= 28; x++) set32(img, x, 14, bodyDark);
+
+        // --- Body outline ---
+        // Top/bottom edges
+        for (int x = 4; x <= 27; x++) { set32(img, x, 1, bodyEdge); set32(img, x, 16, bodyEdge); }
+        // Left/right edges
+        for (int y = 3; y <= 14; y++) { set32(img, 2, y, bodyEdge); set32(img, 29, y, bodyEdge); }
+        // Corner pixels
+        set32(img, 3, 2, bodyEdge); set32(img, 28, 2, bodyEdge);
+        set32(img, 3, 15, bodyEdge); set32(img, 28, 15, bodyEdge);
+        // Grip outlines
+        for (int y = 5; y <= 12; y++) set32(img, 1, y, bodyEdge);
+        for (int y = 6; y <= 11; y++) set32(img, 0, y, bodyEdge);
+        for (int y = 5; y <= 12; y++) set32(img, 30, y, bodyEdge);
+        for (int y = 6; y <= 11; y++) set32(img, 31, y, bodyEdge);
+
+        // === Left Joystick (center ~7, 6, radius 2) ===
+        drawCircleFilled(img, 7, 6, 3, stickBase);
+        drawCircleFilled(img, 7, 6, 2, stickTop);
+        set32(img, 7, 5, stickDot); // highlight
+        set32(img, 9, 8, stickRim); // shadow
+
+        // === D-pad (center ~7, 11) ===
+        // Vertical bar (y:9-13, x:7-8)
+        for (int y = 9; y <= 13; y++) { set32(img, 7, y, dpadCol); set32(img, 8, y, dpadCol); }
+        // Horizontal bar (x:5-10, y:10-11)
+        for (int x = 5; x <= 10; x++) { set32(img, x, 10, dpadCol); set32(img, x, 11, dpadCol); }
+        // Highlights (top & left)
+        set32(img, 7, 9, dpadLight); set32(img, 8, 9, dpadLight);
+        set32(img, 5, 10, dpadLight); set32(img, 5, 11, dpadLight);
+        // Shadows (bottom & right)
+        set32(img, 7, 13, dpadDark); set32(img, 8, 13, dpadDark);
+        set32(img, 10, 10, dpadDark); set32(img, 10, 11, dpadDark);
+        // Center indent
+        set32(img, 7, 10, dpadCenter); set32(img, 8, 10, dpadCenter);
+        set32(img, 7, 11, dpadCenter); set32(img, 8, 11, dpadCenter);
+
+        // === XYAB Buttons (diamond, center ~22, 6) ===
+        // Y top (yellow) 
+        set32(img, 22, 4, btnYH); set32(img, 23, 4, btnY);
+        // X left (blue)
+        set32(img, 20, 6, btnXH); set32(img, 21, 6, btnX);
+        // B right (red)
+        set32(img, 24, 6, btnBH); set32(img, 25, 6, btnB);
+        // A bottom (green)
+        set32(img, 22, 8, btnAH); set32(img, 23, 8, btnA);
+
+        // === Right Joystick (center ~23, 11, radius 2) ===
+        drawCircleFilled(img, 23, 11, 3, stickBase);
+        drawCircleFilled(img, 23, 11, 2, stickTop);
+        set32(img, 23, 10, stickDot); // highlight
+        set32(img, 25, 13, stickRim); // shadow
+
+        // === Start / Select (center of body, y:8) ===
+        // Start (left of center)
+        set32(img, 13, 8, startSel); set32(img, 14, 8, startSelH);
+        // Select (right of center)
+        set32(img, 17, 8, startSel); set32(img, 18, 8, startSelH);
+
+        // === Small ∀ branding logo (center-top, y:3-5) ===
+        // Compact 4-wide ∀: top bar, legs, crossbar, converge, tip
+        set32(img, 14, 3, brass); set32(img, 15, 3, brass); set32(img, 16, 3, brass); set32(img, 17, 3, brass);
+        set32(img, 14, 4, brassD); set32(img, 17, 4, brassD);
+        set32(img, 14, 5, brass); set32(img, 15, 5, brassD); set32(img, 16, 5, brassD); set32(img, 17, 5, brass);
+        set32(img, 15, 6, brassD); set32(img, 16, 6, brassD);
+
+        // === Decorative brass screw dots ===
+        set32(img, 5, 3, brass); set32(img, 26, 3, brass);
+        set32(img, 5, 14, brassD); set32(img, 26, 14, brassD);
+
+        ImageIO.write(img, "png", new File(OUT + "contraption_remote_top.png"));
+        System.out.println("  Created contraption_remote_top.png (32x32)");
+    }
+
+    /** Fill a circle at center (cx,cy) with given radius in a 32x32 image */
+    static void drawCircleFilled(BufferedImage img, int cx, int cy, int r, int argb) {
+        for (int dy = -r; dy <= r; dy++) {
+            for (int dx = -r; dx <= r; dx++) {
+                if (dx * dx + dy * dy <= r * r) {
+                    set32(img, cx + dx, cy + dy, argb);
+                }
+            }
+        }
+    }
+
     static void setP(BufferedImage img, int x, int y, int argb) {
         if (x >= 0 && x < 16 && y >= 0 && y < 16) {
+            img.setRGB(x, y, argb);
+        }
+    }
+
+    static void set32(BufferedImage img, int x, int y, int argb) {
+        if (x >= 0 && x < 32 && y >= 0 && y < 32) {
             img.setRGB(x, y, argb);
         }
     }

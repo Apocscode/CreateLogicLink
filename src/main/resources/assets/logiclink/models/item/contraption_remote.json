@@ -4,7 +4,8 @@
         "4": "create:block/contraption_controls_frame",
         "1_7": "create:block/contraption_controls",
         "particle": "create:block/andesite_casing",
-        "controller": "logiclink:item/logic_remote"
+        "controller": "logiclink:item/logic_remote",
+        "controller_top": "logiclink:block/contraption_remote_top"
     },
     "elements": [
         {
@@ -63,32 +64,136 @@
             }
         },
         {
-            "comment": "Controller face on angled tray",
-            "from": [2.5, 10.5, 7.5],
-            "to": [13.5, 12.5, 14.5],
-            "rotation": {"angle": -22.5, "axis": "x", "origin": [8, 12, 7]},
-            "faces": {
-                "north": {"uv": [0, 0, 12, 2], "rotation": 180, "texture": "#controller"},
-                "east": {"uv": [12, 0, 14, 8], "rotation": 90, "texture": "#controller"},
-                "south": {"uv": [0, 6, 12, 8], "texture": "#controller"},
-                "west": {"uv": [12, 0, 14, 8], "rotation": 270, "texture": "#controller"},
-                "up": {"uv": [0, 0, 12, 8], "rotation": 180, "texture": "#controller"}
-            }
-        },
-        {
+            "comment": "Angled tray - controller face texture (top-down view)",
             "from": [2, 11, 7],
             "to": [14, 12, 15],
             "rotation": {"angle": -22.5, "axis": "x", "origin": [8, 12, 7]},
             "faces": {
-                "up": {"uv": [1, 9.5, 7, 13.5], "rotation": 180, "texture": "#4"}
+                "up": {"uv": [0.5, 0, 12.5, 8], "texture": "#controller_top"}
             }
         },
         {
-            "from": [2, 11.05, 8],
-            "to": [14, 12.05, 14],
+            "comment": "Left joystick base",
+            "from": [4, 12, 12],
+            "to": [7, 12.7, 14.5],
             "rotation": {"angle": -22.5, "axis": "x", "origin": [8, 12, 7]},
             "faces": {
-                "up": {"uv": [1, 10, 7, 13], "rotation": 180, "texture": "#4"}
+                "up": {"uv": [3, 9, 6, 12], "texture": "#controller"},
+                "north": {"uv": [3, 14, 6, 15], "texture": "#controller"},
+                "south": {"uv": [3, 14, 6, 15], "texture": "#controller"}
+            }
+        },
+        {
+            "comment": "Left joystick nub",
+            "from": [4.75, 12.7, 12.6],
+            "to": [6.25, 13.3, 13.9],
+            "rotation": {"angle": -22.5, "axis": "x", "origin": [8, 12, 7]},
+            "faces": {
+                "up": {"uv": [4, 10, 5.5, 11.5], "texture": "#controller"},
+                "north": {"uv": [4, 14, 5.5, 15], "texture": "#controller"},
+                "south": {"uv": [4, 14, 5.5, 15], "texture": "#controller"}
+            }
+        },
+        {
+            "comment": "Right joystick base",
+            "from": [9, 12, 12],
+            "to": [12, 12.7, 14.5],
+            "rotation": {"angle": -22.5, "axis": "x", "origin": [8, 12, 7]},
+            "faces": {
+                "up": {"uv": [8, 9, 11, 12], "texture": "#controller"},
+                "north": {"uv": [8, 14, 11, 15], "texture": "#controller"},
+                "south": {"uv": [8, 14, 11, 15], "texture": "#controller"}
+            }
+        },
+        {
+            "comment": "Right joystick nub",
+            "from": [9.75, 12.7, 12.6],
+            "to": [11.25, 13.3, 13.9],
+            "rotation": {"angle": -22.5, "axis": "x", "origin": [8, 12, 7]},
+            "faces": {
+                "up": {"uv": [9, 10, 10.5, 11.5], "texture": "#controller"},
+                "north": {"uv": [9, 14, 10.5, 15], "texture": "#controller"},
+                "south": {"uv": [9, 14, 10.5, 15], "texture": "#controller"}
+            }
+        },
+        {
+            "comment": "D-pad vertical bar",
+            "from": [4.5, 12, 8],
+            "to": [6.5, 12.4, 11.5],
+            "rotation": {"angle": -22.5, "axis": "x", "origin": [8, 12, 7]},
+            "faces": {
+                "up": {"uv": [3, 1, 5, 5], "texture": "#controller"},
+                "north": {"uv": [3, 15, 5, 15.5], "texture": "#controller"},
+                "south": {"uv": [3, 15, 5, 15.5], "texture": "#controller"}
+            }
+        },
+        {
+            "comment": "D-pad horizontal bar",
+            "from": [3.5, 12, 9],
+            "to": [7.5, 12.4, 10.5],
+            "rotation": {"angle": -22.5, "axis": "x", "origin": [8, 12, 7]},
+            "faces": {
+                "up": {"uv": [2, 2.5, 6, 4], "texture": "#controller"},
+                "north": {"uv": [2, 15, 6, 15.5], "texture": "#controller"},
+                "south": {"uv": [2, 15, 6, 15.5], "texture": "#controller"}
+            }
+        },
+        {
+            "comment": "Y button (top, yellow)",
+            "from": [10.5, 12, 8],
+            "to": [11.5, 12.5, 9],
+            "rotation": {"angle": -22.5, "axis": "x", "origin": [8, 12, 7]},
+            "faces": {
+                "up": {"uv": [8.5, 1, 9.5, 2], "texture": "#controller"},
+                "north": {"uv": [8.5, 14.5, 9.5, 15], "texture": "#controller"}
+            }
+        },
+        {
+            "comment": "X button (left, blue)",
+            "from": [9.5, 12, 9],
+            "to": [10.5, 12.5, 10],
+            "rotation": {"angle": -22.5, "axis": "x", "origin": [8, 12, 7]},
+            "faces": {
+                "up": {"uv": [7.5, 2, 8.5, 3], "texture": "#controller"},
+                "north": {"uv": [7.5, 14.5, 8.5, 15], "texture": "#controller"}
+            }
+        },
+        {
+            "comment": "B button (right, red)",
+            "from": [11.5, 12, 9],
+            "to": [12.5, 12.5, 10],
+            "rotation": {"angle": -22.5, "axis": "x", "origin": [8, 12, 7]},
+            "faces": {
+                "up": {"uv": [9.5, 2, 10.5, 3], "texture": "#controller"},
+                "north": {"uv": [9.5, 14.5, 10.5, 15], "texture": "#controller"}
+            }
+        },
+        {
+            "comment": "A button (bottom, green)",
+            "from": [10.5, 12, 10],
+            "to": [11.5, 12.5, 11],
+            "rotation": {"angle": -22.5, "axis": "x", "origin": [8, 12, 7]},
+            "faces": {
+                "up": {"uv": [8.5, 3, 9.5, 4], "texture": "#controller"},
+                "north": {"uv": [8.5, 14.5, 9.5, 15], "texture": "#controller"}
+            }
+        },
+        {
+            "comment": "Start button",
+            "from": [7, 12, 9.5],
+            "to": [7.75, 12.35, 10.5],
+            "rotation": {"angle": -22.5, "axis": "x", "origin": [8, 12, 7]},
+            "faces": {
+                "up": {"uv": [5.5, 3.5, 6, 4.5], "texture": "#controller"}
+            }
+        },
+        {
+            "comment": "Select button",
+            "from": [8.25, 12, 9.5],
+            "to": [9, 12.35, 10.5],
+            "rotation": {"angle": -22.5, "axis": "x", "origin": [8, 12, 7]},
+            "faces": {
+                "up": {"uv": [6, 3.5, 6.5, 4.5], "texture": "#controller"}
             }
         },
         {
