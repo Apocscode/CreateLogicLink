@@ -22,8 +22,12 @@ import com.apocscode.logiclink.block.TrainMonitorBlock;
 import com.apocscode.logiclink.block.TrainMonitorBlockEntity;
 import com.apocscode.logiclink.block.TrainMonitorMenu;
 import com.apocscode.logiclink.controller.LogicRemoteMenu;
+import com.apocscode.logiclink.entity.RemoteSeatEntity;
 
 import net.minecraft.core.registries.Registries;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.CreativeModeTab;
@@ -52,6 +56,8 @@ public class ModRegistry {
             DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, LogicLink.MOD_ID);
     public static final DeferredRegister<MenuType<?>> MENU_TYPES =
             DeferredRegister.create(Registries.MENU, LogicLink.MOD_ID);
+    public static final DeferredRegister<EntityType<?>> ENTITY_TYPES =
+            DeferredRegister.create(Registries.ENTITY_TYPE, LogicLink.MOD_ID);
     public static final DeferredRegister<CreativeModeTab> CREATIVE_MODE_TABS =
             DeferredRegister.create(Registries.CREATIVE_MODE_TAB, LogicLink.MOD_ID);
 
@@ -355,6 +361,21 @@ public class ModRegistry {
                     () -> net.neoforged.neoforge.common.extensions.IMenuTypeExtension.create(
                             LogicRemoteMenu::new
                     )
+            );
+
+    // ==================== Entity Types ====================
+
+    /**
+     * Invisible seat entity spawned when a player right-clicks a Contraption Remote block.
+     * The player rides this entity while seated, enabling gamepad input routing.
+     */
+    public static final DeferredHolder<EntityType<?>, EntityType<RemoteSeatEntity>> REMOTE_SEAT =
+            ENTITY_TYPES.register("remote_seat", () ->
+                    EntityType.Builder.<RemoteSeatEntity>of(RemoteSeatEntity::new, MobCategory.MISC)
+                            .sized(0.25f, 0.35f)
+                            .noSummon()
+                            .clientTrackingRange(10)
+                            .build(ResourceLocation.fromNamespaceAndPath(LogicLink.MOD_ID, "remote_seat").toString())
             );
 
     // ==================== Creative Mode Tabs ====================

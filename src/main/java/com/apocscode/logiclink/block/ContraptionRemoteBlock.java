@@ -1,19 +1,17 @@
 package com.apocscode.logiclink.block;
 
 import com.apocscode.logiclink.ModRegistry;
-import com.apocscode.logiclink.compat.TweakedControllerCompat;
-import com.apocscode.logiclink.compat.TweakedControllerReader;
-import com.apocscode.logiclink.network.IHubDevice;
+import com.apocscode.logiclink.entity.RemoteSeatEntity;
 
 import com.mojang.serialization.MapCodec;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.ItemInteractionResult;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
@@ -27,25 +25,25 @@ import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
-import net.neoforged.api.distmarker.Dist;
-import net.neoforged.fml.loading.FMLEnvironment;
 
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
+
 /**
- * Contraption Remote Control Block — placeable on contraptions.
+ * Contraption Remote Control Block — functions like Create's train controls.
  * <p>
- * When a player seated on the same contraption right-clicks this block,
- * it opens a control GUI for bound drives and motors. The block relays
- * controller input from the seated player to the linked devices.
+ * Right-click to sit down on the block. While seated, the player's gamepad
+ * input is read and sent to bound Logic Drives and Creative Logic Motors.
+ * Sneak+right-click to view status and bindings.
  * </p>
  * <p>
- * Can also be used stationary: right-click to open the binding GUI,
- * then sneak+click drives/motors to add them as targets (similar to
- * the Logic Remote item but as a block).
+ * The block spawns an invisible {@link RemoteSeatEntity} that the player
+ * rides, similar to Create's SeatBlock mechanic.
  * </p>
  */
 public class ContraptionRemoteBlock extends HorizontalDirectionalBlock implements EntityBlock {
@@ -78,6 +76,21 @@ public class ContraptionRemoteBlock extends HorizontalDirectionalBlock implement
     @Override
     public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
         return SHAPE;
+    }
+
+    @Override
+    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
+        if (!state.is(newState.getBlock())) {
+            // Block broken — discard any seat entities at this position
+            if (!level.isClientSide) {
+                List<RemoteSeatEntity> seats = level.getEntitiesOfClass(RemoteSeatEntity.class, new AABB(pos));
+                for (RemoteSeatEntity seat : seats) {
+                    seat.ejectPassengers();
+                    seat.discard();
+                }
+            }
+            super.onRemove(state, level, pos, newState, isMoving);
+        }
     }
 
     // ==================== Block Entity ====================
@@ -119,9 +132,9 @@ public class ContraptionRemoteBlock extends HorizontalDirectionalBlock implement
             return InteractionResult.SUCCESS;
         }
 
-        // Right-click = open control GUI
-        if (level.isClientSide) {
-            openBlockScreen(pos);
+        // Right-click = sit down on the block
+        if (!level.isClientSide) {
+            sitDown(level, pos, player);
         }
         return InteractionResult.SUCCESS;
     }
@@ -144,21 +157,59 @@ public class ContraptionRemoteBlock extends HorizontalDirectionalBlock implement
             }
         }
 
-        if (!player.isShiftKeyDown() && level.isClientSide) {
-            openBlockScreen(pos);
+        // Right-click with item (not shifting) = sit down
+        if (!player.isShiftKeyDown() && !level.isClientSide) {
+            sitDown(level, pos, player);
             return ItemInteractionResult.SUCCESS;
         }
 
         return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
     }
 
+    // ==================== Seat Mechanic ====================
+
     /**
-     * Opens the remote control screen for this block's position.
-     * Called only on the client side.
+     * Checks if a RemoteSeatEntity already exists at this position.
      */
-    private void openBlockScreen(BlockPos pos) {
-        if (FMLEnvironment.dist == Dist.CLIENT) {
-            ContraptionRemoteScreenOpener.open(pos);
+    public static boolean isSeatOccupied(Level level, BlockPos pos) {
+        return !level.getEntitiesOfClass(RemoteSeatEntity.class, new AABB(pos)).isEmpty();
+    }
+
+    /**
+     * Spawns an invisible RemoteSeatEntity and mounts the player on it.
+     * If a seat already exists, ejects the current passenger and seats the new player.
+     */
+    public static void sitDown(Level level, BlockPos pos, Entity entity) {
+        if (level.isClientSide) return;
+
+        // Check for existing seat entity
+        List<RemoteSeatEntity> seats = level.getEntitiesOfClass(RemoteSeatEntity.class, new AABB(pos));
+        if (!seats.isEmpty()) {
+            RemoteSeatEntity existingSeat = seats.get(0);
+            List<Entity> passengers = existingSeat.getPassengers();
+            if (!passengers.isEmpty() && passengers.get(0) instanceof Player) {
+                // Already occupied by a player — don't eject
+                if (entity instanceof ServerPlayer sp) {
+                    sp.displayClientMessage(Component.literal("Seat is occupied!")
+                            .withStyle(ChatFormatting.RED), true);
+                }
+                return;
+            }
+            // Seat exists but empty or has non-player — use it
+            existingSeat.ejectPassengers();
+            entity.startRiding(existingSeat);
+            return;
+        }
+
+        // Create new seat entity
+        RemoteSeatEntity seat = new RemoteSeatEntity(level);
+        seat.setPos(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
+        level.addFreshEntity(seat);
+        entity.startRiding(seat, true);
+
+        if (entity instanceof ServerPlayer sp) {
+            sp.displayClientMessage(Component.literal("Seated — gamepad controls active")
+                    .withStyle(ChatFormatting.GREEN), true);
         }
     }
 }

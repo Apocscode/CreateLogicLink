@@ -12,6 +12,7 @@ import com.apocscode.logiclink.network.RemoteAxisPayload;
 import com.apocscode.logiclink.network.RemoteBindPayload;
 import com.apocscode.logiclink.network.RemoteButtonPayload;
 import com.apocscode.logiclink.network.RemoteControlPayload;
+import com.apocscode.logiclink.network.SeatInputPayload;
 import com.apocscode.logiclink.network.SensorNetwork;
 import com.mojang.logging.LogUtils;
 
@@ -59,6 +60,7 @@ public class LogicLink {
         ModRegistry.ITEMS.register(modEventBus);
         ModRegistry.BLOCK_ENTITY_TYPES.register(modEventBus);
         ModRegistry.MENU_TYPES.register(modEventBus);
+        ModRegistry.ENTITY_TYPES.register(modEventBus);
         ModRegistry.CREATIVE_MODE_TABS.register(modEventBus);
 
         // Register for server/game events
@@ -97,6 +99,11 @@ public class LogicLink {
                 RemoteBindPayload.TYPE,
                 RemoteBindPayload.STREAM_CODEC,
                 RemoteBindPayload::handle
+        );
+        registrar.playToServer(
+                SeatInputPayload.TYPE,
+                SeatInputPayload.STREAM_CODEC,
+                SeatInputPayload::handle
         );
     }
 

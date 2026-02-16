@@ -4,6 +4,7 @@ import com.apocscode.logiclink.LogicLink;
 import com.apocscode.logiclink.ModRegistry;
 import com.apocscode.logiclink.client.ponder.LogicLinkPonderPlugin;
 import com.apocscode.logiclink.controller.RemoteClientHandler;
+import com.apocscode.logiclink.entity.RemoteSeatEntity;
 
 import net.createmod.ponder.foundation.PonderIndex;
 import net.neoforged.api.distmarker.Dist;
@@ -41,7 +42,8 @@ public class LogicLinkClientSetup {
     @SubscribeEvent
     public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerBlockEntityRenderer(ModRegistry.TRAIN_MONITOR_BE.get(), TrainMonitorRenderer::new);
-        LogicLink.LOGGER.info("Train Monitor renderer registered.");
+        event.registerEntityRenderer(ModRegistry.REMOTE_SEAT.get(), RemoteSeatRenderer::new);
+        LogicLink.LOGGER.info("Train Monitor renderer + Remote Seat renderer registered.");
     }
 
     @SubscribeEvent

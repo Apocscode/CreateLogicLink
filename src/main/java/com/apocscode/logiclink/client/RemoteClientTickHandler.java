@@ -2,6 +2,7 @@ package com.apocscode.logiclink.client;
 
 import com.apocscode.logiclink.LogicLink;
 import com.apocscode.logiclink.controller.RemoteClientHandler;
+import com.apocscode.logiclink.controller.SeatInputHandler;
 
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -22,5 +23,6 @@ public class RemoteClientTickHandler {
     @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Post event) {
         RemoteClientHandler.tick();
+        SeatInputHandler.tick();
     }
 }
