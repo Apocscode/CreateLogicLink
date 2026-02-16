@@ -58,21 +58,47 @@ public class RemoteClientHandler {
     private static final ControllerOutput output = new ControllerOutput();
 
     public static void toggleBindMode(BlockPos location) {
+        Minecraft mc = Minecraft.getInstance();
         if (MODE == Mode.IDLE) {
             MODE = Mode.BIND;
             selectedLocation = location;
             useLock = true;
+            if (mc.player != null) {
+                AllSoundEvents.CONTROLLER_CLICK.playAt(mc.player.level(), mc.player.blockPosition(), 1f, 1f, true);
+                mc.player.displayClientMessage(
+                        Component.literal("Bind Mode — press a button or move an axis")
+                                .withStyle(ChatFormatting.GOLD), true);
+            }
         } else {
             MODE = Mode.IDLE;
+            if (mc.player != null) {
+                mc.player.displayClientMessage(
+                        Component.literal("Bind Mode cancelled").withStyle(ChatFormatting.GRAY), true);
+            }
             onReset();
         }
     }
 
     public static void toggle() {
+        Minecraft mc = Minecraft.getInstance();
         if (MODE == Mode.IDLE) {
             MODE = Mode.ACTIVE;
+            if (mc.player != null) {
+                AllSoundEvents.CONTROLLER_CLICK.playAt(mc.player.level(), mc.player.blockPosition(), 1f, .75f, true);
+                mc.player.displayClientMessage(
+                        Component.literal("Controller ").withStyle(ChatFormatting.GOLD)
+                                .append(Component.literal("ACTIVE").withStyle(ChatFormatting.GREEN)),
+                        true);
+            }
         } else {
             MODE = Mode.IDLE;
+            if (mc.player != null) {
+                AllSoundEvents.CONTROLLER_CLICK.playAt(mc.player.level(), mc.player.blockPosition(), 1f, .5f, true);
+                mc.player.displayClientMessage(
+                        Component.literal("Controller ").withStyle(ChatFormatting.GOLD)
+                                .append(Component.literal("IDLE").withStyle(ChatFormatting.GRAY)),
+                        true);
+            }
             onReset();
         }
     }

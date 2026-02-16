@@ -4,7 +4,7 @@
         "4": "create:block/contraption_controls_frame",
         "1_7": "create:block/contraption_controls",
         "particle": "create:block/andesite_casing",
-        "controller": "logiclink:item/logic_remote"
+        "controller": "logiclink:block/contraption_remote_top"
     },
     "elements": [
         {
@@ -63,16 +63,16 @@
             }
         },
         {
-            "comment": "Controller face replacing button - sits on angled tray",
+            "comment": "Controller face on angled tray",
             "from": [2.5, 10.5, 7.5],
             "to": [13.5, 12.5, 14.5],
             "rotation": {"angle": -22.5, "axis": "x", "origin": [8, 12, 7]},
             "faces": {
-                "north": {"uv": [0, 0, 13, 2], "rotation": 180, "texture": "#controller"},
-                "east": {"uv": [13, 0, 15, 8], "rotation": 90, "texture": "#controller"},
-                "south": {"uv": [0, 6, 13, 8], "texture": "#controller"},
-                "west": {"uv": [13, 0, 15, 8], "rotation": 270, "texture": "#controller"},
-                "up": {"uv": [0, 0, 13, 8], "rotation": 180, "texture": "#controller"}
+                "north": {"uv": [0, 0, 12, 2], "rotation": 180, "texture": "#controller"},
+                "east": {"uv": [12, 0, 14, 8], "rotation": 90, "texture": "#controller"},
+                "south": {"uv": [0, 6, 12, 8], "texture": "#controller"},
+                "west": {"uv": [12, 0, 14, 8], "rotation": 270, "texture": "#controller"},
+                "up": {"uv": [0, 0, 12, 8], "rotation": 180, "texture": "#controller"}
             }
         },
         {

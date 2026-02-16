@@ -127,12 +127,20 @@ public class LogicRemoteItem extends Item implements MenuProvider {
             return InteractionResultHolder.success(heldItem);
         }
 
-        // Normal right-click = toggle active mode (client-side)
+        // Normal right-click = toggle active mode
         if (!player.isShiftKeyDown()) {
             if (level.isClientSide) {
                 toggleActiveClient();
+            } else {
+                // Server-side feedback
+                boolean nowActive = true; // Client will toggle; give feedback
+                player.displayClientMessage(
+                        Component.literal("Controller ").withStyle(ChatFormatting.GOLD)
+                                .append(Component.literal("ACTIVE").withStyle(ChatFormatting.GREEN)),
+                        true);
             }
             player.getCooldowns().addCooldown(this, 2);
+            return InteractionResultHolder.success(heldItem);
         }
 
         return InteractionResultHolder.pass(heldItem);
