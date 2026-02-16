@@ -100,6 +100,16 @@
     "logiclink.logic_remote.tooltip.instructions2": "§eCLICK drive/motor to add target",
     "logiclink.logic_remote.tooltip.instructions3": "§eSNEAK+CLICK air to clear all",
 
+    "logiclink.gui_button_refresh": "Refresh Gamepad",
+    "logiclink.gui_device_prev": "Previous Gamepad",
+    "logiclink.gui_device_next": "Next Gamepad",
+    "logiclink.gui_tab_button": "Buttons",
+    "logiclink.gui_tab_axis": "Axes",
+    "logiclink.gui_gamepad_unavailable": "No Gamepad Detected",
+    "logiclink.gui_gamepad_selected": "Gamepad %s",
+    "logiclink.logic_remote.frequency_slot_1": "Frequency 1 (%s)",
+    "logiclink.logic_remote.frequency_slot_2": "Frequency 2 (%s)",
+
     "logiclink.contraption_remote.status.header": "§6=== Contraption Remote Status ===",
     "logiclink.contraption_remote.status.lectern": "§aLectern: %s",
     "logiclink.contraption_remote.status.no_lectern": "§7No lectern linked",

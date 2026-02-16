@@ -21,6 +21,7 @@ import com.apocscode.logiclink.block.SignalTabletItem;
 import com.apocscode.logiclink.block.TrainMonitorBlock;
 import com.apocscode.logiclink.block.TrainMonitorBlockEntity;
 import com.apocscode.logiclink.block.TrainMonitorMenu;
+import com.apocscode.logiclink.controller.LogicRemoteMenu;
 
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.inventory.MenuType;
@@ -341,6 +342,18 @@ public class ModRegistry {
                     "train_monitor",
                     () -> net.neoforged.neoforge.common.extensions.IMenuTypeExtension.create(
                             TrainMonitorMenu::new
+                    )
+            );
+
+    /**
+     * Logic Remote frequency configuration menu.
+     * Ghost item menu with 50 slots for button/axis frequency pairs.
+     */
+    public static final DeferredHolder<MenuType<?>, MenuType<LogicRemoteMenu>> LOGIC_REMOTE_MENU =
+            MENU_TYPES.register(
+                    "logic_remote",
+                    () -> net.neoforged.neoforge.common.extensions.IMenuTypeExtension.create(
+                            LogicRemoteMenu::new
                     )
             );
 

@@ -4,9 +4,13 @@ import org.slf4j.Logger;
 
 import com.apocscode.logiclink.block.LogicLinkBlockItem;
 import com.apocscode.logiclink.block.LogicSensorBlockItem;
+import com.apocscode.logiclink.controller.RemoteServerHandler;
 import com.apocscode.logiclink.network.HubNetwork;
 import com.apocscode.logiclink.network.LinkNetwork;
 import com.apocscode.logiclink.network.NetworkHighlightPayload;
+import com.apocscode.logiclink.network.RemoteAxisPayload;
+import com.apocscode.logiclink.network.RemoteBindPayload;
+import com.apocscode.logiclink.network.RemoteButtonPayload;
 import com.apocscode.logiclink.network.RemoteControlPayload;
 import com.apocscode.logiclink.network.SensorNetwork;
 import com.mojang.logging.LogUtils;
@@ -21,6 +25,7 @@ import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.server.ServerStartingEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
+import net.neoforged.neoforge.event.tick.LevelTickEvent;
 import net.neoforged.neoforge.event.tick.PlayerTickEvent;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
@@ -78,6 +83,21 @@ public class LogicLink {
                 RemoteControlPayload.STREAM_CODEC,
                 RemoteControlPayload::handle
         );
+        registrar.playToServer(
+                RemoteButtonPayload.TYPE,
+                RemoteButtonPayload.STREAM_CODEC,
+                RemoteButtonPayload::handle
+        );
+        registrar.playToServer(
+                RemoteAxisPayload.TYPE,
+                RemoteAxisPayload.STREAM_CODEC,
+                RemoteAxisPayload::handle
+        );
+        registrar.playToServer(
+                RemoteBindPayload.TYPE,
+                RemoteBindPayload.STREAM_CODEC,
+                RemoteBindPayload::handle
+        );
     }
 
     /**
@@ -122,6 +142,16 @@ public class LogicLink {
     @SubscribeEvent
     public void onServerStarting(ServerStartingEvent event) {
         LOGGER.info("{} ready on server.", MOD_NAME);
+    }
+
+    /**
+     * Server-side level tick: processes RemoteServerHandler to manage
+     * redstone link network entries for active Logic Remote controllers.
+     */
+    @SubscribeEvent
+    public void onLevelTick(LevelTickEvent.Post event) {
+        if (event.getLevel().isClientSide()) return;
+        RemoteServerHandler.tick(event.getLevel());
     }
 
     @SubscribeEvent
