@@ -239,13 +239,15 @@ public class LogicDriveBlockEntity extends SplitShaftBlockEntity implements IHub
     public void tick() {
         super.tick();
 
-        if (level == null || level.isClientSide) return;
+        if (level == null) return;
 
-        // Register with hub network on first server tick
+        // Register with hub network on both client and server
         if (!hubRegistered) {
             HubNetwork.register(this);
             hubRegistered = true;
         }
+
+        if (level.isClientSide) return;
 
         // Coalesce rapid Lua property changes into a single kinetic update per tick
         if (kinematicsNeedUpdate) {

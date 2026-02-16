@@ -5,6 +5,8 @@ import com.apocscode.logiclink.block.LogicRemoteItem;
 import com.apocscode.logiclink.network.OpenFreqConfigPayload;
 import com.apocscode.logiclink.network.RemoteControlPayload;
 
+import com.apocscode.logiclink.client.gui.RemoteGuiTextures;
+
 import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -39,31 +41,31 @@ import java.util.List;
  */
 public class LogicRemoteScreen extends Screen {
 
-    // ==================== Colors ====================
-    private static final int BG_COLOR        = 0xDD1A1A24;
-    private static final int BORDER_COLOR    = 0xFF4488CC;
-    private static final int PANEL_BG        = 0xFF2A2A35;
-    private static final int TITLE_COLOR     = 0xFF88CCFF;
-    private static final int TEXT_COLOR      = 0xFFCCCCCC;
-    private static final int GREEN           = 0xFF22CC55;
-    private static final int RED             = 0xFFEE3333;
-    private static final int YELLOW          = 0xFFFFAA00;
-    private static final int CYAN            = 0xFF00CCEE;
-    private static final int GRAY            = 0xFF666677;
+    // ==================== Colors (Create-style warm palette) ====================
+    private static final int BG_COLOR        = 0xEE8B8279;  // warm brownish panel
+    private static final int BORDER_COLOR    = 0xFF5A524A;  // Create-style dark border
+    private static final int PANEL_BG        = 0xFFA49A8E;  // inner panel warm gray
+    private static final int TITLE_COLOR     = 0xFF575F7A;  // CTC font color
+    private static final int TEXT_COLOR      = 0xFF575F7A;  // CTC font color
+    private static final int GREEN           = 0xFF5CB85C;
+    private static final int RED             = 0xFFD9534F;
+    private static final int YELLOW          = 0xFFF0AD4E;
+    private static final int CYAN            = 0xFF5BC0DE;
+    private static final int GRAY            = 0xFF7A7268;
     private static final int WHITE           = 0xFFFFFFFF;
-    private static final int DARK_GRAY       = 0xFF333344;
-    private static final int SLIDER_TRACK    = 0xFF3A3A4A;
-    private static final int SLIDER_FILL     = 0xFF4488CC;
-    private static final int SLIDER_THUMB    = 0xFFCCDDFF;
-    private static final int BTN_ON          = 0xFF22AA44;
-    private static final int BTN_OFF         = 0xFF664444;
-    private static final int BTN_HOVER       = 0xFF5599CC;
-    private static final int SECTION_BG      = 0xFF252535;
+    private static final int DARK_GRAY       = 0xFF6B6358;
+    private static final int SLIDER_TRACK    = 0xFF7A7268;
+    private static final int SLIDER_FILL     = 0xFF5BC0DE;
+    private static final int SLIDER_THUMB    = 0xFFE8E0D4;
+    private static final int BTN_ON          = 0xFF5CB85C;
+    private static final int BTN_OFF         = 0xFF8B5A5A;
+    private static final int BTN_HOVER       = 0xFF8A8070;
+    private static final int SECTION_BG      = 0xFF968C80;
 
     // ==================== Layout ====================
     private int guiLeft, guiTop;
     private static final int GUI_WIDTH = 260;
-    private static final int GUI_HEIGHT = 220;
+    private static final int GUI_HEIGHT = 260;
 
     // ==================== Source ====================
     /** 0=held item, 1=block at blockPos */
@@ -85,6 +87,12 @@ public class LogicRemoteScreen extends Screen {
     private final List<TargetDisplay> targets = new ArrayList<>();
     private boolean hasDrives = false;
     private boolean hasMotors = false;
+
+    // ==================== Auxiliary Keybind Slots ====================
+    private static final int AUX_SLOT_COUNT = 4;
+    private static final String[] AUX_LABELS = {"AUX 1", "AUX 2", "AUX 3", "AUX 4"};
+    private static final int[] AUX_COLORS = {YELLOW, CYAN, GREEN, RED};
+    private final boolean[] auxEnabled = new boolean[AUX_SLOT_COUNT];
 
     /**
      * Open screen for a held Logic Remote item.
@@ -164,9 +172,18 @@ public class LogicRemoteScreen extends Screen {
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         super.render(graphics, mouseX, mouseY, partialTick);
 
-        // Background
-        graphics.fill(guiLeft - 2, guiTop - 2, guiLeft + GUI_WIDTH + 2, guiTop + GUI_HEIGHT + 2, BORDER_COLOR);
-        graphics.fill(guiLeft, guiTop, guiLeft + GUI_WIDTH, guiTop + GUI_HEIGHT, BG_COLOR);
+        // Background — render CTC texture as decorative panel, then overlay our panels
+        int texW = RemoteGuiTextures.LOGIC_REMOTE_0.width;
+        int texH = RemoteGuiTextures.LOGIC_REMOTE_0.height;
+        int texX = guiLeft + (GUI_WIDTH - texW) / 2;
+        int texY = guiTop;
+        RemoteGuiTextures.LOGIC_REMOTE_0.render(graphics, texX, texY);
+
+        // Extended panel below texture for additional controls
+        if (GUI_HEIGHT > texH) {
+            graphics.fill(guiLeft - 2, guiTop + texH, guiLeft + GUI_WIDTH + 2, guiTop + GUI_HEIGHT + 2, BORDER_COLOR);
+            graphics.fill(guiLeft, guiTop + texH, guiLeft + GUI_WIDTH, guiTop + GUI_HEIGHT, BG_COLOR);
+        }
 
         // Title
         graphics.drawCenteredString(font, this.title, guiLeft + GUI_WIDTH / 2, guiTop + 6, TITLE_COLOR);
@@ -192,14 +209,17 @@ public class LogicRemoteScreen extends Screen {
         graphics.fill(freqBtnX, freqBtnY, freqBtnX + 76, freqBtnY + 12, freqHover ? BTN_HOVER : DARK_GRAY);
         graphics.drawCenteredString(font, "\u266A Freq Config", freqBtnX + 38, freqBtnY + 2, freqHover ? WHITE : YELLOW);
 
-        // Target count
+        // Target count (positioned right of the Freq Config button to avoid overlap)
         String targetStr = targets.size() + " target" + (targets.size() != 1 ? "s" : "") + " bound";
-        graphics.drawString(font, targetStr, guiLeft + 8, guiTop + 20, targets.isEmpty() ? GRAY : CYAN, false);
+        graphics.drawString(font, targetStr, guiLeft + 84, guiTop + 20, targets.isEmpty() ? GRAY : CYAN, false);
 
         if (targets.isEmpty()) {
             graphics.drawCenteredString(font, "No targets bound", guiLeft + GUI_WIDTH / 2, guiTop + 80, GRAY);
-            graphics.drawCenteredString(font, "Sneak + click a Drive or Motor", guiLeft + GUI_WIDTH / 2, guiTop + 96, GRAY);
-            graphics.drawCenteredString(font, "to add targets", guiLeft + GUI_WIDTH / 2, guiTop + 108, GRAY);
+            graphics.drawCenteredString(font, "Link to a Hub (Shift+click)", guiLeft + GUI_WIDTH / 2, guiTop + 96, GRAY);
+            graphics.drawCenteredString(font, "then configure in Motor Config", guiLeft + GUI_WIDTH / 2, guiTop + 108, GRAY);
+
+            // Still render aux buttons even with no targets
+            renderAuxButtons(graphics, mouseX, mouseY, guiTop + 130);
             return;
         }
 
@@ -214,6 +234,9 @@ public class LogicRemoteScreen extends Screen {
         if (hasMotors) {
             y = renderMotorSection(graphics, mouseX, mouseY, y);
         }
+
+        // ==================== Auxiliary Keybind Slots ====================
+        y = renderAuxButtons(graphics, mouseX, mouseY, y + 4);
 
         // ==================== Target List ====================
         renderTargetList(graphics, y + 4);
@@ -374,6 +397,35 @@ public class LogicRemoteScreen extends Screen {
         }
     }
 
+    /**
+     * Renders 4 auxiliary keybind toggle buttons in a horizontal row.
+     * These are intended for redstone link control.
+     */
+    private int renderAuxButtons(GuiGraphics graphics, int mouseX, int mouseY, int y) {
+        int sectionX = guiLeft + 6;
+        int sectionW = GUI_WIDTH - 12;
+
+        graphics.fill(sectionX, y, sectionX + sectionW, y + 30, SECTION_BG);
+        graphics.drawString(font, "Auxiliary (Redstone Links)", sectionX + 4, y + 2, TEXT_COLOR, false);
+
+        int btnW = (sectionW - 20) / AUX_SLOT_COUNT;
+        int btnY = y + 13;
+        for (int i = 0; i < AUX_SLOT_COUNT; i++) {
+            int bx = sectionX + 6 + i * (btnW + 4);
+            boolean hover = isInside(mouseX, mouseY, bx, btnY, btnW, 14);
+            int bgColor = hover ? BTN_HOVER : (auxEnabled[i] ? BTN_ON : BTN_OFF);
+            graphics.fill(bx, btnY, bx + btnW, btnY + 14, bgColor);
+
+            // Left accent line
+            graphics.fill(bx, btnY, bx + 2, btnY + 14, AUX_COLORS[i]);
+
+            String label = AUX_LABELS[i] + (auxEnabled[i] ? " ON" : "");
+            graphics.drawCenteredString(font, label, bx + btnW / 2, btnY + 3, WHITE);
+        }
+
+        return y + 34;
+    }
+
     // ==================== Input Handling ====================
 
     @Override
@@ -408,7 +460,11 @@ public class LogicRemoteScreen extends Screen {
             return true;
         }
 
-        if (targets.isEmpty()) return super.mouseClicked(mouseX, mouseY, button);
+        if (targets.isEmpty()) {
+            // Still handle aux button clicks even with no targets
+            if (handleAuxClick(mX, mY, guiTop + 130 + 4)) return true;
+            return super.mouseClicked(mouseX, mouseY, button);
+        }
 
         int y = guiTop + 34;
 
@@ -506,7 +562,12 @@ public class LogicRemoteScreen extends Screen {
                 sendControl(RemoteControlPayload.SET_MOTOR_ENABLED, 0f);
                 return true;
             }
+
+            y += 76;
         }
+
+        // ==================== Auxiliary Button Clicks ====================
+        if (handleAuxClick(mX, mY, y + 4)) return true;
 
         return super.mouseClicked(mouseX, mouseY, button);
     }
@@ -596,6 +657,29 @@ public class LogicRemoteScreen extends Screen {
         motorSpeed = (int) (-256f + norm * 512f);
         // Quantize to whole RPM
         motorSpeed = Math.round(motorSpeed);
+    }
+
+    // ==================== Auxiliary Click Handling ====================
+
+    /**
+     * Handle clicks on the 4 auxiliary keybind toggle buttons.
+     * Returns true if a button was clicked.
+     */
+    private boolean handleAuxClick(int mX, int mY, int y) {
+        int sectionX = guiLeft + 6;
+        int sectionW = GUI_WIDTH - 12;
+        int btnW = (sectionW - 20) / AUX_SLOT_COUNT;
+        int btnY = y + 13;
+
+        for (int i = 0; i < AUX_SLOT_COUNT; i++) {
+            int bx = sectionX + 6 + i * (btnW + 4);
+            if (isInside(mX, mY, bx, btnY, btnW, 14)) {
+                auxEnabled[i] = !auxEnabled[i];
+                sendControl(RemoteControlPayload.SET_AUX_TOGGLE, i + (auxEnabled[i] ? 0.5f : 0f));
+                return true;
+            }
+        }
+        return false;
     }
 
     // ==================== Network ====================

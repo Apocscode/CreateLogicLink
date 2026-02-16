@@ -84,10 +84,14 @@ public class LogicRemoteItem extends Item implements MenuProvider {
         // Shift + right-click on Logic Link block = link to hub
         if (player.isShiftKeyDown()) {
             BlockEntity be = level.getBlockEntity(pos);
-            if (be instanceof LogicLinkBlockEntity) {
-                linkToHub(stack, pos);
+            if (be instanceof LogicLinkBlockEntity hub) {
+                String label = hub.getHubLabel();
+                linkToHub(stack, pos, label);
+                String displayName = label.isEmpty()
+                        ? "Hub at " + pos.toShortString()
+                        : "\"" + label + "\" (" + pos.toShortString() + ")";
                 player.displayClientMessage(
-                        Component.literal("Linked to Logic Hub at " + pos.toShortString())
+                        Component.literal("Linked to " + displayName)
                                 .withStyle(ChatFormatting.GREEN), true);
                 player.getCooldowns().addCooldown(this, 2);
                 return InteractionResult.SUCCESS;
@@ -179,12 +183,13 @@ public class LogicRemoteItem extends Item implements MenuProvider {
     /**
      * Store a link to a Logic Hub (Logic Link block) in the item's NBT.
      */
-    public static void linkToHub(ItemStack stack, BlockPos hubPos) {
+    public static void linkToHub(ItemStack stack, BlockPos hubPos, String hubLabel) {
         CompoundTag tag = getOrCreateTag(stack);
         tag.putInt("HubX", hubPos.getX());
         tag.putInt("HubY", hubPos.getY());
         tag.putInt("HubZ", hubPos.getZ());
         tag.putBoolean("HubLinked", true);
+        tag.putString("HubLabel", hubLabel != null ? hubLabel : "");
         saveTag(stack, tag);
     }
 
@@ -195,6 +200,14 @@ public class LogicRemoteItem extends Item implements MenuProvider {
         CompoundTag tag = getOrCreateTag(stack);
         if (!tag.getBoolean("HubLinked")) return null;
         return new BlockPos(tag.getInt("HubX"), tag.getInt("HubY"), tag.getInt("HubZ"));
+    }
+
+    /**
+     * Get the label of the linked hub, or empty string if none.
+     */
+    public static String getLinkedHubLabel(ItemStack stack) {
+        CompoundTag tag = getOrCreateTag(stack);
+        return tag.contains("HubLabel") ? tag.getString("HubLabel") : "";
     }
 
     // ==================== MenuProvider ====================

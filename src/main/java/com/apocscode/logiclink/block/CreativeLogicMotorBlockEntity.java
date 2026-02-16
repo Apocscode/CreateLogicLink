@@ -219,13 +219,15 @@ public class CreativeLogicMotorBlockEntity extends GeneratingKineticBlockEntity 
     public void tick() {
         super.tick();
 
-        if (level == null || level.isClientSide) return;
+        if (level == null) return;
 
-        // Register with hub network on first server tick
+        // Register with hub network on both client and server
         if (!hubRegistered) {
             HubNetwork.register(this);
             hubRegistered = true;
         }
+
+        if (level.isClientSide) return;
 
         if (sequenceIndex < 0 || sequenceIndex >= sequence.size()) return;
 

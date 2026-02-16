@@ -41,6 +41,7 @@ import java.util.List;
  *   <li>2 = SET_DRIVE_REVERSED (value: 0=normal, 1=reversed)</li>
  *   <li>3 = SET_MOTOR_SPEED (value = -256 to 256)</li>
  *   <li>4 = SET_MOTOR_ENABLED (value: 0=off, 1=on)</li>
+ *   <li>5 = SET_AUX_TOGGLE (value: slot index 0-3, +0.5 if enabling)</li>
  * </ul>
  */
 public record RemoteControlPayload(int source, BlockPos blockPos, int action, float value)
@@ -56,6 +57,7 @@ public record RemoteControlPayload(int source, BlockPos blockPos, int action, fl
     public static final int SET_DRIVE_REVERSED = 2;
     public static final int SET_MOTOR_SPEED = 3;
     public static final int SET_MOTOR_ENABLED = 4;
+    public static final int SET_AUX_TOGGLE = 5;
 
     public static final Type<RemoteControlPayload> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(LogicLink.MOD_ID, "remote_control"));
@@ -134,6 +136,15 @@ public record RemoteControlPayload(int source, BlockPos blockPos, int action, fl
                 if (be instanceof CreativeLogicMotorBlockEntity motor) {
                     motor.setEnabled(value > 0.5f);
                 }
+            }
+            case SET_AUX_TOGGLE -> {
+                // Auxiliary redstone link toggle.
+                // value encodes: slot index (int part) + enabled (0.5 fractional).
+                int slot = (int) value;
+                boolean enabled = (value - slot) > 0.25f;
+                // TODO: Wire to Create redstone link frequency system.
+                // For now, this is a placeholder for future redstone link integration.
+                LogicLink.LOGGER.debug("Aux slot {} toggled to {}", slot, enabled);
             }
         }
     }

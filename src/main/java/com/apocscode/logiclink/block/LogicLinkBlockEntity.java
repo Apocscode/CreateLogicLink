@@ -49,6 +49,9 @@ public class LogicLinkBlockEntity extends BlockEntity {
     /** Hub scanning range for wireless device discovery. */
     private int hubRange = HubNetwork.DEFAULT_RANGE;
 
+    /** User-assigned label for this hub (distinguishes multiple hubs). */
+    private String hubLabel = "";
+
     public LogicLinkBlockEntity(BlockPos pos, BlockState blockState) {
         super(ModRegistry.LOGIC_LINK_BE.get(), pos, blockState);
     }
@@ -161,6 +164,21 @@ public class LogicLinkBlockEntity extends BlockEntity {
         setChanged();
     }
 
+    /**
+     * Gets the user-assigned label for this hub.
+     */
+    public String getHubLabel() {
+        return hubLabel;
+    }
+
+    /**
+     * Sets the user-assigned label for this hub.
+     */
+    public void setHubLabel(String label) {
+        this.hubLabel = label != null ? label : "";
+        setChanged();
+    }
+
     // ==================== Cleanup ====================
 
     /**
@@ -183,6 +201,9 @@ public class LogicLinkBlockEntity extends BlockEntity {
         if (hubRange != HubNetwork.DEFAULT_RANGE) {
             tag.putInt("HubRange", hubRange);
         }
+        if (!hubLabel.isEmpty()) {
+            tag.putString("HubLabel", hubLabel);
+        }
     }
 
     @Override
@@ -196,6 +217,7 @@ public class LogicLinkBlockEntity extends BlockEntity {
             networkFrequency = null;
         }
         hubRange = tag.contains("HubRange") ? tag.getInt("HubRange") : HubNetwork.DEFAULT_RANGE;
+        hubLabel = tag.contains("HubLabel") ? tag.getString("HubLabel") : "";
         cachedSummary = null;
     }
 }

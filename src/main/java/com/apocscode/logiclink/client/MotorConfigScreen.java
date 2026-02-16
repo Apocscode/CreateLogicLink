@@ -37,30 +37,30 @@ import java.util.List;
  */
 public class MotorConfigScreen extends Screen {
 
-    // ==================== Colors (CTC dark theme) ====================
-    private static final int BG_OUTER       = 0xFF2B2B33;
-    private static final int BG_INNER       = 0xFF3C3C48;
-    private static final int BORDER_DARK    = 0xFF1A1A22;
-    private static final int BORDER_LIGHT   = 0xFF56566A;
-    private static final int TITLE_COLOR    = 0xFFDAE0F2;
-    private static final int LABEL_COLOR    = 0xFFB0B8CC;
-    private static final int TEXT_COLOR     = 0xFFCCCCCC;
-    private static final int TEXT_DIM       = 0xFF8888AA;
-    private static final int GREEN          = 0xFF4CB84C;
-    private static final int RED            = 0xFFCC4444;
-    private static final int YELLOW         = 0xFFD4AA44;
-    private static final int CYAN           = 0xFF44AACC;
+    // ==================== Colors (Create-style warm palette) ====================
+    private static final int BG_OUTER       = 0xFF8B8279;
+    private static final int BG_INNER       = 0xFFA49A8E;
+    private static final int BORDER_DARK    = 0xFF5A524A;
+    private static final int BORDER_LIGHT   = 0xFFCCC4B8;
+    private static final int TITLE_COLOR    = 0xFF575F7A;
+    private static final int LABEL_COLOR    = 0xFF575F7A;
+    private static final int TEXT_COLOR     = 0xFF575F7A;
+    private static final int TEXT_DIM       = 0xFF7A7268;
+    private static final int GREEN          = 0xFF5CB85C;
+    private static final int RED            = 0xFFD9534F;
+    private static final int YELLOW         = 0xFFF0AD4E;
+    private static final int CYAN           = 0xFF5BC0DE;
     private static final int WHITE          = 0xFFFFFFFF;
-    private static final int SLOT_BG        = 0xFF32323E;
-    private static final int SLOT_SELECTED  = 0xFF3A4E6A;
-    private static final int SLOT_ASSIGNED  = 0xFF2E3E2E;
-    private static final int BTN_IDLE       = 0xFF444460;
-    private static final int BTN_HOVER      = 0xFF5566AA;
-    private static final int BTN_ACTIVE     = 0xFF446644;
-    private static final int FIELD_BG       = 0xFF252530;
-    private static final int FIELD_BORDER   = 0xFF555568;
-    private static final int DEVICE_BG      = 0xFF2A2A36;
-    private static final int DEVICE_HOVER   = 0xFF3D4D6D;
+    private static final int SLOT_BG        = 0xFF968C80;
+    private static final int SLOT_SELECTED  = 0xFF8AA0B8;
+    private static final int SLOT_ASSIGNED  = 0xFF7A9A7A;
+    private static final int BTN_IDLE       = 0xFF8A8070;
+    private static final int BTN_HOVER      = 0xFF6B6358;
+    private static final int BTN_ACTIVE     = 0xFF5CB85C;
+    private static final int FIELD_BG       = 0xFF7A7268;
+    private static final int FIELD_BORDER   = 0xFF5A524A;
+    private static final int DEVICE_BG      = 0xFF8B8279;
+    private static final int DEVICE_HOVER   = 0xFF7A8AA0;
 
     // ==================== Layout ====================
     private int guiLeft, guiTop;
@@ -75,6 +75,11 @@ public class MotorConfigScreen extends Screen {
     private final List<DeviceInfo> availableDevices = new ArrayList<>();
     private int deviceScrollOffset = 0;
     private static final int DEVICE_ROWS_VISIBLE = 10;
+
+    /** Linked hub label for display. */
+    private String linkedHubLabel = "";
+    /** Linked hub position for display. */
+    private BlockPos linkedHubPos = null;
 
     // ==================== Axis Slot Configuration ====================
     public static final int MAX_AXIS_SLOTS = 4;
@@ -118,11 +123,33 @@ public class MotorConfigScreen extends Screen {
 
     private void discoverDevices() {
         availableDevices.clear();
+        linkedHubLabel = "";
+        linkedHubPos = null;
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
 
-        BlockPos playerPos = mc.player.blockPosition();
-        List<BlockEntity> devices = HubNetwork.getDevicesInRange(mc.level, playerPos, HubNetwork.DEFAULT_RANGE);
+        // Find the remote item in player's hands
+        ItemStack remoteStack = mc.player.getMainHandItem();
+        if (!(remoteStack.getItem() instanceof LogicRemoteItem)) {
+            remoteStack = mc.player.getOffhandItem();
+        }
+        if (remoteStack.isEmpty() || !(remoteStack.getItem() instanceof LogicRemoteItem)) return;
+
+        // Use linked hub position as search center (not player position)
+        BlockPos hubPos = LogicRemoteItem.getLinkedHub(remoteStack);
+        if (hubPos == null) return; // Not linked to a hub
+
+        linkedHubPos = hubPos;
+        linkedHubLabel = LogicRemoteItem.getLinkedHubLabel(remoteStack);
+
+        // Try to read hub range from the actual hub block entity if loaded
+        int range = HubNetwork.DEFAULT_RANGE;
+        BlockEntity hubBe = mc.level.getBlockEntity(hubPos);
+        if (hubBe instanceof com.apocscode.logiclink.block.LogicLinkBlockEntity hub) {
+            range = hub.getHubRange();
+        }
+
+        List<BlockEntity> devices = HubNetwork.getDevicesInRange(mc.level, hubPos, range);
 
         for (BlockEntity be : devices) {
             if (be instanceof IHubDevice device) {
@@ -265,13 +292,27 @@ public class MotorConfigScreen extends Screen {
 
         g.fill(panelX, panelY, panelX + panelW, panelY + panelH, BG_INNER);
         g.fill(panelX, panelY, panelX + panelW, panelY + 12, BORDER_DARK);
-        g.drawString(font, "Hub Devices", panelX + 3, panelY + 2, LABEL_COLOR, false);
 
-        if (availableDevices.isEmpty()) {
+        // Hub header: show label or position if linked
+        String hubHeader;
+        if (linkedHubPos != null) {
+            hubHeader = linkedHubLabel.isEmpty()
+                    ? "Hub " + linkedHubPos.toShortString()
+                    : linkedHubLabel;
+        } else {
+            hubHeader = "No Hub Linked";
+        }
+        g.drawString(font, hubHeader, panelX + 3, panelY + 2, LABEL_COLOR, false);
+
+        if (linkedHubPos == null) {
+            g.drawString(font, "Shift+click a", panelX + 4, panelY + 18, TEXT_DIM, false);
+            g.drawString(font, "Logic Hub to", panelX + 4, panelY + 30, TEXT_DIM, false);
+            g.drawString(font, "link remote", panelX + 4, panelY + 40, TEXT_DIM, false);
+        } else if (availableDevices.isEmpty()) {
             g.drawString(font, "No devices", panelX + 4, panelY + 18, TEXT_DIM, false);
             g.drawString(font, "Place motors/", panelX + 4, panelY + 30, TEXT_DIM, false);
-            g.drawString(font, "drives near a", panelX + 4, panelY + 40, TEXT_DIM, false);
-            g.drawString(font, "Logic Hub", panelX + 4, panelY + 50, TEXT_DIM, false);
+            g.drawString(font, "drives near", panelX + 4, panelY + 40, TEXT_DIM, false);
+            g.drawString(font, "the linked hub", panelX + 4, panelY + 50, TEXT_DIM, false);
         } else {
             int listY = panelY + 14;
             int maxShow = Math.min(availableDevices.size() - deviceScrollOffset, DEVICE_ROWS_VISIBLE);
