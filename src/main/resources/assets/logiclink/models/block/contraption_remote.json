@@ -4,7 +4,8 @@
         "4": "create:block/contraption_controls_frame",
         "1_7": "create:block/contraption_controls",
         "particle": "create:block/andesite_casing",
-        "controller": "logiclink:item/logic_remote"
+        "controller": "logiclink:item/logic_remote",
+        "controller_top": "logiclink:block/contraption_remote_top"
     },
     "elements": [
         {
@@ -60,12 +61,12 @@
             }
         },
         {
-            "comment": "Angled tray - controller face texture",
+            "comment": "Angled tray - controller face texture (top-down view)",
             "from": [2, 11.1, 7],
             "to": [14, 12.1, 15],
             "rotation": {"angle": -22.5, "axis": "x", "origin": [8, 12.1, 7]},
             "faces": {
-                "up": {"uv": [0, 0, 12, 8], "rotation": 180, "texture": "#controller"}
+                "up": {"uv": [0.5, 0, 12.5, 8], "texture": "#controller_top"}
             }
         },
         {
