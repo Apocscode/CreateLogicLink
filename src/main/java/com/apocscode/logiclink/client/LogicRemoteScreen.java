@@ -201,14 +201,21 @@ public class LogicRemoteScreen extends Screen {
             addRenderableOnly(axisDigits[i]);
         }
 
-        updatePageVisibility();
+        // Apply initial page-specific visibility (don't call rebuildWidgets here)
+        applyPageVisibility();
     }
 
     /**
-     * Show/hide widgets based on the current page.
+     * Switch pages: rebuild widgets so positions and visibility update.
      */
     private void updatePageVisibility() {
-        // Page-1 extra buttons only visible on page 1
+        this.rebuildWidgets();
+    }
+
+    /**
+     * Apply widget visibility for the current page. Called from init() after widgets are created.
+     */
+    private void applyPageVisibility() {
         bugReportButton.visible = !isSecondPage;
         page2Button.visible = !isSecondPage;
     }
@@ -216,10 +223,23 @@ public class LogicRemoteScreen extends Screen {
     // ==================== Rendering ====================
 
     @Override
-    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
-        // Dim background overlay
-        this.renderBackground(graphics, mouseX, mouseY, partialTick);
+    public void renderBackground(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
+        // Render the standard dim overlay first, then our CTC texture on top
+        super.renderBackground(graphics, mouseX, mouseY, partialTick);
 
+        int x = guiLeft;
+        int y = guiTop;
+
+        // Render the correct CTC background texture for the current page
+        if (isSecondPage) {
+            background1.render(graphics, x, y);
+        } else {
+            background0.render(graphics, x, y);
+        }
+    }
+
+    @Override
+    public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         int x = guiLeft;
         int y = guiTop;
 
@@ -227,8 +247,6 @@ public class LogicRemoteScreen extends Screen {
         GamepadInputs.GetControls();
 
         if (isSecondPage) {
-            // ---- Page 2: Axes tab ----
-            background1.render(graphics, x, y);
 
             // Animate left joystick
             Vec2 v = new Vec2(GamepadInputs.axis[0], GamepadInputs.axis[1]);
@@ -264,8 +282,6 @@ public class LogicRemoteScreen extends Screen {
             }
         } else {
             // ---- Page 1: Buttons tab ----
-            background0.render(graphics, x, y);
-
             lStick.visible = false;
             rStick.visible = false;
             for (DigitIcon axisDigit : axisDigits) {
@@ -288,6 +304,11 @@ public class LogicRemoteScreen extends Screen {
         controllerDigits[0].setToolTip(gpText);
         controllerDigits[1].setToolTip(gpText);
 
+        // Render background (CTC texture via renderBackground override) + widgets
+        super.render(graphics, mouseX, mouseY, partialTick);
+
+        // ---- Post-widget overlays ----
+
         // ---- Title (same position as LogicRemoteConfigScreen) ----
         graphics.drawString(font, title, x + 15, y + 4, 0xFFFFFF, false);
 
@@ -301,9 +322,6 @@ public class LogicRemoteScreen extends Screen {
                     .scale(5)
                     .render(graphics);
         }
-
-        // Render widgets (IconButtons, digits, joysticks) on top
-        super.render(graphics, mouseX, mouseY, partialTick);
     }
 
     // ==================== Lifecycle ====================
