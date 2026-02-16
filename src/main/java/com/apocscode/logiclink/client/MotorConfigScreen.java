@@ -1,6 +1,5 @@
 package com.apocscode.logiclink.client;
 
-import com.apocscode.logiclink.LogicLink;
 import com.apocscode.logiclink.block.LogicRemoteItem;
 import com.apocscode.logiclink.network.HubNetwork;
 import com.apocscode.logiclink.network.IHubDevice;
@@ -23,66 +22,81 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Motor/Drive configuration screen for the Logic Remote.
+ * Motor/Drive assignment screen for the Logic Remote.
  * <p>
- * Lists all motors/drives connected to nearby Logic Hub,
- * allows assigning 4 axis slots with keybinds (W/S/A/D),
- * sequential movement toggle, and distance setting (1-100m).
- * </p>
+ * Workflow:
+ * 1. Player places a Logic Link Hub in the world
+ * 2. Hub auto-discovers nearby LogicLink motors/drives
+ * 3. This screen lists all hub-connected motors/drives on the left
+ * 4. Player assigns up to 4 devices to axis slots (keybind positions)
+ * 5. Each slot has: direction (Forward/Reverse), speed (1-256 scrollable), keybind label
+ * <p>
+ * Use case: Gantry control - Motor X, Motor Y/Z, Piston Motor, Aux Redstone Link
+ * <p>
+ * Visual style matches Create's dark-panel controller theme.
  */
 public class MotorConfigScreen extends Screen {
 
-    // ==================== Colors ====================
-    private static final int BG_COLOR     = 0xDD1A1A24;
-    private static final int BORDER_COLOR = 0xFF4488CC;
-    private static final int PANEL_BG     = 0xFF2A2A35;
-    private static final int TITLE_COLOR  = 0xFF88CCFF;
-    private static final int TEXT_COLOR   = 0xFFCCCCCC;
-    private static final int GREEN        = 0xFF22CC55;
-    private static final int RED          = 0xFFEE3333;
-    private static final int YELLOW       = 0xFFFFAA00;
-    private static final int CYAN         = 0xFF00CCEE;
-    private static final int GRAY         = 0xFF666677;
-    private static final int WHITE        = 0xFFFFFFFF;
-    private static final int DARK_GRAY    = 0xFF333344;
-    private static final int BTN_HOVER    = 0xFF5599CC;
-    private static final int BTN_ON       = 0xFF22AA44;
-    private static final int BTN_OFF      = 0xFF664444;
-    private static final int SECTION_BG   = 0xFF252535;
-    private static final int SELECTED     = 0xFF4488CC;
+    // ==================== Colors (CTC dark theme) ====================
+    private static final int BG_OUTER       = 0xFF2B2B33;
+    private static final int BG_INNER       = 0xFF3C3C48;
+    private static final int BORDER_DARK    = 0xFF1A1A22;
+    private static final int BORDER_LIGHT   = 0xFF56566A;
+    private static final int TITLE_COLOR    = 0xFFDAE0F2;
+    private static final int LABEL_COLOR    = 0xFFB0B8CC;
+    private static final int TEXT_COLOR     = 0xFFCCCCCC;
+    private static final int TEXT_DIM       = 0xFF8888AA;
+    private static final int GREEN          = 0xFF4CB84C;
+    private static final int RED            = 0xFFCC4444;
+    private static final int YELLOW         = 0xFFD4AA44;
+    private static final int CYAN           = 0xFF44AACC;
+    private static final int WHITE          = 0xFFFFFFFF;
+    private static final int SLOT_BG        = 0xFF32323E;
+    private static final int SLOT_SELECTED  = 0xFF3A4E6A;
+    private static final int SLOT_ASSIGNED  = 0xFF2E3E2E;
+    private static final int BTN_IDLE       = 0xFF444460;
+    private static final int BTN_HOVER      = 0xFF5566AA;
+    private static final int BTN_ACTIVE     = 0xFF446644;
+    private static final int FIELD_BG       = 0xFF252530;
+    private static final int FIELD_BORDER   = 0xFF555568;
+    private static final int DEVICE_BG      = 0xFF2A2A36;
+    private static final int DEVICE_HOVER   = 0xFF3D4D6D;
 
     // ==================== Layout ====================
     private int guiLeft, guiTop;
-    private static final int GUI_WIDTH = 300;
-    private static final int GUI_HEIGHT = 260;
+    private static final int GUI_WIDTH = 320;
+    private static final int GUI_HEIGHT = 240;
+    private static final int DEVICE_PANEL_W = 120;
+    private static final int SLOT_PANEL_X = DEVICE_PANEL_W + 8;
+    private static final int SLOT_PANEL_W = GUI_WIDTH - SLOT_PANEL_X - 6;
+    private static final int SLOT_H = 48;
 
     // ==================== Device Discovery ====================
-    /** All discovered motors/drives from hub network. */
     private final List<DeviceInfo> availableDevices = new ArrayList<>();
+    private int deviceScrollOffset = 0;
+    private static final int DEVICE_ROWS_VISIBLE = 10;
 
     // ==================== Axis Slot Configuration ====================
-    /** 4 axis slots: 0=W(forward), 1=S(backward), 2=A(left/right+), 3=D(left/right-) */
     public static final int MAX_AXIS_SLOTS = 4;
     private final AxisSlot[] axisSlots = new AxisSlot[MAX_AXIS_SLOTS];
 
-    /** Currently selected axis slot for device assignment. -1 = none */
-    private int selectedSlot = -1;
+    /** Slot currently being assigned (-1 = none). */
+    private int assigningSlot = -1;
 
-    /** Scroll offset for device list. */
-    private int deviceScrollOffset = 0;
-
-    /** Scroll offset for settings. */
-    private int settingsScrollOffset = 0;
+    /** Slot with active speed field (for keyboard input). */
+    private int editingSpeedSlot = -1;
+    private String speedEditBuffer = "";
 
     /** Keybind labels for the 4 axes. */
-    private static final String[] AXIS_LABELS = {"W (Forward)", "S (Reverse)", "A (Right)", "D (Left)"};
+    private static final String[] AXIS_LABELS = {"Axis 1", "Axis 2", "Axis 3", "Axis 4"};
     public static final String[] AXIS_KEYS = {"W", "S", "A", "D"};
+    private static final int[] KEY_COLORS = {GREEN, RED, CYAN, YELLOW};
 
     /** Parent screen to return to. */
     private final Screen parentScreen;
 
     public MotorConfigScreen(Screen parentScreen) {
-        super(Component.literal("Motor / Drive Configuration"));
+        super(Component.literal("Motor / Drive Assignment"));
         this.parentScreen = parentScreen;
 
         for (int i = 0; i < MAX_AXIS_SLOTS; i++) {
@@ -143,10 +157,17 @@ public class MotorConfigScreen extends Screen {
             if (slot.contains("X")) {
                 axisSlots[i].targetPos = new BlockPos(slot.getInt("X"), slot.getInt("Y"), slot.getInt("Z"));
                 axisSlots[i].targetType = slot.getString("Type");
-                axisSlots[i].sequential = slot.getBoolean("Sequential");
-                axisSlots[i].distance = slot.getInt("Distance");
-                if (axisSlots[i].distance < 1) axisSlots[i].distance = 1;
-                if (axisSlots[i].distance > 100) axisSlots[i].distance = 100;
+                axisSlots[i].reversed = slot.getBoolean("Reversed");
+                axisSlots[i].speed = slot.getInt("Speed");
+                if (axisSlots[i].speed < 1) axisSlots[i].speed = 1;
+                if (axisSlots[i].speed > 256) axisSlots[i].speed = 256;
+                // Legacy compat: migrate old Sequential/Distance format
+                if (slot.contains("Distance") && !slot.contains("Speed")) {
+                    axisSlots[i].speed = Math.max(1, Math.min(256, slot.getInt("Distance") * 4));
+                }
+                if (slot.contains("Sequential")) {
+                    axisSlots[i].sequential = slot.getBoolean("Sequential");
+                }
             }
         }
     }
@@ -171,8 +192,9 @@ public class MotorConfigScreen extends Screen {
                 slot.putInt("Y", axisSlots[i].targetPos.getY());
                 slot.putInt("Z", axisSlots[i].targetPos.getZ());
                 slot.putString("Type", axisSlots[i].targetType);
+                slot.putBoolean("Reversed", axisSlots[i].reversed);
+                slot.putInt("Speed", axisSlots[i].speed);
                 slot.putBoolean("Sequential", axisSlots[i].sequential);
-                slot.putInt("Distance", axisSlots[i].distance);
             }
             axisList.add(slot);
         }
@@ -198,10 +220,17 @@ public class MotorConfigScreen extends Screen {
             if (slot.contains("X")) {
                 slots[i].targetPos = new BlockPos(slot.getInt("X"), slot.getInt("Y"), slot.getInt("Z"));
                 slots[i].targetType = slot.getString("Type");
-                slots[i].sequential = slot.getBoolean("Sequential");
-                slots[i].distance = slot.getInt("Distance");
-                if (slots[i].distance < 1) slots[i].distance = 1;
-                if (slots[i].distance > 100) slots[i].distance = 100;
+                slots[i].reversed = slot.getBoolean("Reversed");
+                slots[i].speed = slot.getInt("Speed");
+                if (slots[i].speed < 1) slots[i].speed = 1;
+                if (slots[i].speed > 256) slots[i].speed = 256;
+                // Legacy compat
+                if (slot.contains("Distance") && !slot.contains("Speed")) {
+                    slots[i].speed = Math.max(1, Math.min(256, slot.getInt("Distance") * 4));
+                }
+                if (slot.contains("Sequential")) {
+                    slots[i].sequential = slot.getBoolean("Sequential");
+                }
             }
         }
         return slots;
@@ -213,139 +242,182 @@ public class MotorConfigScreen extends Screen {
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         super.render(g, mouseX, mouseY, partialTick);
 
-        // Background
-        g.fill(guiLeft - 2, guiTop - 2, guiLeft + GUI_WIDTH + 2, guiTop + GUI_HEIGHT + 2, BORDER_COLOR);
-        g.fill(guiLeft, guiTop, guiLeft + GUI_WIDTH, guiTop + GUI_HEIGHT, BG_COLOR);
+        // Outer frame
+        g.fill(guiLeft - 2, guiTop - 2, guiLeft + GUI_WIDTH + 2, guiTop + GUI_HEIGHT + 2, BORDER_DARK);
+        g.fill(guiLeft - 1, guiTop - 1, guiLeft + GUI_WIDTH + 1, guiTop + GUI_HEIGHT + 1, BORDER_LIGHT);
+        g.fill(guiLeft, guiTop, guiLeft + GUI_WIDTH, guiTop + GUI_HEIGHT, BG_OUTER);
 
-        // Title
-        g.drawCenteredString(font, this.title, guiLeft + GUI_WIDTH / 2, guiTop + 6, TITLE_COLOR);
+        // Title bar
+        g.fill(guiLeft, guiTop, guiLeft + GUI_WIDTH, guiTop + 18, BORDER_DARK);
+        g.drawCenteredString(font, this.title, guiLeft + GUI_WIDTH / 2, guiTop + 5, TITLE_COLOR);
 
-        // Back button
-        int backX = guiLeft + 4;
-        int backY = guiTop + 4;
-        boolean backHover = isInside(mouseX, mouseY, backX, backY, 30, 12);
-        g.fill(backX, backY, backX + 30, backY + 12, backHover ? BTN_HOVER : DARK_GRAY);
-        g.drawCenteredString(font, "< Back", backX + 15, backY + 2, WHITE);
+        // Back button (top-left)
+        renderButton(g, mouseX, mouseY, guiLeft + 3, guiTop + 2, 32, 13, "\u2190 Back", BTN_IDLE, BTN_HOVER, WHITE);
 
-        // Save button
-        int saveX = guiLeft + GUI_WIDTH - 44;
-        int saveY = guiTop + 4;
-        boolean saveHover = isInside(mouseX, mouseY, saveX, saveY, 40, 12);
-        g.fill(saveX, saveY, saveX + 40, saveY + 12, saveHover ? GREEN : BTN_ON);
-        g.drawCenteredString(font, "Save", saveX + 20, saveY + 2, WHITE);
+        // Save button (top-right)
+        renderButton(g, mouseX, mouseY, guiLeft + GUI_WIDTH - 35, guiTop + 2, 32, 13, "Save", BTN_ACTIVE, GREEN, WHITE);
 
-        int y = guiTop + 22;
+        // ==================== Left Panel: Hub Devices ====================
+        int panelX = guiLeft + 4;
+        int panelY = guiTop + 22;
+        int panelW = DEVICE_PANEL_W;
+        int panelH = GUI_HEIGHT - 26;
 
-        // ==================== Axis Slots ====================
-        g.drawString(font, "Axis Layout — Assign Motor/Drive to Keys", guiLeft + 8, y, YELLOW, false);
-        y += 14;
+        g.fill(panelX, panelY, panelX + panelW, panelY + panelH, BG_INNER);
+        g.fill(panelX, panelY, panelX + panelW, panelY + 12, BORDER_DARK);
+        g.drawString(font, "Hub Devices", panelX + 3, panelY + 2, LABEL_COLOR, false);
+
+        if (availableDevices.isEmpty()) {
+            g.drawString(font, "No devices", panelX + 4, panelY + 18, TEXT_DIM, false);
+            g.drawString(font, "Place motors/", panelX + 4, panelY + 30, TEXT_DIM, false);
+            g.drawString(font, "drives near a", panelX + 4, panelY + 40, TEXT_DIM, false);
+            g.drawString(font, "Logic Hub", panelX + 4, panelY + 50, TEXT_DIM, false);
+        } else {
+            int listY = panelY + 14;
+            int maxShow = Math.min(availableDevices.size() - deviceScrollOffset, DEVICE_ROWS_VISIBLE);
+            for (int i = 0; i < maxShow; i++) {
+                int idx = i + deviceScrollOffset;
+                if (idx >= availableDevices.size()) break;
+
+                DeviceInfo dev = availableDevices.get(idx);
+                int dy = listY + i * 18;
+                boolean hover = isInside(mouseX, mouseY, panelX + 2, dy, panelW - 4, 16);
+                boolean alreadyAssigned = isDeviceAssigned(dev.pos);
+
+                int bg = hover ? DEVICE_HOVER : DEVICE_BG;
+                if (alreadyAssigned) bg = SLOT_ASSIGNED;
+                g.fill(panelX + 2, dy, panelX + panelW - 2, dy + 16, bg);
+
+                String icon = "drive".equals(dev.type) ? "\u25B6" : "\u2699";
+                int col = alreadyAssigned ? TEXT_DIM : ("drive".equals(dev.type) ? YELLOW : CYAN);
+                g.drawString(font, icon + " " + dev.label, panelX + 5, dy + 1, col, false);
+
+                // Position text below label
+                String posStr = dev.pos.getX() + "," + dev.pos.getY() + "," + dev.pos.getZ();
+                g.drawString(font, posStr, panelX + 5, dy + 8, TEXT_DIM, false);
+            }
+
+            // Scroll indicators
+            if (deviceScrollOffset > 0) {
+                g.drawCenteredString(font, "\u25B2", panelX + panelW / 2, panelY + 12, TEXT_DIM);
+            }
+            if (deviceScrollOffset + maxShow < availableDevices.size()) {
+                g.drawCenteredString(font, "\u25BC", panelX + panelW / 2,
+                        panelY + panelH - 10, TEXT_DIM);
+            }
+        }
+
+        // Refresh button at bottom of device panel
+        int refX = panelX + 2;
+        int refY = panelY + panelH - 14;
+        renderButton(g, mouseX, mouseY, refX, refY, panelW - 4, 12, "\u21BB Refresh", BTN_IDLE, BTN_HOVER, LABEL_COLOR);
+
+        // ==================== Right Panel: 4 Axis Slots ====================
+        int slotPanelX = guiLeft + SLOT_PANEL_X;
+        int slotPanelY = guiTop + 22;
 
         for (int i = 0; i < MAX_AXIS_SLOTS; i++) {
-            renderAxisSlot(g, mouseX, mouseY, y, i);
-            y += 52;
+            int sy = slotPanelY + i * (SLOT_H + 2);
+            renderAxisSlot(g, mouseX, mouseY, slotPanelX, sy, i);
+        }
+
+        // Help text at bottom
+        if (assigningSlot >= 0) {
+            g.drawCenteredString(font, "Click a device from the list to assign to [" + AXIS_KEYS[assigningSlot] + "]",
+                    guiLeft + GUI_WIDTH / 2, guiTop + GUI_HEIGHT - 12, YELLOW);
         }
     }
 
-    private void renderAxisSlot(GuiGraphics g, int mouseX, int mouseY, int y, int index) {
-        int sx = guiLeft + 6;
-        int sw = GUI_WIDTH - 12;
+    private void renderAxisSlot(GuiGraphics g, int mouseX, int mouseY, int x, int y, int index) {
         AxisSlot slot = axisSlots[index];
 
-        // Slot background (highlight if selected)
-        int bg = (selectedSlot == index) ? SELECTED : SECTION_BG;
-        g.fill(sx, y, sx + sw, y + 48, bg);
+        // Slot background
+        int bg = (assigningSlot == index) ? SLOT_SELECTED : (slot.hasTarget() ? SLOT_ASSIGNED : SLOT_BG);
+        g.fill(x, y, x + SLOT_PANEL_W, y + SLOT_H, bg);
+        // Left accent bar (keybind color)
+        g.fill(x, y, x + 3, y + SLOT_H, KEY_COLORS[index]);
 
-        // Key label
-        g.drawString(font, "[" + AXIS_KEYS[index] + "] " + AXIS_LABELS[index],
-                sx + 4, y + 2, CYAN, false);
+        // Header: keybind + label
+        String header = "[" + AXIS_KEYS[index] + "] " + AXIS_LABELS[index];
+        g.drawString(font, header, x + 6, y + 2, KEY_COLORS[index], false);
 
-        // Target assignment
-        if (slot.targetPos != null) {
-            String icon = "drive".equals(slot.targetType) ? "[D]" : "[M]";
-            g.drawString(font, icon + " " + slot.targetType + " @ " + slot.targetPos.toShortString(),
-                    sx + 4, y + 14, GREEN, false);
+        if (slot.hasTarget()) {
+            // Assigned device info
+            String icon = "drive".equals(slot.targetType) ? "\u25B6" : "\u2699";
+            String typeName = "drive".equals(slot.targetType) ? "Drive" : "Motor";
+            g.drawString(font, icon + " " + typeName + " @ " + slot.targetPos.toShortString(),
+                    x + 6, y + 13, GREEN, false);
 
-            // Clear button
-            int clearX = sx + sw - 42;
-            int clearY = y + 12;
-            boolean clearHover = isInside(mouseX, mouseY, clearX, clearY, 38, 12);
-            g.fill(clearX, clearY, clearX + 38, clearY + 12, clearHover ? RED : BTN_OFF);
-            g.drawCenteredString(font, "Clear", clearX + 19, clearY + 2, WHITE);
+            // Direction toggle: Forward / Reverse
+            int dirX = x + 6;
+            int dirY = y + 25;
+            int dirW = 52;
+            boolean dirHover = isInside(mouseX, mouseY, dirX, dirY, dirW, 12);
+            int dirBg = dirHover ? BTN_HOVER : (slot.reversed ? RED : BTN_ACTIVE);
+            g.fill(dirX, dirY, dirX + dirW, dirY + 12, dirBg);
+            g.drawCenteredString(font, slot.reversed ? "Reverse" : "Forward", dirX + dirW / 2, dirY + 2, WHITE);
 
-            // Sequential toggle
-            int seqX = sx + 4;
-            int seqY = y + 28;
-            boolean seqHover = isInside(mouseX, mouseY, seqX, seqY, 70, 12);
-            g.fill(seqX, seqY, seqX + 70, seqY + 12,
-                    seqHover ? BTN_HOVER : (slot.sequential ? BTN_ON : DARK_GRAY));
-            g.drawCenteredString(font, slot.sequential ? "Sequential" : "Continuous",
-                    seqX + 35, seqY + 2, WHITE);
+            // Speed field (Create-style scroll input)
+            int speedX = dirX + dirW + 4;
+            int speedY = y + 25;
+            int speedW = 64;
+            boolean speedHover = isInside(mouseX, mouseY, speedX, speedY, speedW, 12);
+            int speedBg = (editingSpeedSlot == index) ? SLOT_SELECTED : (speedHover ? FIELD_BORDER : FIELD_BG);
+            g.fill(speedX - 1, speedY - 1, speedX + speedW + 1, speedY + 13, FIELD_BORDER);
+            g.fill(speedX, speedY, speedX + speedW, speedY + 12, speedBg);
 
-            // Distance scroller (only visible in sequential mode)
-            if (slot.sequential) {
-                int distX = sx + 80;
-                int distY = y + 28;
-                g.drawString(font, "Dist: " + slot.distance + "m", distX, distY + 2, TEXT_COLOR, false);
-
-                // - button
-                int minX = distX + 60;
-                boolean minHover = isInside(mouseX, mouseY, minX, distY, 12, 12);
-                g.fill(minX, distY, minX + 12, distY + 12, minHover ? BTN_HOVER : DARK_GRAY);
-                g.drawCenteredString(font, "-", minX + 6, distY + 2, WHITE);
-
-                // + button
-                int plusX = minX + 16;
-                boolean plusHover = isInside(mouseX, mouseY, plusX, distY, 12, 12);
-                g.fill(plusX, distY, plusX + 12, distY + 12, plusHover ? BTN_HOVER : DARK_GRAY);
-                g.drawCenteredString(font, "+", plusX + 6, distY + 2, WHITE);
+            String speedStr;
+            if (editingSpeedSlot == index) {
+                speedStr = speedEditBuffer + "_";
+            } else {
+                speedStr = slot.speed + " RPM";
             }
-        } else {
-            // Assign button
-            int assignX = sx + 4;
-            int assignY = y + 14;
-            boolean assignHover = isInside(mouseX, mouseY, assignX, assignY, 80, 14);
-            g.fill(assignX, assignY, assignX + 80, assignY + 14,
-                    assignHover ? BTN_HOVER : DARK_GRAY);
-            g.drawCenteredString(font, "Assign Device", assignX + 40, assignY + 3, WHITE);
-        }
+            g.drawString(font, speedStr, speedX + 3, speedY + 2, WHITE, false);
 
-        // If this slot is selected for assignment, show device list
-        if (selectedSlot == index) {
-            renderDeviceList(g, mouseX, mouseY, y + 14, sx + 90, sw - 94);
+            // Scroll hint
+            if (speedHover && editingSpeedSlot != index) {
+                g.drawString(font, "\u2191\u2193", speedX + speedW + 2, speedY + 2, TEXT_DIM, false);
+            }
+
+            // Clear (X) button
+            int clrX = x + SLOT_PANEL_W - 14;
+            int clrY = y + 2;
+            boolean clrHover = isInside(mouseX, mouseY, clrX, clrY, 12, 12);
+            g.fill(clrX, clrY, clrX + 12, clrY + 12, clrHover ? RED : BTN_IDLE);
+            g.drawCenteredString(font, "X", clrX + 6, clrY + 2, WHITE);
+
+            // Reassign button
+            int reassX = x + SLOT_PANEL_W - 50;
+            int reassY = y + 35;
+            renderButton(g, mouseX, mouseY, reassX, reassY, 46, 11, "Reassign", BTN_IDLE, BTN_HOVER, LABEL_COLOR);
+
+        } else {
+            // Empty slot
+            if (assigningSlot == index) {
+                g.drawString(font, "Select a device from", x + 6, y + 15, YELLOW, false);
+                g.drawString(font, "the list on the left", x + 6, y + 26, YELLOW, false);
+
+                // Cancel button
+                int canX = x + SLOT_PANEL_W - 48;
+                int canY = y + 35;
+                renderButton(g, mouseX, mouseY, canX, canY, 44, 11, "Cancel", BTN_IDLE, RED, WHITE);
+            } else {
+                g.drawString(font, "Empty \u2014 click to assign", x + 6, y + 18, TEXT_DIM, false);
+
+                // Assign button
+                int assX = x + SLOT_PANEL_W - 48;
+                int assY = y + 35;
+                renderButton(g, mouseX, mouseY, assX, assY, 44, 11, "Assign", BTN_IDLE, BTN_HOVER, WHITE);
+            }
         }
     }
 
-    private void renderDeviceList(GuiGraphics g, int mouseX, int mouseY, int y, int x, int w) {
-        if (availableDevices.isEmpty()) {
-            g.drawString(font, "No devices found", x + 2, y + 2, GRAY, false);
-            g.drawString(font, "(Place drives/motors", x + 2, y + 12, GRAY, false);
-            g.drawString(font, " near a Logic Hub)", x + 2, y + 22, GRAY, false);
-            return;
-        }
-
-        int maxShow = Math.min(availableDevices.size() - deviceScrollOffset, 3);
-        for (int i = 0; i < maxShow; i++) {
-            int idx = i + deviceScrollOffset;
-            if (idx >= availableDevices.size()) break;
-
-            DeviceInfo dev = availableDevices.get(idx);
-            int dy = y + i * 14;
-            boolean hover = isInside(mouseX, mouseY, x, dy, w, 12);
-            int color = "drive".equals(dev.type) ? YELLOW : CYAN;
-
-            g.fill(x, dy, x + w, dy + 12, hover ? BTN_HOVER : DARK_GRAY);
-            String icon = "drive".equals(dev.type) ? "[D]" : "[M]";
-            g.drawString(font, icon + " " + dev.label + " " + dev.pos.toShortString(),
-                    x + 2, dy + 2, hover ? WHITE : color, false);
-        }
-
-        // Scroll indicators
-        if (deviceScrollOffset > 0) {
-            g.drawString(font, "^ more ^", x + 2, y - 10, GRAY, false);
-        }
-        if (deviceScrollOffset + maxShow < availableDevices.size()) {
-            g.drawString(font, "v more v", x + 2, y + maxShow * 14, GRAY, false);
-        }
+    private void renderButton(GuiGraphics g, int mouseX, int mouseY,
+                               int x, int y, int w, int h,
+                               String text, int idleColor, int hoverColor, int textColor) {
+        boolean hover = isInside(mouseX, mouseY, x, y, w, h);
+        g.fill(x, y, x + w, y + h, hover ? hoverColor : idleColor);
+        g.drawCenteredString(font, text, x + w / 2, y + (h - 8) / 2, textColor);
     }
 
     // ==================== Input Handling ====================
@@ -355,132 +427,226 @@ public class MotorConfigScreen extends Screen {
         if (button != 0) return super.mouseClicked(mouseX, mouseY, button);
         int mX = (int) mouseX, mY = (int) mouseY;
 
+        // Clicking anywhere clears speed edit mode
+        if (editingSpeedSlot >= 0) {
+            commitSpeedEdit();
+        }
+
         // Back button
-        if (isInside(mX, mY, guiLeft + 4, guiTop + 4, 30, 12)) {
+        if (isInside(mX, mY, guiLeft + 3, guiTop + 2, 32, 13)) {
             saveConfigToItem();
             minecraft.setScreen(parentScreen);
             return true;
         }
 
         // Save button
-        if (isInside(mX, mY, guiLeft + GUI_WIDTH - 44, guiTop + 4, 40, 12)) {
+        if (isInside(mX, mY, guiLeft + GUI_WIDTH - 35, guiTop + 2, 32, 13)) {
             saveConfigToItem();
             minecraft.player.displayClientMessage(
                     Component.literal("Configuration saved!").withStyle(ChatFormatting.GREEN), true);
             return true;
         }
 
-        int y = guiTop + 36;
+        // Refresh button
+        int panelX = guiLeft + 4;
+        int panelY = guiTop + 22;
+        int panelH = GUI_HEIGHT - 26;
+        int panelW = DEVICE_PANEL_W;
+        if (isInside(mX, mY, panelX + 2, panelY + panelH - 14, panelW - 4, 12)) {
+            discoverDevices();
+            return true;
+        }
+
+        // Device list clicks (when assigning)
+        if (assigningSlot >= 0 && !availableDevices.isEmpty()) {
+            int listY = panelY + 14;
+            int maxShow = Math.min(availableDevices.size() - deviceScrollOffset, DEVICE_ROWS_VISIBLE);
+            for (int i = 0; i < maxShow; i++) {
+                int idx = i + deviceScrollOffset;
+                if (idx >= availableDevices.size()) break;
+                int dy = listY + i * 18;
+                if (isInside(mX, mY, panelX + 2, dy, panelW - 4, 16)) {
+                    DeviceInfo dev = availableDevices.get(idx);
+                    AxisSlot slot = axisSlots[assigningSlot];
+                    slot.targetPos = dev.pos;
+                    slot.targetType = dev.type;
+                    slot.speed = "drive".equals(dev.type) ? 8 : 64; // sensible defaults
+                    slot.reversed = false;
+                    assigningSlot = -1;
+                    return true;
+                }
+            }
+        }
+
+        // Axis slot interactions
+        int slotPanelX = guiLeft + SLOT_PANEL_X;
+        int slotPanelY = guiTop + 22;
         for (int i = 0; i < MAX_AXIS_SLOTS; i++) {
-            int sx = guiLeft + 6;
-            int sw = GUI_WIDTH - 12;
+            int sy = slotPanelY + i * (SLOT_H + 2);
             AxisSlot slot = axisSlots[i];
 
-            if (slot.targetPos != null) {
+            if (slot.hasTarget()) {
+                // Direction toggle
+                int dirX = slotPanelX + 6;
+                int dirY = sy + 25;
+                if (isInside(mX, mY, dirX, dirY, 52, 12)) {
+                    slot.reversed = !slot.reversed;
+                    return true;
+                }
+
+                // Speed field click (enter edit mode)
+                int speedX = dirX + 56;
+                int speedY = sy + 25;
+                if (isInside(mX, mY, speedX, speedY, 64, 12)) {
+                    editingSpeedSlot = i;
+                    speedEditBuffer = String.valueOf(slot.speed);
+                    return true;
+                }
+
                 // Clear button
-                int clearX = sx + sw - 42;
-                int clearY = y + 12;
-                if (isInside(mX, mY, clearX, clearY, 38, 12)) {
+                int clrX = slotPanelX + SLOT_PANEL_W - 14;
+                int clrY = sy + 2;
+                if (isInside(mX, mY, clrX, clrY, 12, 12)) {
                     slot.targetPos = null;
                     slot.targetType = "";
-                    selectedSlot = -1;
+                    if (assigningSlot == i) assigningSlot = -1;
                     return true;
                 }
 
-                // Sequential toggle
-                int seqX = sx + 4;
-                int seqY = y + 28;
-                if (isInside(mX, mY, seqX, seqY, 70, 12)) {
-                    slot.sequential = !slot.sequential;
-                    return true;
-                }
-
-                // Distance - button
-                if (slot.sequential) {
-                    int distX = sx + 80 + 60;
-                    int distY = y + 28;
-                    if (isInside(mX, mY, distX, distY, 12, 12)) {
-                        slot.distance = Math.max(1, slot.distance - 1);
-                        return true;
-                    }
-                    // Distance + button
-                    if (isInside(mX, mY, distX + 16, distY, 12, 12)) {
-                        slot.distance = Math.min(100, slot.distance + 1);
-                        return true;
-                    }
-                }
-            } else {
-                // Assign button
-                int assignX = sx + 4;
-                int assignY = y + 14;
-                if (isInside(mX, mY, assignX, assignY, 80, 14)) {
-                    selectedSlot = (selectedSlot == i) ? -1 : i;
+                // Reassign button
+                int reassX = slotPanelX + SLOT_PANEL_W - 50;
+                int reassY = sy + 35;
+                if (isInside(mX, mY, reassX, reassY, 46, 11)) {
+                    assigningSlot = i;
                     deviceScrollOffset = 0;
                     return true;
                 }
-            }
-
-            // Device list clicks (when slot is selected)
-            if (selectedSlot == i && !availableDevices.isEmpty()) {
-                int listX = sx + 90;
-                int listW = sw - 94;
-                int listY = y + 14;
-                int maxShow = Math.min(availableDevices.size() - deviceScrollOffset, 3);
-                for (int j = 0; j < maxShow; j++) {
-                    int idx = j + deviceScrollOffset;
-                    if (idx >= availableDevices.size()) break;
-                    int dy = listY + j * 14;
-                    if (isInside(mX, mY, listX, dy, listW, 12)) {
-                        DeviceInfo dev = availableDevices.get(idx);
-                        slot.targetPos = dev.pos;
-                        slot.targetType = dev.type;
-                        selectedSlot = -1;
+            } else {
+                if (assigningSlot == i) {
+                    // Cancel button
+                    int canX = slotPanelX + SLOT_PANEL_W - 48;
+                    int canY = sy + 35;
+                    if (isInside(mX, mY, canX, canY, 44, 11)) {
+                        assigningSlot = -1;
+                        return true;
+                    }
+                } else {
+                    // Assign button
+                    int assX = slotPanelX + SLOT_PANEL_W - 48;
+                    int assY = sy + 35;
+                    if (isInside(mX, mY, assX, assY, 44, 11)) {
+                        assigningSlot = i;
+                        deviceScrollOffset = 0;
                         return true;
                     }
                 }
             }
-
-            y += 52;
         }
 
-        // Click outside any slot = deselect
-        selectedSlot = -1;
         return super.mouseClicked(mouseX, mouseY, button);
     }
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-        if (selectedSlot >= 0 && !availableDevices.isEmpty()) {
+        int mX = (int) mouseX, mY = (int) mouseY;
+
+        // Scroll device list
+        int panelX = guiLeft + 4;
+        int panelY = guiTop + 22;
+        int panelH = GUI_HEIGHT - 26;
+        if (isInside(mX, mY, panelX, panelY, DEVICE_PANEL_W, panelH)) {
+            int max = Math.max(0, availableDevices.size() - DEVICE_ROWS_VISIBLE);
             if (scrollY > 0 && deviceScrollOffset > 0) {
                 deviceScrollOffset--;
                 return true;
             }
-            if (scrollY < 0 && deviceScrollOffset < availableDevices.size() - 3) {
+            if (scrollY < 0 && deviceScrollOffset < max) {
                 deviceScrollOffset++;
                 return true;
             }
+            return true;
         }
 
-        // Scroll distance values for axis slots
-        int y = guiTop + 36;
+        // Scroll speed values on axis slots
+        int slotPanelX = guiLeft + SLOT_PANEL_X;
+        int slotPanelY = guiTop + 22;
         for (int i = 0; i < MAX_AXIS_SLOTS; i++) {
-            if (axisSlots[i].targetPos != null && axisSlots[i].sequential) {
-                int sx = guiLeft + 86;
-                int sy = y + 28;
-                if (isInside((int) mouseX, (int) mouseY, sx, sy, 100, 12)) {
-                    int delta = scrollY > 0 ? 1 : -1;
-                    axisSlots[i].distance = Math.max(1, Math.min(100, axisSlots[i].distance + delta));
-                    return true;
-                }
+            int sy = slotPanelY + i * (SLOT_H + 2);
+            AxisSlot slot = axisSlots[i];
+            if (!slot.hasTarget()) continue;
+
+            int speedX = slotPanelX + 62;
+            int speedY = sy + 25;
+            if (isInside(mX, mY, speedX, speedY, 64, 12)) {
+                int delta = (int) Math.signum(scrollY);
+                // Shift = x10 for faster adjustment
+                if (hasShiftDown()) delta *= 10;
+                slot.speed = Math.max(1, Math.min(256, slot.speed + delta));
+                return true;
             }
-            y += 52;
         }
 
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
     }
 
     @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        // Speed edit mode: accept digit keys
+        if (editingSpeedSlot >= 0) {
+            if (keyCode == 259) { // Backspace
+                if (!speedEditBuffer.isEmpty()) {
+                    speedEditBuffer = speedEditBuffer.substring(0, speedEditBuffer.length() - 1);
+                }
+                return true;
+            }
+            if (keyCode == 257 || keyCode == 335) { // Enter / Numpad Enter
+                commitSpeedEdit();
+                return true;
+            }
+            if (keyCode == 256) { // Escape
+                editingSpeedSlot = -1;
+                speedEditBuffer = "";
+                return true;
+            }
+            // Digit keys (0-9)
+            char c = 0;
+            if (keyCode >= 48 && keyCode <= 57) c = (char) keyCode;
+            if (keyCode >= 320 && keyCode <= 329) c = (char) (keyCode - 272); // numpad
+            if (c >= '0' && c <= '9') {
+                if (speedEditBuffer.length() < 3) {
+                    speedEditBuffer += c;
+                }
+                return true;
+            }
+            return true; // consume all keys while editing
+        }
+
+        return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    private void commitSpeedEdit() {
+        if (editingSpeedSlot >= 0 && editingSpeedSlot < MAX_AXIS_SLOTS) {
+            try {
+                int val = Integer.parseInt(speedEditBuffer);
+                axisSlots[editingSpeedSlot].speed = Math.max(1, Math.min(256, val));
+            } catch (NumberFormatException ignored) {
+                // Keep old value
+            }
+        }
+        editingSpeedSlot = -1;
+        speedEditBuffer = "";
+    }
+
+    private boolean isDeviceAssigned(BlockPos pos) {
+        for (AxisSlot slot : axisSlots) {
+            if (slot.targetPos != null && slot.targetPos.equals(pos)) return true;
+        }
+        return false;
+    }
+
+    @Override
     public void onClose() {
+        if (editingSpeedSlot >= 0) commitSpeedEdit();
         saveConfigToItem();
         super.onClose();
     }
@@ -499,8 +665,11 @@ public class MotorConfigScreen extends Screen {
     public static class AxisSlot {
         public BlockPos targetPos = null;
         public String targetType = "";
+        public boolean reversed = false;
+        public int speed = 64; // 1-256 RPM
+        /** Legacy compat fields. */
         public boolean sequential = false;
-        public int distance = 10; // 1-100 meters
+        public int distance = 10;
 
         public boolean hasTarget() {
             return targetPos != null;

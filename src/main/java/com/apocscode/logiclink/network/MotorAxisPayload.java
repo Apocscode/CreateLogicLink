@@ -15,18 +15,19 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 /**
- * Client→Server packet sent when a player uses WASD keybinds while the
+ * Client-Server packet sent when a player uses WASD keybinds while the
  * Logic Remote controller overlay is active.
  * <p>
- * Each axis slot (0-3) maps to one motor/drive target. The value is the
- * movement direction: +1 (forward / right), -1 (backward / left), 0 (stop).
- * <p>
- * For sequential movement, distance (1-100 meters) is included.
+ * Each axis slot (0-3) maps to one motor/drive target. The axisValue is the
+ * movement direction: +1 (forward), -1 (backward), 0 (stop).
+ * The configuredSpeed is the RPM set in the Motor Config GUI (1-256).
+ * Direction reversal is already baked into axisValue by RemoteClientHandler.
  */
 public record MotorAxisPayload(
         BlockPos targetPos,
         String targetType,
         float axisValue,
+        int configuredSpeed,
         boolean sequential,
         int sequenceDistance
 ) implements CustomPacketPayload {
@@ -41,9 +42,10 @@ public record MotorAxisPayload(
                     BlockPos pos = buf.readBlockPos();
                     String type = buf.readUtf(32);
                     float value = buf.readFloat();
+                    int speed = buf.readVarInt();
                     boolean seq = buf.readBoolean();
                     int dist = buf.readVarInt();
-                    return new MotorAxisPayload(pos, type, value, seq, dist);
+                    return new MotorAxisPayload(pos, type, value, speed, seq, dist);
                 }
 
                 @Override
@@ -51,6 +53,7 @@ public record MotorAxisPayload(
                     buf.writeBlockPos(payload.targetPos);
                     buf.writeUtf(payload.targetType, 32);
                     buf.writeFloat(payload.axisValue);
+                    buf.writeVarInt(payload.configuredSpeed);
                     buf.writeBoolean(payload.sequential);
                     buf.writeVarInt(payload.sequenceDistance);
                 }
@@ -64,29 +67,27 @@ public record MotorAxisPayload(
             BlockEntity be = level.getBlockEntity(payload.targetPos);
             if (be == null || be.isRemoved()) return;
 
+            int speed = Math.max(1, Math.min(256, payload.configuredSpeed));
+
             if (be instanceof LogicDriveBlockEntity drive) {
-                if (payload.sequential && payload.axisValue != 0) {
-                    // Sequential: set modifier proportional to distance, run briefly
+                if (Math.abs(payload.axisValue) > 0.01f) {
+                    // Scale RPM (1-256) down to drive modifier range (0-16)
                     float modifier = Math.signum(payload.axisValue)
-                            * Math.min(16.0f, payload.sequenceDistance);
+                            * Math.max(1.0f, speed / 16.0f);
                     drive.setSpeedModifier(modifier);
                     drive.setMotorEnabled(true);
                 } else {
-                    // Continuous: set modifier from axis, enable/disable based on value
-                    float modifier = payload.axisValue * 16.0f;
-                    drive.setSpeedModifier(modifier);
-                    drive.setMotorEnabled(Math.abs(payload.axisValue) > 0.01f);
+                    drive.setSpeedModifier(0);
+                    drive.setMotorEnabled(false);
                 }
             } else if (be instanceof CreativeLogicMotorBlockEntity motor) {
-                if (payload.sequential && payload.axisValue != 0) {
-                    int speed = (int) (Math.signum(payload.axisValue)
-                            * Math.min(256, payload.sequenceDistance * 4));
-                    motor.setMotorSpeed(speed);
+                if (Math.abs(payload.axisValue) > 0.01f) {
+                    int motorSpeed = (int) (Math.signum(payload.axisValue) * speed);
+                    motor.setMotorSpeed(motorSpeed);
                     motor.setEnabled(true);
                 } else {
-                    int speed = (int) (payload.axisValue * 256.0f);
-                    motor.setMotorSpeed(speed);
-                    motor.setEnabled(Math.abs(payload.axisValue) > 0.01f);
+                    motor.setMotorSpeed(0);
+                    motor.setEnabled(false);
                 }
             }
         });

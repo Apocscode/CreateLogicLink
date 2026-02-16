@@ -193,7 +193,7 @@ public class RemoteClientHandler {
             for (MotorConfigScreen.AxisSlot slot : cachedAxisConfig) {
                 if (slot.hasTarget()) {
                     PacketDistributor.sendToServer(new MotorAxisPayload(
-                            slot.targetPos, slot.targetType, 0f, slot.sequential, slot.distance));
+                            slot.targetPos, slot.targetType, 0f, slot.speed, slot.sequential, slot.distance));
                 }
             }
         }
@@ -323,18 +323,17 @@ public class RemoteClientHandler {
                     keyW = newW; keyS = newS; keyA = newA; keyD = newD;
 
                     if (wasdChanged || motorAxisPacketCooldown == 0) {
-                        float[] values = {
-                                keyW ? 1.0f : 0.0f,   // slot 0 = W (forward)
-                                keyS ? -1.0f : 0.0f,   // slot 1 = S (reverse)
-                                keyA ? 1.0f : 0.0f,    // slot 2 = A (right)
-                                keyD ? -1.0f : 0.0f     // slot 3 = D (left)
-                        };
+                        boolean[] pressed = {keyW, keyS, keyA, keyD};
+                        float[] baseDir = {1.0f, -1.0f, 1.0f, -1.0f}; // W=fwd, S=rev, A=right, D=left
                         for (int i = 0; i < MotorConfigScreen.MAX_AXIS_SLOTS; i++) {
                             MotorConfigScreen.AxisSlot slot = cachedAxisConfig[i];
-                            if (slot.hasTarget() && (wasdChanged || values[i] != 0)) {
+                            if (slot.hasTarget() && (wasdChanged || pressed[i])) {
+                                float dir = pressed[i] ? baseDir[i] : 0.0f;
+                                // Apply reversed flag
+                                if (slot.reversed && dir != 0) dir = -dir;
                                 PacketDistributor.sendToServer(new MotorAxisPayload(
                                         slot.targetPos, slot.targetType,
-                                        values[i], slot.sequential, slot.distance));
+                                        dir, slot.speed, slot.sequential, slot.distance));
                             }
                         }
                         if (wasdChanged) {
@@ -457,10 +456,12 @@ public class RemoteClientHandler {
                     MotorConfigScreen.AxisSlot slot = cachedAxisConfig[i];
                     if (slot.hasTarget()) {
                         String icon = "drive".equals(slot.targetType) ? "D" : "M";
-                        String mode = slot.sequential ? "seq:" + slot.distance + "m" : "cont";
-                        String info = "[" + MotorConfigScreen.AXIS_KEYS[i] + "] " + icon + " " + mode;
+                        String dir = slot.reversed ? "R" : "F";
+                        String info = "[" + MotorConfigScreen.AXIS_KEYS[i] + "] "
+                                + icon + " " + dir + " " + slot.speed + "rpm";
                         int labelX = px + 4;
-                        graphics.drawString(mc.font, info, labelX, labelY + i * 10, 0xFF88CCFF, false);
+                        int labelCol = slot.reversed ? 0xFFCC8844 : 0xFF88CCFF;
+                        graphics.drawString(mc.font, info, labelX, labelY + i * 10, labelCol, false);
                     }
                 }
             }
