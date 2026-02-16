@@ -101,7 +101,7 @@ public class ContraptionRemoteBlockEntity extends BlockEntity {
             return;
         }
 
-        // Priority 1: Seated gamepad input (from SeatInputPayload)
+        // Priority 1: Gamepad input (from SeatInputPayload)
         // This is applied immediately in applyGamepadInput(), so here we just
         // maintain the active state based on timeout
         if (gamepadTimeout > 0) {
@@ -148,7 +148,7 @@ public class ContraptionRemoteBlockEntity extends BlockEntity {
         if (be == null || be.isRemoved()) return;
 
         if (be instanceof LogicDriveBlockEntity drive) {
-            // Left stick Y → modifier, A → enable, Y → reverse
+            // Left stick Y â†’ modifier, A â†’ enable, Y â†’ reverse
             float axisY = data.getAxis(1);
             float modifier = Math.round(axisY * 16.0f * 2.0f) / 2.0f;
             if (Math.abs(modifier) < 0.25f) modifier = 0;
@@ -156,7 +156,7 @@ public class ContraptionRemoteBlockEntity extends BlockEntity {
             drive.setMotorEnabled(data.getButton(0));
             drive.setReversed(data.getButton(3));
         } else if (be instanceof CreativeLogicMotorBlockEntity motor) {
-            // Right trigger → positive speed, Left trigger → negative speed
+            // Right trigger â†’ positive speed, Left trigger â†’ negative speed
             float speed = data.getAxis(5) * 256.0f;
             float leftTrigger = data.getAxis(4);
             if (leftTrigger > 0.1f) speed = -leftTrigger * 256.0f;
@@ -217,18 +217,18 @@ public class ContraptionRemoteBlockEntity extends BlockEntity {
         setChanged();
     }
 
-    // ==================== Seated Gamepad Input (from SeatInputPayload) ====================
+    // ==================== Gamepad Input (from SeatInputPayload) ====================
 
-    /** Stored gamepad input from seated player. */
+    /** Stored gamepad input from activated player. */
     private short gamepadButtons = 0;
     private int gamepadAxes = 0;
     /** Whether gamepad input has been received and needs applying. */
     private boolean gamepadInputDirty = false;
-    /** Timeout counter — if no gamepad input received, stop applying after N ticks. */
+    /** Timeout counter â€” if no gamepad input received, stop applying after N ticks. */
     private int gamepadTimeout = 0;
 
     /**
-     * Called from SeatInputPayload handler when a seated player sends gamepad input.
+     * Called from SeatInputPayload handler when an activated player sends gamepad input.
      * Decodes button/axis state and applies to all bound targets.
      */
     public void applyGamepadInput(short buttons, int axes) {
@@ -254,11 +254,11 @@ public class ContraptionRemoteBlockEntity extends BlockEntity {
     /**
      * Apply decoded gamepad input to a single target.
      * Uses the same mapping as CTC controller input:
-     * - Left stick Y → drive speed modifier
-     * - A button → drive enable
-     * - Y button → drive reverse
-     * - Right trigger → motor speed (+), Left trigger → motor speed (-)
-     * - B button → motor enable
+     * - Left stick Y â†’ drive speed modifier
+     * - A button â†’ drive enable
+     * - Y button â†’ drive reverse
+     * - Right trigger â†’ motor speed (+), Left trigger â†’ motor speed (-)
+     * - B button â†’ motor enable
      */
     private void applyGamepadToTarget(com.apocscode.logiclink.input.ControllerOutput output, TargetEntry target) {
         if (level == null) return;
@@ -266,7 +266,7 @@ public class ContraptionRemoteBlockEntity extends BlockEntity {
         if (be == null || be.isRemoved()) return;
 
         if (be instanceof LogicDriveBlockEntity drive) {
-            // Left stick Y (axis index 1) → speed modifier
+            // Left stick Y (axis index 1) â†’ speed modifier
             // Decode: axis[1] is 5-bit encoded (sign + 4 magnitude)
             byte rawAxis1 = output.axis[1];
             boolean negative = (rawAxis1 & 0x10) != 0;
@@ -276,12 +276,12 @@ public class ContraptionRemoteBlockEntity extends BlockEntity {
             if (Math.abs(modifier) < 0.25f) modifier = 0;
             drive.setSpeedModifier(modifier);
 
-            // A button (index 0) → enable
+            // A button (index 0) â†’ enable
             drive.setMotorEnabled(output.buttons[0]);
-            // Y button (index 3) → reverse
+            // Y button (index 3) â†’ reverse
             drive.setReversed(output.buttons[3]);
         } else if (be instanceof CreativeLogicMotorBlockEntity motor) {
-            // Right trigger (axis 5) → positive speed, Left trigger (axis 4) → negative speed
+            // Right trigger (axis 5) â†’ positive speed, Left trigger (axis 4) â†’ negative speed
             // Triggers are 4-bit encoded (0-15, unsigned)
             float rightTrigger = output.axis[5] / 15.0f;
             float leftTrigger = output.axis[4] / 15.0f;
@@ -290,7 +290,7 @@ public class ContraptionRemoteBlockEntity extends BlockEntity {
             speed = Math.round(speed);
             if (Math.abs(speed) < 4) speed = 0;
             motor.setMotorSpeed((int) speed);
-            // B button (index 1) → enable
+            // B button (index 1) â†’ enable
             motor.setEnabled(output.buttons[1]);
         }
     }
@@ -367,7 +367,7 @@ public class ContraptionRemoteBlockEntity extends BlockEntity {
             .withStyle(active ? ChatFormatting.GREEN : ChatFormatting.GRAY), false);
 
         if (gamepadTimeout > 0) {
-            player.displayClientMessage(Component.literal("  Mode: Seated Gamepad (live)")
+            player.displayClientMessage(Component.literal("  Mode: Gamepad (active)")
                 .withStyle(ChatFormatting.GREEN), false);
         } else if (lecternPos != null && TweakedControllerCompat.isLoaded()) {
             player.displayClientMessage(Component.literal("  Mode: CTC Gamepad (via Lectern)")

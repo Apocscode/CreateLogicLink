@@ -14,6 +14,7 @@ import com.apocscode.logiclink.network.MotorAxisPayload;
 import com.apocscode.logiclink.network.RemoteAxisPayload;
 import com.apocscode.logiclink.network.RemoteBindPayload;
 import com.apocscode.logiclink.network.RemoteButtonPayload;
+import com.apocscode.logiclink.network.SeatInputPayload;
 import com.simibubi.create.AllSoundEvents;
 import com.simibubi.create.content.redstone.link.LinkBehaviour;
 import com.simibubi.create.foundation.blockEntity.behaviour.BlockEntityBehaviour;
@@ -38,10 +39,10 @@ import net.neoforged.neoforge.network.PacketDistributor;
  * Client-side handler for the Logic Remote controller.
  * Manages three modes: IDLE, ACTIVE, BIND.
  * <p>
- * ACTIVE: reads gamepad input, encodes it, sends button/axis packets to server.
+ * ACTIVE: reads gamepad input, encodes it, sends packets to server.
+ *   - Item mode: sends RemoteButton/RemoteAxis/MotorAxis packets via hub.
+ *   - Block mode: sends SeatInputPayload to a Contraption Remote block.
  * BIND: outlines a redstone link block, waits for a button/axis press, then binds.
- * <p>
- * Port of CTC's TweakedLinkedControllerClientHandler for standalone LogicLink use.
  */
 public class RemoteClientHandler {
 
@@ -65,6 +66,9 @@ public class RemoteClientHandler {
     /** Cached axis config from the held item. */
     private static MotorConfigScreen.AxisSlot[] cachedAxisConfig = null;
 
+    /** Block position when activated from a Contraption Remote block (null = item mode). */
+    private static BlockPos activeBlockPos = null;
+
     // Shared output instance for encoding
     private static final ControllerOutput output = new ControllerOutput();
 
@@ -77,7 +81,7 @@ public class RemoteClientHandler {
             if (mc.player != null) {
                 AllSoundEvents.CONTROLLER_CLICK.playAt(mc.player.level(), mc.player.blockPosition(), 1f, 1f, true);
                 mc.player.displayClientMessage(
-                        Component.literal("Bind Mode — press a button or move an axis")
+                        Component.literal("Bind Mode \u2014 press a button or move an axis")
                                 .withStyle(ChatFormatting.GOLD), true);
             }
         } else {
@@ -90,16 +94,52 @@ public class RemoteClientHandler {
         }
     }
 
+    /**
+     * Toggle controller mode for a held Logic Remote item.
+     * Caches axis config from the item for WASD motor control.
+     */
     public static void toggle() {
         Minecraft mc = Minecraft.getInstance();
         if (MODE == Mode.IDLE) {
             MODE = Mode.ACTIVE;
+            activeBlockPos = null; // Item mode
             // Cache axis config from held item
             if (mc.player != null) {
                 ItemStack held = mc.player.getMainHandItem();
                 if (!(held.getItem() instanceof com.apocscode.logiclink.block.LogicRemoteItem))
                     held = mc.player.getOffhandItem();
                 cachedAxisConfig = MotorConfigScreen.getAxisConfigFromItem(held);
+                AllSoundEvents.CONTROLLER_CLICK.playAt(mc.player.level(), mc.player.blockPosition(), 1f, .75f, true);
+                mc.player.displayClientMessage(
+                        Component.literal("Controller ").withStyle(ChatFormatting.GOLD)
+                                .append(Component.literal("ACTIVE").withStyle(ChatFormatting.GREEN)),
+                        true);
+            }
+        } else {
+            MODE = Mode.IDLE;
+            cachedAxisConfig = null;
+            if (mc.player != null) {
+                AllSoundEvents.CONTROLLER_CLICK.playAt(mc.player.level(), mc.player.blockPosition(), 1f, .5f, true);
+                mc.player.displayClientMessage(
+                        Component.literal("Controller ").withStyle(ChatFormatting.GOLD)
+                                .append(Component.literal("IDLE").withStyle(ChatFormatting.GRAY)),
+                        true);
+            }
+            onReset();
+        }
+    }
+
+    /**
+     * Toggle controller mode for a Contraption Remote block.
+     * Gamepad input is sent as SeatInputPayload to the block entity.
+     */
+    public static void toggleForBlock(BlockPos pos) {
+        Minecraft mc = Minecraft.getInstance();
+        if (MODE == Mode.IDLE) {
+            MODE = Mode.ACTIVE;
+            activeBlockPos = pos;
+            cachedAxisConfig = null;
+            if (mc.player != null) {
                 AllSoundEvents.CONTROLLER_CLICK.playAt(mc.player.level(), mc.player.blockPosition(), 1f, .75f, true);
                 mc.player.displayClientMessage(
                         Component.literal("Controller ").withStyle(ChatFormatting.GOLD)
@@ -130,12 +170,19 @@ public class RemoteClientHandler {
         keyA = false;
         keyD = false;
 
-        if (buttonStates != 0) {
-            buttonStates = 0;
-            PacketDistributor.sendToServer(new RemoteButtonPayload(buttonStates));
+        if (activeBlockPos != null) {
+            // Block mode: send zero input to the block entity
+            PacketDistributor.sendToServer(new SeatInputPayload(activeBlockPos, (short) 0, 0));
+            activeBlockPos = null;
+        } else {
+            // Item mode: send zero button/axis packets via hub
+            if (buttonStates != 0) {
+                buttonStates = 0;
+                PacketDistributor.sendToServer(new RemoteButtonPayload(buttonStates));
+            }
+            axisStates = 0;
+            PacketDistributor.sendToServer(new RemoteAxisPayload(axisStates, false, null));
         }
-        axisStates = 0;
-        PacketDistributor.sendToServer(new RemoteAxisPayload(axisStates, false, null));
 
         // Send zero to all configured motor axes so they stop
         if (cachedAxisConfig != null) {
@@ -146,6 +193,9 @@ public class RemoteClientHandler {
                 }
             }
         }
+
+        buttonStates = 0;
+        axisStates = 0;
     }
 
     /**
@@ -167,13 +217,24 @@ public class RemoteClientHandler {
             return;
         }
 
-        ItemStack heldItem = player.getMainHandItem();
-        if (!(heldItem.getItem() instanceof com.apocscode.logiclink.block.LogicRemoteItem)) {
-            heldItem = player.getOffhandItem();
-            if (!(heldItem.getItem() instanceof com.apocscode.logiclink.block.LogicRemoteItem)) {
+        // Validate activation source
+        if (activeBlockPos != null) {
+            // Block mode: check player is within range
+            if (player.blockPosition().distSqr(activeBlockPos) > 32 * 32) {
                 MODE = Mode.IDLE;
                 onReset();
                 return;
+            }
+        } else {
+            // Item mode: need held LogicRemoteItem
+            ItemStack heldItem = player.getMainHandItem();
+            if (!(heldItem.getItem() instanceof com.apocscode.logiclink.block.LogicRemoteItem)) {
+                heldItem = player.getOffhandItem();
+                if (!(heldItem.getItem() instanceof com.apocscode.logiclink.block.LogicRemoteItem)) {
+                    MODE = Mode.IDLE;
+                    onReset();
+                    return;
+                }
             }
         }
 
@@ -196,63 +257,85 @@ public class RemoteClientHandler {
 
         if (MODE == Mode.ACTIVE) {
             short pressedKeys = output.encodeButtons();
-            if (pressedKeys != buttonStates) {
-                // Play click sounds
-                if ((pressedKeys & ~buttonStates) != 0) {
-                    AllSoundEvents.CONTROLLER_CLICK.playAt(player.level(), player.blockPosition(), 1f, .75f, true);
-                }
-                if ((buttonStates & ~pressedKeys) != 0) {
-                    AllSoundEvents.CONTROLLER_CLICK.playAt(player.level(), player.blockPosition(), 1f, .5f, true);
-                }
-                PacketDistributor.sendToServer(new RemoteButtonPayload(pressedKeys));
-                buttonPacketCooldown = PACKET_RATE;
-            }
-            if (buttonPacketCooldown == 0 && pressedKeys != 0) {
-                PacketDistributor.sendToServer(new RemoteButtonPayload(pressedKeys));
-                buttonPacketCooldown = PACKET_RATE;
-            }
-            buttonStates = pressedKeys;
-
             int axis = output.encodeAxis();
-            if (axis != axisStates) {
-                PacketDistributor.sendToServer(new RemoteAxisPayload(axis, false, null));
-                axisPacketCooldown = PACKET_RATE;
-            }
-            if (axisPacketCooldown == 0 && axis != 0) {
-                PacketDistributor.sendToServer(new RemoteAxisPayload(axis, false, null));
-                axisPacketCooldown = PACKET_RATE;
-            }
-            axisStates = axis;
 
-            // ===== WASD Motor Axis Control =====
-            if (motorAxisPacketCooldown > 0) motorAxisPacketCooldown--;
-            if (cachedAxisConfig != null) {
-                long window = mc.getWindow().getWindow();
-                boolean newW = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_W) == GLFW.GLFW_PRESS;
-                boolean newS = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_S) == GLFW.GLFW_PRESS;
-                boolean newA = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_A) == GLFW.GLFW_PRESS;
-                boolean newD = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_D) == GLFW.GLFW_PRESS;
-
-                boolean changed = (newW != keyW) || (newS != keyS) || (newA != keyA) || (newD != keyD);
-                keyW = newW; keyS = newS; keyA = newA; keyD = newD;
-
-                if (changed || motorAxisPacketCooldown == 0) {
-                    float[] values = {
-                            keyW ? 1.0f : 0.0f,   // slot 0 = W (forward)
-                            keyS ? -1.0f : 0.0f,   // slot 1 = S (reverse)
-                            keyA ? 1.0f : 0.0f,    // slot 2 = A (right)
-                            keyD ? -1.0f : 0.0f     // slot 3 = D (left)
-                    };
-                    for (int i = 0; i < MotorConfigScreen.MAX_AXIS_SLOTS; i++) {
-                        MotorConfigScreen.AxisSlot slot = cachedAxisConfig[i];
-                        if (slot.hasTarget() && (changed || values[i] != 0)) {
-                            PacketDistributor.sendToServer(new MotorAxisPayload(
-                                    slot.targetPos, slot.targetType,
-                                    values[i], slot.sequential, slot.distance));
-                        }
+            if (activeBlockPos != null) {
+                // ===== BLOCK MODE: send SeatInputPayload =====
+                boolean changed = (pressedKeys != buttonStates) || (axis != axisStates);
+                if (changed) {
+                    if ((pressedKeys & ~buttonStates) != 0) {
+                        AllSoundEvents.CONTROLLER_CLICK.playAt(player.level(), player.blockPosition(), 1f, .75f, true);
                     }
-                    if (changed) {
-                        motorAxisPacketCooldown = PACKET_RATE;
+                    if ((buttonStates & ~pressedKeys) != 0) {
+                        AllSoundEvents.CONTROLLER_CLICK.playAt(player.level(), player.blockPosition(), 1f, .5f, true);
+                    }
+                    PacketDistributor.sendToServer(new SeatInputPayload(activeBlockPos, pressedKeys, axis));
+                    buttonPacketCooldown = PACKET_RATE;
+                }
+                if (buttonPacketCooldown == 0 && (pressedKeys != 0 || axis != 0)) {
+                    PacketDistributor.sendToServer(new SeatInputPayload(activeBlockPos, pressedKeys, axis));
+                    buttonPacketCooldown = PACKET_RATE;
+                }
+                buttonStates = pressedKeys;
+                axisStates = axis;
+            } else {
+                // ===== ITEM MODE: send RemoteButton + RemoteAxis + MotorAxis =====
+                if (pressedKeys != buttonStates) {
+                    if ((pressedKeys & ~buttonStates) != 0) {
+                        AllSoundEvents.CONTROLLER_CLICK.playAt(player.level(), player.blockPosition(), 1f, .75f, true);
+                    }
+                    if ((buttonStates & ~pressedKeys) != 0) {
+                        AllSoundEvents.CONTROLLER_CLICK.playAt(player.level(), player.blockPosition(), 1f, .5f, true);
+                    }
+                    PacketDistributor.sendToServer(new RemoteButtonPayload(pressedKeys));
+                    buttonPacketCooldown = PACKET_RATE;
+                }
+                if (buttonPacketCooldown == 0 && pressedKeys != 0) {
+                    PacketDistributor.sendToServer(new RemoteButtonPayload(pressedKeys));
+                    buttonPacketCooldown = PACKET_RATE;
+                }
+                buttonStates = pressedKeys;
+
+                if (axis != axisStates) {
+                    PacketDistributor.sendToServer(new RemoteAxisPayload(axis, false, null));
+                    axisPacketCooldown = PACKET_RATE;
+                }
+                if (axisPacketCooldown == 0 && axis != 0) {
+                    PacketDistributor.sendToServer(new RemoteAxisPayload(axis, false, null));
+                    axisPacketCooldown = PACKET_RATE;
+                }
+                axisStates = axis;
+
+                // ===== WASD Motor Axis Control =====
+                if (motorAxisPacketCooldown > 0) motorAxisPacketCooldown--;
+                if (cachedAxisConfig != null) {
+                    long window = mc.getWindow().getWindow();
+                    boolean newW = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_W) == GLFW.GLFW_PRESS;
+                    boolean newS = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_S) == GLFW.GLFW_PRESS;
+                    boolean newA = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_A) == GLFW.GLFW_PRESS;
+                    boolean newD = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_D) == GLFW.GLFW_PRESS;
+
+                    boolean wasdChanged = (newW != keyW) || (newS != keyS) || (newA != keyA) || (newD != keyD);
+                    keyW = newW; keyS = newS; keyA = newA; keyD = newD;
+
+                    if (wasdChanged || motorAxisPacketCooldown == 0) {
+                        float[] values = {
+                                keyW ? 1.0f : 0.0f,   // slot 0 = W (forward)
+                                keyS ? -1.0f : 0.0f,   // slot 1 = S (reverse)
+                                keyA ? 1.0f : 0.0f,    // slot 2 = A (right)
+                                keyD ? -1.0f : 0.0f     // slot 3 = D (left)
+                        };
+                        for (int i = 0; i < MotorConfigScreen.MAX_AXIS_SLOTS; i++) {
+                            MotorConfigScreen.AxisSlot slot = cachedAxisConfig[i];
+                            if (slot.hasTarget() && (wasdChanged || values[i] != 0)) {
+                                PacketDistributor.sendToServer(new MotorAxisPayload(
+                                        slot.targetPos, slot.targetType,
+                                        values[i], slot.sequential, slot.distance));
+                            }
+                        }
+                        if (wasdChanged) {
+                            motorAxisPacketCooldown = PACKET_RATE;
+                        }
                     }
                 }
             }
@@ -307,8 +390,6 @@ public class RemoteClientHandler {
 
     /**
      * Overlay renderer shown during BIND mode and ACTIVE mode.
-     * BIND: shows tooltip instructions.
-     * ACTIVE: shows controller texture with WASD keybind labels.
      */
     public static void renderOverlay(GuiGraphics graphics, DeltaTracker deltaTracker) {
         Minecraft mc = Minecraft.getInstance();
@@ -319,7 +400,6 @@ public class RemoteClientHandler {
         int screenH = mc.getWindow().getGuiScaledHeight();
 
         if (MODE == Mode.BIND) {
-            // Bind mode tooltip
             graphics.pose().pushPose();
             Screen tooltipScreen = new Screen(CommonComponents.EMPTY) {};
             tooltipScreen.init(mc, screenW, screenH);
@@ -339,37 +419,29 @@ public class RemoteClientHandler {
         }
 
         if (MODE == Mode.ACTIVE) {
-            // Controller overlay — shows WASD keybinds and assigned motors
             int panelW = 140;
             int panelH = 90;
             int px = (screenW - panelW) / 2;
             int py = screenH - panelH - 12;
 
-            // Semi-transparent panel background
             graphics.fill(px - 1, py - 1, px + panelW + 1, py + panelH + 1, 0xCC4488CC);
             graphics.fill(px, py, px + panelW, py + panelH, 0xCC1A1A28);
 
-            // Title
+            String title = activeBlockPos != null ? "Remote Control" : "Logic Remote";
             graphics.drawCenteredString(mc.font,
-                    Component.literal("Logic Remote").withStyle(ChatFormatting.AQUA),
+                    Component.literal(title).withStyle(ChatFormatting.AQUA),
                     px + panelW / 2, py + 3, 0xFFFFFFFF);
 
-            // WASD key layout (diamond pattern)
             int centerX = px + panelW / 2;
             int keyY = py + 18;
             int keySize = 18;
             int gap = 2;
 
-            // W key (top center)
             renderKey(graphics, mc, centerX - keySize / 2, keyY, keySize, keySize, "W", keyW, 0);
-            // A key (left)
             renderKey(graphics, mc, centerX - keySize - gap - keySize / 2, keyY + keySize + gap, keySize, keySize, "A", keyA, 2);
-            // S key (center)
             renderKey(graphics, mc, centerX - keySize / 2, keyY + keySize + gap, keySize, keySize, "S", keyS, 1);
-            // D key (right)
             renderKey(graphics, mc, centerX + gap + keySize / 2, keyY + keySize + gap, keySize, keySize, "D", keyD, 3);
 
-            // Axis labels under keys
             if (cachedAxisConfig != null) {
                 int labelY = keyY + keySize * 2 + gap + 6;
                 for (int i = 0; i < MotorConfigScreen.MAX_AXIS_SLOTS; i++) {
@@ -384,27 +456,19 @@ public class RemoteClientHandler {
                 }
             }
 
-            // ESC hint
             graphics.drawCenteredString(mc.font,
                     Component.literal("[ESC] Close").withStyle(ChatFormatting.DARK_GRAY),
                     px + panelW / 2, py + panelH - 10, 0xFF666677);
         }
     }
 
-    /**
-     * Render a single key button in the controller overlay.
-     */
     private static void renderKey(GuiGraphics g, Minecraft mc, int x, int y, int w, int h,
                                    String label, boolean pressed, int slotIndex) {
         int bg = pressed ? 0xFF4488CC : 0xFF333344;
         int border = pressed ? 0xFF66AAEE : 0xFF555566;
-        // Border
         g.fill(x - 1, y - 1, x + w + 1, y + h + 1, border);
-        // Background
         g.fill(x, y, x + w, y + h, bg);
-        // Key label
         g.drawCenteredString(mc.font, label, x + w / 2, y + (h - 8) / 2, 0xFFFFFFFF);
-        // Small status dot
         if (cachedAxisConfig != null && slotIndex < cachedAxisConfig.length
                 && cachedAxisConfig[slotIndex].hasTarget()) {
             int dotColor = pressed ? 0xFF22FF55 : 0xFF888888;

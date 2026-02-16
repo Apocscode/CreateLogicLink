@@ -2,7 +2,6 @@ package com.apocscode.logiclink.network;
 
 import com.apocscode.logiclink.LogicLink;
 import com.apocscode.logiclink.block.ContraptionRemoteBlockEntity;
-import com.apocscode.logiclink.entity.RemoteSeatEntity;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.FriendlyByteBuf;
@@ -14,12 +13,11 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 /**
- * Client→Server packet carrying gamepad input from a player seated on
- * a Contraption Remote block.
+ * Client-Server packet carrying gamepad input for a Contraption Remote block.
  * <p>
  * Contains the block position, 15 button states (packed short), and
- * 6 axis values (packed int). The server validates the player is indeed
- * riding a RemoteSeatEntity at the given position before applying input.
+ * 6 axis values (packed int). The server validates the player is within
+ * range of the block before applying input.
  */
 public record SeatInputPayload(BlockPos blockPos, short buttonStates, int axisStates)
         implements CustomPacketPayload {
@@ -55,11 +53,8 @@ public record SeatInputPayload(BlockPos blockPos, short buttonStates, int axisSt
             if (!(context.player() instanceof ServerPlayer sp)) return;
             if (sp.isSpectator()) return;
 
-            // Validate: player must be riding a RemoteSeatEntity
-            if (!(sp.getVehicle() instanceof RemoteSeatEntity seat)) return;
-
-            // Validate: seat must be at the claimed block position
-            if (!seat.blockPosition().equals(payload.blockPos)) return;
+            // Validate: player must be within range of the block (32 blocks)
+            if (sp.blockPosition().distSqr(payload.blockPos) > 32 * 32) return;
 
             // Get the block entity and apply the input
             BlockEntity be = sp.level().getBlockEntity(payload.blockPos);

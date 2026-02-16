@@ -1,7 +1,7 @@
 package com.apocscode.logiclink.block;
 
 import com.apocscode.logiclink.ModRegistry;
-import com.apocscode.logiclink.entity.RemoteSeatEntity;
+import com.apocscode.logiclink.controller.RemoteClientHandler;
 
 import com.mojang.serialization.MapCodec;
 import net.minecraft.ChatFormatting;
@@ -11,7 +11,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.ItemInteractionResult;
-import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
@@ -26,29 +25,25 @@ import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.core.Direction;
 import net.minecraft.world.level.block.state.StateDefinition;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 
 import org.jetbrains.annotations.Nullable;
 
 import java.util.EnumMap;
 import java.util.Map;
 
-import java.util.List;
-
 /**
- * Contraption Remote Control Block — functions like Create's train controls.
+ * Contraption Remote Control Block - functions like Create's train controls.
  * <p>
- * Right-click to sit down on the block. While seated, the player's gamepad
+ * The player sits on a separate Create seat, then right-clicks this block's
+ * hitbox to toggle controller mode. While active, the player's gamepad
  * input is read and sent to bound Logic Drives and Creative Logic Motors.
  * Sneak+right-click to view status and bindings.
- * </p>
- * <p>
- * The block spawns an invisible {@link RemoteSeatEntity} that the player
- * rides, similar to Create's SeatBlock mechanic.
  * </p>
  */
 public class ContraptionRemoteBlock extends HorizontalDirectionalBlock implements EntityBlock {
@@ -58,14 +53,14 @@ public class ContraptionRemoteBlock extends HorizontalDirectionalBlock implement
     /**
      * Directional hitbox shapes matching the controls geometry.
      * Tightly wraps the control surface, side pillars, and base step
-     * — similar to Create's ContraptionControlsBlock shape.
+     * - similar to Create's ContraptionControlsBlock shape.
      */
     private static final Map<Direction, VoxelShape> SHAPES = createDirectionalShapes();
 
     private static Map<Direction, VoxelShape> createDirectionalShapes() {
         Map<Direction, VoxelShape> map = new EnumMap<>(Direction.class);
 
-        // NORTH: default model orientation — controls face north, back toward south
+        // NORTH: default model orientation - controls face north, back toward south
         map.put(Direction.NORTH, Shapes.or(
                 Block.box(0, 0, 4, 16, 2, 16),      // base step
                 Block.box(0, 2, 6, 2, 16, 16),       // left pillar
@@ -74,7 +69,7 @@ public class ContraptionRemoteBlock extends HorizontalDirectionalBlock implement
                 Block.box(2, 2, 7, 14, 12, 14)       // control/seat area
         ));
 
-        // SOUTH: rotated 180° — controls face south
+        // SOUTH: rotated 180 - controls face south
         map.put(Direction.SOUTH, Shapes.or(
                 Block.box(0, 0, 0, 16, 2, 12),       // base step
                 Block.box(14, 2, 0, 16, 16, 10),     // left pillar
@@ -83,7 +78,7 @@ public class ContraptionRemoteBlock extends HorizontalDirectionalBlock implement
                 Block.box(2, 2, 2, 14, 12, 9)        // control/seat area
         ));
 
-        // EAST: rotated 90° — controls face east
+        // EAST: rotated 90 - controls face east
         map.put(Direction.EAST, Shapes.or(
                 Block.box(0, 0, 0, 12, 2, 16),       // base step
                 Block.box(0, 2, 0, 10, 16, 2),       // left pillar
@@ -92,7 +87,7 @@ public class ContraptionRemoteBlock extends HorizontalDirectionalBlock implement
                 Block.box(2, 2, 2, 9, 12, 14)        // control/seat area
         ));
 
-        // WEST: rotated 270° — controls face west
+        // WEST: rotated 270 - controls face west
         map.put(Direction.WEST, Shapes.or(
                 Block.box(4, 0, 0, 16, 2, 16),       // base step
                 Block.box(6, 2, 14, 16, 16, 16),     // left pillar
@@ -127,21 +122,6 @@ public class ContraptionRemoteBlock extends HorizontalDirectionalBlock implement
     @Override
     public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
         return SHAPES.getOrDefault(state.getValue(FACING), SHAPES.get(Direction.NORTH));
-    }
-
-    @Override
-    public void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean isMoving) {
-        if (!state.is(newState.getBlock())) {
-            // Block broken — discard any seat entities at this position
-            if (!level.isClientSide) {
-                List<RemoteSeatEntity> seats = level.getEntitiesOfClass(RemoteSeatEntity.class, new AABB(pos));
-                for (RemoteSeatEntity seat : seats) {
-                    seat.ejectPassengers();
-                    seat.discard();
-                }
-            }
-            super.onRemove(state, level, pos, newState, isMoving);
-        }
     }
 
     // ==================== Block Entity ====================
@@ -183,9 +163,9 @@ public class ContraptionRemoteBlock extends HorizontalDirectionalBlock implement
             return InteractionResult.SUCCESS;
         }
 
-        // Right-click = sit down on the block
-        if (!level.isClientSide) {
-            sitDown(level, pos, player);
+        // Right-click = toggle controller mode
+        if (level.isClientSide) {
+            toggleControllerClient(pos);
         }
         return InteractionResult.SUCCESS;
     }
@@ -193,74 +173,33 @@ public class ContraptionRemoteBlock extends HorizontalDirectionalBlock implement
     @Override
     protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
                                                Player player, InteractionHand hand, BlockHitResult hitResult) {
-        if (!level.isClientSide && player instanceof ServerPlayer sp) {
-            BlockEntity be = level.getBlockEntity(pos);
-            if (be instanceof ContraptionRemoteBlockEntity remote) {
-                // Holding a Logic Remote? Let the item handle binding
-                if (stack.getItem() instanceof LogicRemoteItem) {
-                    return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
-                }
-
-                if (player.isShiftKeyDown()) {
-                    remote.sendStatusToPlayer(sp);
-                    return ItemInteractionResult.SUCCESS;
-                }
-            }
+        // Holding a Logic Remote? Let the item handle binding
+        if (stack.getItem() instanceof LogicRemoteItem) {
+            return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         }
 
-        // Right-click with item (not shifting) = sit down
-        if (!player.isShiftKeyDown() && !level.isClientSide) {
-            sitDown(level, pos, player);
+        if (player.isShiftKeyDown()) {
+            // Sneak + right-click = show status
+            if (!level.isClientSide && player instanceof ServerPlayer sp) {
+                BlockEntity be = level.getBlockEntity(pos);
+                if (be instanceof ContraptionRemoteBlockEntity remote) {
+                    remote.sendStatusToPlayer(sp);
+                }
+            }
             return ItemInteractionResult.SUCCESS;
         }
 
-        return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        // Right-click = toggle controller mode
+        if (level.isClientSide) {
+            toggleControllerClient(pos);
+        }
+        return ItemInteractionResult.SUCCESS;
     }
 
-    // ==================== Seat Mechanic ====================
+    // ==================== Controller Toggle ====================
 
-    /**
-     * Checks if a RemoteSeatEntity already exists at this position.
-     */
-    public static boolean isSeatOccupied(Level level, BlockPos pos) {
-        return !level.getEntitiesOfClass(RemoteSeatEntity.class, new AABB(pos)).isEmpty();
-    }
-
-    /**
-     * Spawns an invisible RemoteSeatEntity and mounts the player on it.
-     * If a seat already exists, ejects the current passenger and seats the new player.
-     */
-    public static void sitDown(Level level, BlockPos pos, Entity entity) {
-        if (level.isClientSide) return;
-
-        // Check for existing seat entity
-        List<RemoteSeatEntity> seats = level.getEntitiesOfClass(RemoteSeatEntity.class, new AABB(pos));
-        if (!seats.isEmpty()) {
-            RemoteSeatEntity existingSeat = seats.get(0);
-            List<Entity> passengers = existingSeat.getPassengers();
-            if (!passengers.isEmpty() && passengers.get(0) instanceof Player) {
-                // Already occupied by a player — don't eject
-                if (entity instanceof ServerPlayer sp) {
-                    sp.displayClientMessage(Component.literal("Seat is occupied!")
-                            .withStyle(ChatFormatting.RED), true);
-                }
-                return;
-            }
-            // Seat exists but empty or has non-player — use it
-            existingSeat.ejectPassengers();
-            entity.startRiding(existingSeat);
-            return;
-        }
-
-        // Create new seat entity
-        RemoteSeatEntity seat = new RemoteSeatEntity(level);
-        seat.setPos(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5);
-        level.addFreshEntity(seat);
-        entity.startRiding(seat, true);
-
-        if (entity instanceof ServerPlayer sp) {
-            sp.displayClientMessage(Component.literal("Seated — gamepad controls active")
-                    .withStyle(ChatFormatting.GREEN), true);
-        }
+    @OnlyIn(Dist.CLIENT)
+    private static void toggleControllerClient(BlockPos pos) {
+        RemoteClientHandler.toggleForBlock(pos);
     }
 }
