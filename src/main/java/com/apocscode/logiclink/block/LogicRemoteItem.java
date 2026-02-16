@@ -2,7 +2,6 @@ package com.apocscode.logiclink.block;
 
 import com.apocscode.logiclink.LogicLink;
 import com.apocscode.logiclink.ModRegistry;
-import com.apocscode.logiclink.client.LogicRemoteScreen;
 import com.apocscode.logiclink.controller.LogicRemoteMenu;
 import com.apocscode.logiclink.controller.RemoteClientHandler;
 import com.apocscode.logiclink.network.HubNetwork;
@@ -10,6 +9,7 @@ import com.apocscode.logiclink.network.IHubDevice;
 import com.simibubi.create.AllBlocks;
 import com.simibubi.create.content.redstone.link.RedstoneLinkNetworkHandler.Frequency;
 import net.createmod.catnip.data.Couple;
+import net.createmod.catnip.platform.CatnipServices;
 
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -37,7 +37,6 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.api.distmarker.Dist;
 import net.neoforged.api.distmarker.OnlyIn;
-import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.items.ItemStackHandler;
 
 import java.util.ArrayList;
@@ -68,114 +67,122 @@ public class LogicRemoteItem extends Item implements MenuProvider {
         super(properties);
     }
 
-    // ==================== Interaction ====================
+    // ==================== Interaction (CTC-style) ====================
 
+    /**
+     * Fires BEFORE block interaction — exact same pattern as CTC's
+     * TweakedLinkedControllerItem.onItemUseFirst().
+     */
     @Override
-    public InteractionResult useOn(UseOnContext context) {
-        Level level = context.getLevel();
-        BlockPos pos = context.getClickedPos();
-        Player player = context.getPlayer();
-        ItemStack stack = context.getItemInHand();
-
+    public InteractionResult onItemUseFirst(ItemStack stack, UseOnContext ctx)
+    {
+        Player player = ctx.getPlayer();
         if (player == null) return InteractionResult.PASS;
+        Level world = ctx.getLevel();
+        BlockPos pos = ctx.getClickedPos();
+        BlockState hitState = world.getBlockState(pos);
 
-        BlockState hitState = level.getBlockState(pos);
-
-        // Shift + right-click on Logic Link block = link to hub
-        if (player.isShiftKeyDown()) {
-            BlockEntity be = level.getBlockEntity(pos);
-            if (be instanceof LogicLinkBlockEntity hub) {
-                String label = hub.getHubLabel();
-                linkToHub(stack, pos, label);
-                String displayName = label.isEmpty()
-                        ? "Hub at " + pos.toShortString()
-                        : "\"" + label + "\" (" + pos.toShortString() + ")";
-                player.displayClientMessage(
-                        Component.literal("Linked to " + displayName)
-                                .withStyle(ChatFormatting.GREEN), true);
-                player.getCooldowns().addCooldown(this, 2);
-                return InteractionResult.SUCCESS;
-            }
-        }
-
-        // Right-click on Create Redstone Link = enter bind mode (client-side)
-        if (!player.isShiftKeyDown() && AllBlocks.REDSTONE_LINK.has(hitState)) {
-            if (level.isClientSide) {
-                toggleBindModeClient(pos);
-            }
-            player.getCooldowns().addCooldown(this, 2);
-            return InteractionResult.SUCCESS;
-        }
-
-        // Right-click a drive or motor = add as target (server-side)
-        if (!level.isClientSide) {
-            BlockEntity be = level.getBlockEntity(pos);
-            if (be instanceof IHubDevice device) {
-                String type = device.getDeviceType();
-                if ("drive".equals(type) || "creative_motor".equals(type)) {
-                    if (addTarget(stack, pos, type)) {
-                        String label = device.getHubLabel().isEmpty() ? type : device.getHubLabel();
+        if (player.mayBuild())
+        {
+            if (player.isShiftKeyDown())
+            {
+                // Shift + right-click on Logic Link hub = link to hub
+                BlockEntity be = world.getBlockEntity(pos);
+                if (be instanceof LogicLinkBlockEntity hub)
+                {
+                    if (!world.isClientSide)
+                    {
+                        String label = hub.getHubLabel();
+                        linkToHub(stack, pos, label);
+                        String displayName = label.isEmpty()
+                                ? "Hub at " + pos.toShortString()
+                                : "\"" + label + "\" (" + pos.toShortString() + ")";
                         player.displayClientMessage(
-                                Component.literal("Bound " + label + " at " + pos.toShortString())
-                                        .withStyle(ChatFormatting.AQUA), true);
-                    } else {
-                        player.displayClientMessage(
-                                Component.literal("Max targets reached (" + MAX_TARGETS + ")")
-                                        .withStyle(ChatFormatting.RED), true);
+                                Component.literal("Linked to " + displayName)
+                                        .withStyle(ChatFormatting.GREEN), true);
                     }
                     return InteractionResult.SUCCESS;
                 }
             }
+            else
+            {
+                // Right-click on Redstone Link = enter bind mode (client-side)
+                if (AllBlocks.REDSTONE_LINK.has(hitState))
+                {
+                    if (world.isClientSide)
+                        CatnipServices.PLATFORM.executeOnClientOnly(() -> () -> this.toggleBindMode(ctx.getClickedPos()));
+                    player.getCooldowns().addCooldown(this, 2);
+                    return InteractionResult.SUCCESS;
+                }
+
+                // Right-click on a drive or motor = add as target (server-side)
+                BlockEntity be = world.getBlockEntity(pos);
+                if (be instanceof IHubDevice device)
+                {
+                    String type = device.getDeviceType();
+                    if ("drive".equals(type) || "creative_motor".equals(type))
+                    {
+                        if (!world.isClientSide)
+                        {
+                            if (addTarget(stack, pos, type))
+                            {
+                                String label = device.getHubLabel().isEmpty() ? type : device.getHubLabel();
+                                player.displayClientMessage(
+                                        Component.literal("Bound " + label + " at " + pos.toShortString())
+                                                .withStyle(ChatFormatting.AQUA), true);
+                            }
+                            else
+                            {
+                                player.displayClientMessage(
+                                        Component.literal("Max targets reached (" + MAX_TARGETS + ")")
+                                                .withStyle(ChatFormatting.RED), true);
+                            }
+                        }
+                        return InteractionResult.SUCCESS;
+                    }
+                }
+            }
         }
 
-        // Fall through to use() for normal right-click behavior
-        return use(level, player, context.getHand()).getResult();
+        return use(world, player, ctx.getHand()).getResult();
     }
 
     @Override
-    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+    public InteractionResultHolder<ItemStack> use(Level world, Player player, InteractionHand hand)
+    {
         ItemStack heldItem = player.getItemInHand(hand);
 
-        // Shift + right-click in main hand = open remote control GUI
-        if (player.isShiftKeyDown() && hand == InteractionHand.MAIN_HAND) {
-            if (level.isClientSide) {
-                openRemoteScreenClient();
-            }
+        // Shift + right-click in main hand = open control panel GUI
+        if (player.isShiftKeyDown() && hand == InteractionHand.MAIN_HAND)
+        {
+            if (!world.isClientSide && player instanceof ServerPlayer sp && player.mayBuild())
+                sp.openMenu(this, buf -> {
+                    ItemStack.STREAM_CODEC.encode(buf, heldItem);
+                });
             return InteractionResultHolder.success(heldItem);
         }
 
         // Normal right-click = toggle active mode
-        if (!player.isShiftKeyDown()) {
-            if (level.isClientSide) {
-                toggleActiveClient();
-            } else {
-                // Server-side feedback
-                boolean nowActive = true; // Client will toggle; give feedback
-                player.displayClientMessage(
-                        Component.literal("Controller ").withStyle(ChatFormatting.GOLD)
-                                .append(Component.literal("ACTIVE").withStyle(ChatFormatting.GREEN)),
-                        true);
-            }
+        if (!player.isShiftKeyDown())
+        {
+            if (world.isClientSide)
+                CatnipServices.PLATFORM.executeOnClientOnly(() -> this::toggleActive);
             player.getCooldowns().addCooldown(this, 2);
-            return InteractionResultHolder.success(heldItem);
         }
 
         return InteractionResultHolder.pass(heldItem);
     }
 
     @OnlyIn(Dist.CLIENT)
-    private void toggleBindModeClient(BlockPos pos) {
+    private void toggleBindMode(BlockPos pos)
+    {
         RemoteClientHandler.toggleBindMode(pos);
     }
 
     @OnlyIn(Dist.CLIENT)
-    private void toggleActiveClient() {
+    private void toggleActive()
+    {
         RemoteClientHandler.toggle();
-    }
-
-    @OnlyIn(Dist.CLIENT)
-    private void openRemoteScreenClient() {
-        net.minecraft.client.Minecraft.getInstance().setScreen(new LogicRemoteScreen());
     }
 
     // ==================== Hub Linking ====================
