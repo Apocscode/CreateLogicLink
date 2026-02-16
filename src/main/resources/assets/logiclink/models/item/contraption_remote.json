@@ -4,7 +4,7 @@
         "4": "create:block/contraption_controls_frame",
         "1_7": "create:block/contraption_controls",
         "particle": "create:block/andesite_casing",
-        "controller": "logiclink:block/contraption_remote_top"
+        "controller": "logiclink:item/logic_remote"
     },
     "elements": [
         {

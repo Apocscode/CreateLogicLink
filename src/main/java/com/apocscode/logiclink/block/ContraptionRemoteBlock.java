@@ -24,13 +24,18 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.core.Direction;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
+import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 import org.jetbrains.annotations.Nullable;
+
+import java.util.EnumMap;
+import java.util.Map;
 
 import java.util.List;
 
@@ -50,8 +55,54 @@ public class ContraptionRemoteBlock extends HorizontalDirectionalBlock implement
 
     public static final MapCodec<ContraptionRemoteBlock> CODEC = simpleCodec(ContraptionRemoteBlock::new);
 
-    /** Slightly smaller than full block for visual distinction. */
-    private static final VoxelShape SHAPE = Block.box(1, 0, 1, 15, 14, 15);
+    /**
+     * Directional hitbox shapes matching the controls geometry.
+     * Tightly wraps the control surface, side pillars, and base step
+     * — similar to Create's ContraptionControlsBlock shape.
+     */
+    private static final Map<Direction, VoxelShape> SHAPES = createDirectionalShapes();
+
+    private static Map<Direction, VoxelShape> createDirectionalShapes() {
+        Map<Direction, VoxelShape> map = new EnumMap<>(Direction.class);
+
+        // NORTH: default model orientation — controls face north, back toward south
+        map.put(Direction.NORTH, Shapes.or(
+                Block.box(0, 0, 4, 16, 2, 16),      // base step
+                Block.box(0, 2, 6, 2, 16, 16),       // left pillar
+                Block.box(14, 2, 6, 16, 16, 16),     // right pillar
+                Block.box(2, 2, 14, 14, 16, 16),     // back wall
+                Block.box(2, 2, 7, 14, 12, 14)       // control/seat area
+        ));
+
+        // SOUTH: rotated 180° — controls face south
+        map.put(Direction.SOUTH, Shapes.or(
+                Block.box(0, 0, 0, 16, 2, 12),       // base step
+                Block.box(14, 2, 0, 16, 16, 10),     // left pillar
+                Block.box(0, 2, 0, 2, 16, 10),       // right pillar
+                Block.box(2, 2, 0, 14, 16, 2),       // back wall
+                Block.box(2, 2, 2, 14, 12, 9)        // control/seat area
+        ));
+
+        // EAST: rotated 90° — controls face east
+        map.put(Direction.EAST, Shapes.or(
+                Block.box(0, 0, 0, 12, 2, 16),       // base step
+                Block.box(0, 2, 0, 10, 16, 2),       // left pillar
+                Block.box(0, 2, 14, 10, 16, 16),     // right pillar
+                Block.box(0, 2, 2, 2, 16, 14),       // back wall
+                Block.box(2, 2, 2, 9, 12, 14)        // control/seat area
+        ));
+
+        // WEST: rotated 270° — controls face west
+        map.put(Direction.WEST, Shapes.or(
+                Block.box(4, 0, 0, 16, 2, 16),       // base step
+                Block.box(6, 2, 14, 16, 16, 16),     // left pillar
+                Block.box(6, 2, 0, 16, 16, 2),       // right pillar
+                Block.box(14, 2, 2, 16, 16, 14),     // back wall
+                Block.box(7, 2, 2, 14, 12, 14)       // control/seat area
+        ));
+
+        return map;
+    }
 
     public ContraptionRemoteBlock(Properties properties) {
         super(properties);
@@ -75,7 +126,7 @@ public class ContraptionRemoteBlock extends HorizontalDirectionalBlock implement
 
     @Override
     public VoxelShape getShape(BlockState state, BlockGetter level, BlockPos pos, CollisionContext context) {
-        return SHAPE;
+        return SHAPES.getOrDefault(state.getValue(FACING), SHAPES.get(Direction.NORTH));
     }
 
     @Override
