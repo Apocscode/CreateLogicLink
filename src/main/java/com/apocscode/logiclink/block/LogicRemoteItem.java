@@ -2,8 +2,10 @@ package com.apocscode.logiclink.block;
 
 import com.apocscode.logiclink.LogicLink;
 import com.apocscode.logiclink.ModRegistry;
+import com.apocscode.logiclink.client.LogicRemoteScreen;
 import com.apocscode.logiclink.controller.LogicRemoteMenu;
 import com.apocscode.logiclink.controller.RemoteClientHandler;
+import com.apocscode.logiclink.network.HubNetwork;
 import com.apocscode.logiclink.network.IHubDevice;
 import com.simibubi.create.AllBlocks;
 import com.simibubi.create.content.redstone.link.RedstoneLinkNetworkHandler.Frequency;
@@ -79,6 +81,19 @@ public class LogicRemoteItem extends Item implements MenuProvider {
 
         BlockState hitState = level.getBlockState(pos);
 
+        // Shift + right-click on Logic Link block = link to hub
+        if (player.isShiftKeyDown()) {
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be instanceof LogicLinkBlockEntity) {
+                linkToHub(stack, pos);
+                player.displayClientMessage(
+                        Component.literal("Linked to Logic Hub at " + pos.toShortString())
+                                .withStyle(ChatFormatting.GREEN), true);
+                player.getCooldowns().addCooldown(this, 2);
+                return InteractionResult.SUCCESS;
+            }
+        }
+
         // Right-click on Create Redstone Link = enter bind mode (client-side)
         if (!player.isShiftKeyDown() && AllBlocks.REDSTONE_LINK.has(hitState)) {
             if (level.isClientSide) {
@@ -117,12 +132,10 @@ public class LogicRemoteItem extends Item implements MenuProvider {
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         ItemStack heldItem = player.getItemInHand(hand);
 
-        // Shift + right-click in main hand = open frequency config menu
+        // Shift + right-click in main hand = open remote control GUI
         if (player.isShiftKeyDown() && hand == InteractionHand.MAIN_HAND) {
-            if (!level.isClientSide && player instanceof ServerPlayer sp && player.mayBuild()) {
-                sp.openMenu(this, buf -> {
-                    ItemStack.STREAM_CODEC.encode(buf, heldItem);
-                });
+            if (level.isClientSide) {
+                openRemoteScreenClient();
             }
             return InteractionResultHolder.success(heldItem);
         }
@@ -154,6 +167,34 @@ public class LogicRemoteItem extends Item implements MenuProvider {
     @OnlyIn(Dist.CLIENT)
     private void toggleActiveClient() {
         RemoteClientHandler.toggle();
+    }
+
+    @OnlyIn(Dist.CLIENT)
+    private void openRemoteScreenClient() {
+        net.minecraft.client.Minecraft.getInstance().setScreen(new LogicRemoteScreen());
+    }
+
+    // ==================== Hub Linking ====================
+
+    /**
+     * Store a link to a Logic Hub (Logic Link block) in the item's NBT.
+     */
+    public static void linkToHub(ItemStack stack, BlockPos hubPos) {
+        CompoundTag tag = getOrCreateTag(stack);
+        tag.putInt("HubX", hubPos.getX());
+        tag.putInt("HubY", hubPos.getY());
+        tag.putInt("HubZ", hubPos.getZ());
+        tag.putBoolean("HubLinked", true);
+        saveTag(stack, tag);
+    }
+
+    /**
+     * Get the linked hub position, or null if not linked.
+     */
+    public static BlockPos getLinkedHub(ItemStack stack) {
+        CompoundTag tag = getOrCreateTag(stack);
+        if (!tag.getBoolean("HubLinked")) return null;
+        return new BlockPos(tag.getInt("HubX"), tag.getInt("HubY"), tag.getInt("HubZ"));
     }
 
     // ==================== MenuProvider ====================
@@ -270,10 +311,21 @@ public class LogicRemoteItem extends Item implements MenuProvider {
             }
         }
 
+        BlockPos hub = getLinkedHub(stack);
+        if (hub != null) {
+            tooltip.add(Component.literal("Hub: " + hub.toShortString())
+                    .withStyle(ChatFormatting.GREEN));
+        } else {
+            tooltip.add(Component.literal("No hub linked")
+                    .withStyle(ChatFormatting.GRAY));
+        }
+
         tooltip.add(Component.empty());
-        tooltip.add(Component.literal("Right-click: Toggle controller")
+        tooltip.add(Component.literal("Right-click: Toggle controller (WASD)")
                 .withStyle(ChatFormatting.DARK_GRAY));
-        tooltip.add(Component.literal("Shift + Right-click: Configure frequencies")
+        tooltip.add(Component.literal("Shift + Right-click: Open control panel")
+                .withStyle(ChatFormatting.DARK_GRAY));
+        tooltip.add(Component.literal("Shift + Click Logic Link: Link to hub")
                 .withStyle(ChatFormatting.DARK_GRAY));
         tooltip.add(Component.literal("Click Redstone Link: Bind button/axis")
                 .withStyle(ChatFormatting.DARK_GRAY));

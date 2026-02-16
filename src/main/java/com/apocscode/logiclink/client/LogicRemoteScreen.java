@@ -4,6 +4,7 @@ import com.apocscode.logiclink.LogicLink;
 import com.apocscode.logiclink.block.LogicRemoteItem;
 import com.apocscode.logiclink.network.RemoteControlPayload;
 
+import net.minecraft.Util;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
@@ -16,6 +17,8 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
 import net.neoforged.neoforge.network.PacketDistributor;
+
+import java.net.URI;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -166,6 +169,20 @@ public class LogicRemoteScreen extends Screen {
 
         // Title
         graphics.drawCenteredString(font, this.title, guiLeft + GUI_WIDTH / 2, guiTop + 6, TITLE_COLOR);
+
+        // Bug Report button (top-right)
+        int bugBtnX = guiLeft + GUI_WIDTH - 76;
+        int bugBtnY = guiTop + 4;
+        boolean bugHover = isInside(mouseX, mouseY, bugBtnX, bugBtnY, 72, 12);
+        graphics.fill(bugBtnX, bugBtnY, bugBtnX + 72, bugBtnY + 12, bugHover ? BTN_HOVER : DARK_GRAY);
+        graphics.drawCenteredString(font, "\u26A0 Bug Report", bugBtnX + 36, bugBtnY + 2, bugHover ? WHITE : YELLOW);
+
+        // Motor Config button (top-left)
+        int motorBtnX = guiLeft + 4;
+        int motorBtnY = guiTop + 4;
+        boolean motorHover = isInside(mouseX, mouseY, motorBtnX, motorBtnY, 76, 12);
+        graphics.fill(motorBtnX, motorBtnY, motorBtnX + 76, motorBtnY + 12, motorHover ? BTN_HOVER : DARK_GRAY);
+        graphics.drawCenteredString(font, "\u2699 Motor Config", motorBtnX + 38, motorBtnY + 2, motorHover ? WHITE : CYAN);
 
         // Target count
         String targetStr = targets.size() + " target" + (targets.size() != 1 ? "s" : "") + " bound";
@@ -356,6 +373,22 @@ public class LogicRemoteScreen extends Screen {
         if (button != 0) return super.mouseClicked(mouseX, mouseY, button);
 
         int mX = (int)mouseX, mY = (int)mouseY;
+
+        // Bug Report button
+        int bugBtnX = guiLeft + GUI_WIDTH - 76;
+        int bugBtnY = guiTop + 4;
+        if (isInside(mX, mY, bugBtnX, bugBtnY, 72, 12)) {
+            Util.getPlatform().openUri(URI.create("https://github.com/Apocscode/CreateLogicLink/issues"));
+            return true;
+        }
+
+        // Motor Config button
+        int motorBtnX = guiLeft + 4;
+        int motorBtnY = guiTop + 4;
+        if (isInside(mX, mY, motorBtnX, motorBtnY, 76, 12)) {
+            minecraft.setScreen(new MotorConfigScreen(this));
+            return true;
+        }
 
         if (targets.isEmpty()) return super.mouseClicked(mouseX, mouseY, button);
 

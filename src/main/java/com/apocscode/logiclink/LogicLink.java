@@ -7,6 +7,7 @@ import com.apocscode.logiclink.block.LogicSensorBlockItem;
 import com.apocscode.logiclink.controller.RemoteServerHandler;
 import com.apocscode.logiclink.network.HubNetwork;
 import com.apocscode.logiclink.network.LinkNetwork;
+import com.apocscode.logiclink.network.MotorAxisPayload;
 import com.apocscode.logiclink.network.NetworkHighlightPayload;
 import com.apocscode.logiclink.network.RemoteAxisPayload;
 import com.apocscode.logiclink.network.RemoteBindPayload;
@@ -104,6 +105,11 @@ public class LogicLink {
                 SeatInputPayload.TYPE,
                 SeatInputPayload.STREAM_CODEC,
                 SeatInputPayload::handle
+        );
+        registrar.playToServer(
+                MotorAxisPayload.TYPE,
+                MotorAxisPayload.STREAM_CODEC,
+                MotorAxisPayload::handle
         );
     }
 
