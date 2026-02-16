@@ -2,6 +2,7 @@ package com.apocscode.logiclink.client;
 
 import com.apocscode.logiclink.LogicLink;
 import com.apocscode.logiclink.block.LogicRemoteItem;
+import com.apocscode.logiclink.network.OpenFreqConfigPayload;
 import com.apocscode.logiclink.network.RemoteControlPayload;
 
 import net.minecraft.Util;
@@ -183,6 +184,13 @@ public class LogicRemoteScreen extends Screen {
         boolean motorHover = isInside(mouseX, mouseY, motorBtnX, motorBtnY, 76, 12);
         graphics.fill(motorBtnX, motorBtnY, motorBtnX + 76, motorBtnY + 12, motorHover ? BTN_HOVER : DARK_GRAY);
         graphics.drawCenteredString(font, "\u2699 Motor Config", motorBtnX + 38, motorBtnY + 2, motorHover ? WHITE : CYAN);
+
+        // Freq Config button (below Motor Config)
+        int freqBtnX = guiLeft + 4;
+        int freqBtnY = guiTop + 4 + 14;
+        boolean freqHover = isInside(mouseX, mouseY, freqBtnX, freqBtnY, 76, 12);
+        graphics.fill(freqBtnX, freqBtnY, freqBtnX + 76, freqBtnY + 12, freqHover ? BTN_HOVER : DARK_GRAY);
+        graphics.drawCenteredString(font, "\u266A Freq Config", freqBtnX + 38, freqBtnY + 2, freqHover ? WHITE : YELLOW);
 
         // Target count
         String targetStr = targets.size() + " target" + (targets.size() != 1 ? "s" : "") + " bound";
@@ -387,6 +395,16 @@ public class LogicRemoteScreen extends Screen {
         int motorBtnY = guiTop + 4;
         if (isInside(mX, mY, motorBtnX, motorBtnY, 76, 12)) {
             minecraft.setScreen(new MotorConfigScreen(this));
+            return true;
+        }
+
+        // Freq Config button
+        int freqBtnX = guiLeft + 4;
+        int freqBtnY = guiTop + 4 + 14;
+        if (isInside(mX, mY, freqBtnX, freqBtnY, 76, 12)) {
+            // Close this screen and ask server to open the frequency config menu
+            minecraft.setScreen(null);
+            PacketDistributor.sendToServer(new OpenFreqConfigPayload());
             return true;
         }
 

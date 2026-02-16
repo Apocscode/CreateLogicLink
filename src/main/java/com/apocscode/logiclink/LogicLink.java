@@ -8,6 +8,7 @@ import com.apocscode.logiclink.controller.RemoteServerHandler;
 import com.apocscode.logiclink.network.HubNetwork;
 import com.apocscode.logiclink.network.LinkNetwork;
 import com.apocscode.logiclink.network.MotorAxisPayload;
+import com.apocscode.logiclink.network.OpenFreqConfigPayload;
 import com.apocscode.logiclink.network.NetworkHighlightPayload;
 import com.apocscode.logiclink.network.RemoteAxisPayload;
 import com.apocscode.logiclink.network.RemoteBindPayload;
@@ -110,6 +111,11 @@ public class LogicLink {
                 MotorAxisPayload.TYPE,
                 MotorAxisPayload.STREAM_CODEC,
                 MotorAxisPayload::handle
+        );
+        registrar.playToServer(
+                OpenFreqConfigPayload.TYPE,
+                OpenFreqConfigPayload.STREAM_CODEC,
+                OpenFreqConfigPayload::handle
         );
     }
 

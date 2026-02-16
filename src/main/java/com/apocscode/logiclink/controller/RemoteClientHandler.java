@@ -161,6 +161,10 @@ public class RemoteClientHandler {
     }
 
     protected static void onReset() {
+        // Restore movement keybindings (CTC-style unlock)
+        ControlsUtil.getControls()
+                .forEach(kb -> kb.setDown(ControlsUtil.isActuallyPressed(kb)));
+
         selectedLocation = BlockPos.ZERO;
         buttonPacketCooldown = 0;
         axisPacketCooldown = 0;
@@ -339,6 +343,11 @@ public class RemoteClientHandler {
                     }
                 }
             }
+        }
+
+        // Lock player movement while ACTIVE (CTC-style: controls appear in front, player is frozen)
+        if (MODE == Mode.ACTIVE) {
+            ControlsUtil.getControls().forEach(kb -> kb.setDown(false));
         }
 
         if (MODE == Mode.BIND) {
