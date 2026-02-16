@@ -11,6 +11,6 @@ import net.minecraft.core.BlockPos;
 public class ContraptionRemoteScreenOpener {
 
     public static void open(BlockPos blockPos) {
-        Minecraft.getInstance().setScreen(new LogicRemoteScreen(blockPos));
+        Minecraft.getInstance().setScreen(new LogicRemoteScreen());
     }
 }
