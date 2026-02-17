@@ -440,9 +440,9 @@ public class RemoteClientHandler {
             if (cachedProfile != null) {
                 long auxWindow = mc.getWindow().getWindow();
                 byte newAux = 0;
-                // F1-F8 map to aux channels 0-7
+                // Numpad 1-8 map to aux channels 0-7
                 for (int i = 0; i < ControlProfile.MAX_AUX_BINDINGS; i++) {
-                    int keyCode = GLFW.GLFW_KEY_F1 + i; // GLFW_KEY_F1 through GLFW_KEY_F8
+                    int keyCode = GLFW.GLFW_KEY_KP_1 + i; // GLFW_KEY_KP_1 through GLFW_KEY_KP_8
                     if (GLFW.glfwGetKey(auxWindow, keyCode) == GLFW.GLFW_PRESS) {
                         newAux |= (byte) (1 << i);
                     }
