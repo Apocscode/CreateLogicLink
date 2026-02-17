@@ -177,4 +177,26 @@ Fixed three in-game bugs reported after Session 5 testing:
 ### Deployed
 - **Jar**: `logiclink-0.1.0.jar` (504,633 bytes) → ATM10 mods folder
 
-*Last updated: 2026-02-16 — Session 6*
+---
+
+## Session 6b — 2026-02-16 — Adjust Block Offset & Restore Shift+RC GUI
+
+### Commits
+- `8128dae` — Fix block model offset, restore shift+RC GUI
+
+### Summary
+In-game testing showed the controller model was still off-center on the block (equal in all directions now, but shifted), and the shift+right-click frequency config GUI was incorrectly removed (only plain right-click should have been removed).
+
+1. **Block model offset** — Adjusted post-rotation translate from `(0.28, 0, -0.1875)` to `(0.125, 0, 0)`. Removed the erroneous z-compensation and reduced forward offset by ~2.5 pixels
+2. **Restored shift+right-click GUI** — Re-added `implements MenuProvider`, `createMenu()`, `getDisplayName()` to `LogicRemoteItem`. Added `isShiftKeyDown()` check in `use()`: shift+RC opens freq config GUI, plain RC toggles active mode
+
+### Files Changed
+| File | Change |
+|------|--------|
+| `client/ContraptionRemoteRenderer.java` | Post-rotation offset adjusted to `(0.125, 0, 0)` |
+| `block/LogicRemoteItem.java` | Restore MenuProvider, add shift check in `use()` |
+
+### Deployed
+- **Jar**: `logiclink-0.1.0.jar` (505,172 bytes) → ATM10 mods folder
+
+*Last updated: 2026-02-16 — Session 6b*
