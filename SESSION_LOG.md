@@ -97,4 +97,58 @@ Focused on visual polish and the critical right-click rendering fix:
 ### Deployed
 - **Jar**: `logiclink-0.1.0.jar` (492,750 bytes) → ATM10 mods folder
 
-*Last updated: 2026-02-16 — Session 4*
+---
+
+## Session 5 — 2026-02-16 (Evening) — Exact CTC Visual Parity
+
+### Commits
+- `9e82106` — Make Logic Remote exactly match CTC Tweaked Controller
+
+### Summary
+Complete overhaul to make the Logic Remote visually and behaviorally identical to CTC's Tweaked Linked Controller:
+
+**Item Renderer rewrite:**
+- Rewrote `LogicRemoteItemRenderer` with CTC's exact rendering pattern
+- **Idle state**: renders complete controller model (body + antennas + all buttons baked in)
+- **Active state**: renders powered base PartialModel (glowing body + antennas) + individual button/joystick/trigger PartialModels with depression animations
+- First-person floating transform handles both single-hand (larger displacement) and dual-hand (smaller displacement) holding
+- Bind mode pulsating light flicker
+- Added `earlyTick()` for equip progress separate from button input tick
+
+**Partial models (CTC-exact structure):**
+- Copied all CTC model JSONs adapted for `logiclink` namespace: `powered.json`, `button.json`, `joystick.json`, `trigger.json`, `button_a/b/x/y.json` (Xbox face buttons)
+- Updated `item.json` to match CTC's complete 14KB Blockbench model with antennas, all buttons, joysticks, triggers
+- Added `logic_remote_powered.png` texture for active/glowing state
+- All models reference `logiclink:item/logic_remote` textures + `create:block/redstone_antenna` for antennas
+
+**Right-click GUI removed:**
+- Shift+right-click no longer opens the frequency config panel — just toggles active mode like CTC
+- Updated tooltip to reflect new behavior
+
+**Contraption Remote block TESR:**
+- Created `ContraptionRemoteRenderer` (`SafeBlockEntityRenderer`) that renders the full 3D controller item model on the block's angled tray
+- Uses `LogicRemoteItemRenderer.renderInLectern()` with CTC-style transforms (translate + rotateY for facing + offset + rotateZ for tray angle)
+- Registered in `LogicLinkClientSetup`
+- Removed all baked controller elements (joysticks, buttons, d-pad, start/select) from `contraption_remote.json` block model — now rendered dynamically by the TESR
+
+### Files Changed
+| File | Change |
+|------|--------|
+| `client/LogicRemoteItemRenderer.java` | Complete rewrite with PartialModel system and CTC rendering pattern |
+| `client/ContraptionRemoteRenderer.java` | **New** — Block entity renderer for 3D controller on tray |
+| `client/LogicLinkClientSetup.java` | Register ContraptionRemoteRenderer |
+| `client/RemoteClientTickHandler.java` | Added `earlyTick()` call |
+| `block/LogicRemoteItem.java` | Removed shift+RC GUI, updated tooltip |
+| `models/item/logic_remote/item.json` | Replaced with CTC's full controller model |
+| `models/item/logic_remote/powered.json` | **New** — Powered base partial model |
+| `models/item/logic_remote/button.json` | **New** — Generic button partial |
+| `models/item/logic_remote/joystick.json` | **New** — Joystick partial (stem + nub) |
+| `models/item/logic_remote/trigger.json` | **New** — Trigger partial |
+| `models/item/logic_remote/button_a/b/x/y.json` | **New** — Xbox face button partials |
+| `textures/item/logic_remote_powered.png` | **New** — Powered/active texture |
+| `models/block/contraption_remote.json` | Removed baked controller elements |
+
+### Deployed
+- **Jar**: `logiclink-0.1.0.jar` (503,956 bytes) → ATM10 mods folder
+
+*Last updated: 2026-02-16 — Session 5*
