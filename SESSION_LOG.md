@@ -585,3 +585,23 @@ Rewrote LogicDriveBlockEntity from SplitShaftBlockEntity to GeneratingKineticBlo
 
 ### Deployed
 - Jar: logiclink-0.1.0.jar to ATM10 mods folder
+
+---
+
+## Session 7k -- 2026-02-17 -- Fix Joystick Tilt Axes + Drive Speed Control
+
+### Commits
+- `d7e770b` -- Fix joystick tilt axes + drive speed from configured RPM
+
+### Summary
+1. **Joystick animation axes swapped** — Up/down input was tilting the 3D joystick stick left/right instead of forward/back. Root cause: Y-axis input was applied to `rotateX` and X-axis input to `rotateZ`, but the model's coordinate system has X running top→bottom and Z running right→left on the controller face. Swapped: Y input → `rotateZ` (forward/back tilt), X input → `rotateX` (left/right tilt). Also reordered rotations to rotateZ-then-rotateX for correct gimbal behavior.
+2. **Drive speed ignoring configured RPM** — Setting axis speed to 5 RPM with a 256 RPM input source still ran the drive at 256. Root cause: modifier was `axisValue * max(1.0, speed/16.0)` — for any speed < 16, the modifier was always 1.0, making output = input speed unchanged. Fixed: modifier is now computed as `desiredSpeed / inputSpeed`, so output = `inputSpeed * (speed / inputSpeed)` = the configured speed exactly.
+
+### Files Changed
+| File | Change |
+|------|--------|
+| client/LogicRemoteItemRenderer.java | Swap tiltX↔tiltZ, reorder rotateZ before rotateX |
+| network/MotorAxisPayload.java | Drive modifier = desiredSpeed/inputSpeed for both continuous and sequential |
+
+### Deployed
+- Jar: logiclink-0.1.0.jar to ATM10 mods folder
