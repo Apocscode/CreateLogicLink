@@ -813,7 +813,7 @@ Fixed the Contraption Remote block going IDLE immediately after a contraption st
 ### Commits
 - `5dbabf4` — Add grace period for block mode passenger check (contraption assembly)
 - `04c7476` — Fix aux redstone in block mode: embed profile tag in packet
-- `TBD` — Add comprehensive documentation for Logic Remote & Contraption Remote
+- `c34ba96` — Add full documentation for Logic Remote & Contraption Remote
 
 ### Summary
 Fixed two issues with the Contraption Remote block, then added complete documentation across all systems:
