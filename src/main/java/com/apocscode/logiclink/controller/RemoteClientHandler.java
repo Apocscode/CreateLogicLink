@@ -435,22 +435,36 @@ public class RemoteClientHandler {
                 }
             }
 
-            // ===== Aux Redstone Channels (keys 1-8) — runs in BOTH modes =====
+            // ===== Aux Redstone Channels (keys 1-8 + gamepad D-pad/buttons) =====
             if (auxPacketCooldown > 0) auxPacketCooldown--;
             if (cachedProfile != null) {
                 long auxWindow = mc.getWindow().getWindow();
                 byte newAux = 0;
-                // Number keys 1-8 map to aux channels 0-7
+                // F1-F8 map to aux channels 0-7
                 for (int i = 0; i < ControlProfile.MAX_AUX_BINDINGS; i++) {
-                    int keyCode = GLFW.GLFW_KEY_1 + i; // GLFW_KEY_1 through GLFW_KEY_8
+                    int keyCode = GLFW.GLFW_KEY_F1 + i; // GLFW_KEY_F1 through GLFW_KEY_F8
                     if (GLFW.glfwGetKey(auxWindow, keyCode) == GLFW.GLFW_PRESS) {
                         newAux |= (byte) (1 << i);
                     }
                 }
+                // Gamepad: D-pad and face buttons map to aux channels
+                // D-Up=11→ch0, D-Down=13→ch1, D-Left=14→ch2, D-Right=12→ch3
+                // A=0→ch4, B=1→ch5, X=2→ch6, Y=3→ch7
+                if (GamepadInputs.HasGamepad()) {
+                    int[] gpButtonMap = {11, 13, 14, 12, 0, 1, 2, 3};
+                    for (int i = 0; i < gpButtonMap.length; i++) {
+                        if (GamepadInputs.GetButton(gpButtonMap[i])) {
+                            newAux |= (byte) (1 << i);
+                        }
+                    }
+                }
                 if (newAux != prevAuxStates || (auxPacketCooldown == 0 && newAux != 0)) {
+                    LogicLink.LOGGER.info("[AuxClient] Sending aux states: 0b{}, has freq ch0={}",
+                            Integer.toBinaryString(newAux & 0xFF),
+                            cachedProfile.getAuxBinding(0).hasFrequency());
                     PacketDistributor.sendToServer(new AuxRedstonePayload(newAux));
                     prevAuxStates = newAux;
-                    if (newAux != prevAuxStates) auxPacketCooldown = PACKET_RATE;
+                    auxPacketCooldown = PACKET_RATE;
                 }
                 auxStates = newAux;
             }

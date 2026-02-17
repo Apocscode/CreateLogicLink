@@ -57,7 +57,7 @@ public class ControlProfile {
 
     /** Keyboard key labels for the 8 aux bindings. */
     public static final String[] AUX_KEYS = {
-        "1", "2", "3", "4", "5", "6", "7", "8"
+        "F1", "F2", "F3", "F4", "F5", "F6", "F7", "F8"
     };
 
     public ControlProfile() {
