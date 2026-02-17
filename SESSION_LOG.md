@@ -408,3 +408,50 @@ Fixed 3 remaining issues from in-game testing:
 
 ### Deployed
 - **Jar**: `logiclink-0.1.0.jar` → ATM10 mods folder
+
+---
+
+## Session 7d — 2026-02-17 — Critical Persistence Fix (saveData nuking CustomData)
+
+### Commits
+- `d69975d` — fix: LogicRemoteMenu.saveData() was destroying all CustomData
+
+### Summary
+Motor/drive list and settings were STILL not persisting across GUI close/reopen despite auto-save working correctly. Added debug logging to ControlConfigScreen.init(), autoSave(), and SaveControlProfilePayload.handle().
+
+**Root cause**: `LogicRemoteMenu.saveData()` (called when the frequency config container screen closes) created a brand new `CompoundTag()`, put only `"Items"` into it, and replaced the ENTIRE CustomData component. This destroyed ControlProfile, AxisConfig, HubLinked, HubX/Y/Z, HubLabel every time.
+
+**Fix**: Changed `saveData()` to read existing CustomData first via `contentHolder.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag()`, then merge the `"Items"` key into the existing tag instead of replacing it.
+
+### Files Changed
+| File | Change |
+|------|--------|
+| `controller/LogicRemoteMenu.java` | Fixed `saveData()` to preserve existing CustomData (was creating fresh CompoundTag) |
+| `client/ControlConfigScreen.java` | Added debug logging to init() and autoSave() |
+| `network/SaveControlProfilePayload.java` | Added debug logging to handler |
+
+---
+
+## Session 7e — 2026-02-17 — Fix Motor Control in Block Mode (Seated)
+
+### Commits
+- `966fa0d` — Fix: ControlProfile motor bindings now work in Block Mode (seated)
+
+### Summary
+After persistence was confirmed working, user reported motors assigned in ControlConfigScreen were not being controlled when using the Contraption Remote block while seated.
+
+**Root cause**: `RemoteClientHandler.activateForBlock()` set `cachedAxisConfig = null`, so the motor axis control loop (which sends `MotorAxisPayload` to each bound motor) never executed in Block Mode. ControlProfile motor bindings were ONLY used in Item Mode (via `toggle()`).
+
+**Fix (2 changes to RemoteClientHandler)**:
+1. `activateForBlock()` now loads `cachedProfile` and `cachedAxisConfig` from the player's held LogicRemoteItem (same pattern as `toggle()`)
+2. Motor Axis Control loop and Aux Redstone Channels loop moved OUTSIDE the block/item if/else branch — they now run in BOTH modes
+
+Block Mode now sends: SeatInputPayload (block entity targets) + MotorAxisPayload (ControlProfile motors) + AuxRedstonePayload (aux channels).
+
+### Files Changed
+| File | Change |
+|------|--------|
+| `controller/RemoteClientHandler.java` | Load ControlProfile in activateForBlock(); motor+aux loops run in both modes |
+
+### Deployed
+- **Jar**: `logiclink-0.1.0.jar` → ATM10 mods folder
