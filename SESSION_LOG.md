@@ -317,3 +317,41 @@ Added smooth joystick tilt animation that visually emulates analog stick movemen
 
 ### Deployed
 - **Jar**: `logiclink-0.1.0.jar` → ATM10 mods folder
+
+---
+
+## Session 7 — 2026-02-17 — Control Profile System: 8 Motors + 8 Aux Redstone
+
+### Commits
+- `aee043d` — feat: Control Profile system - 8 motor bindings, 8 aux redstone channels
+
+### Summary
+Complete motor/drive control and redstone aux system replacing the legacy 4-slot AxisConfig:
+
+1. **ControlProfile data class** — 8 `MotorBinding` slots (targetPos, targetType, label, speed 1-256, reversed, sequential, distance) + 8 `AuxBinding` slots (label, power 1-15, momentary/constant, freqId pair). Full NBT serialization with migration path from old AxisConfig format. Stored in item CustomData under "ControlProfile" key.
+
+2. **ControlConfigScreen** — Full-screen 400×260 GUI with 3-panel layout: left panel shows hub-connected devices (scrollable, 12 rows via HubNetwork discovery), center panel has 8 motor binding slots with speed/direction/sequential editing, right panel has 8 aux redstone slots with power level and momentary/constant toggle.
+
+3. **3rd tab button** — Added to LogicRemoteConfigScreen using `AllIcons.I_CONFIG_OPEN`, positioned at x+67. Opens the new ControlConfigScreen. Also added bug report button (`I_PRIORITY_VERY_HIGH`) linking to GitHub issues.
+
+4. **Sequential movement** — Wired in MotorAxisPayload handler: when sequential=true && distance>0, calls `clearSequence()` → `addRotateStep(degrees, speed)` → `runSequence(false)` on both LogicDriveBlockEntity and CreativeLogicMotorBlockEntity.
+
+5. **8-axis motor keys** — RemoteClientHandler expanded from 4 WASD booleans to `float[8] motorKeyValues`: A/D (Left X), W/S (Left Y), ←/→ (Right X), ↑/↓ (Right Y), Q (LT), E (RT), Z (LB), C (RB). Added `computeKeyAxis()` and `keyValue()` helpers.
+
+6. **Aux redstone channels** — Number keys 1-8 toggle aux channels. Created `AuxRedstonePayload` (8-bit channel mask) registered in LogicLink. Server handler reads ControlProfile, converts freq IDs to Create Frequency objects, sends via `RemoteServerHandler.receivePressed()`.
+
+7. **Overlay expanded** — HUD overlay panel enlarged from 140×90 to 160×110, shows up to 8 motor binding labels with axis key indicators.
+
+### Files Changed
+| File | Change |
+|------|--------|
+| `controller/ControlProfile.java` | **NEW** — 8 MotorBinding + 8 AuxBinding data class, NBT, migration |
+| `client/ControlConfigScreen.java` | **NEW** — 400×260 3-panel config GUI with hub device discovery |
+| `network/AuxRedstonePayload.java` | **NEW** — 8-channel aux redstone packet (1-byte payload) |
+| `client/LogicRemoteConfigScreen.java` | Added 3rd tab button (I_CONFIG_OPEN) + bug report button |
+| `controller/RemoteClientHandler.java` | 8-axis motor keys, ControlProfile loading, aux redstone handling |
+| `network/MotorAxisPayload.java` | Wired sequential movement (clearSequence/addRotateStep/runSequence) |
+| `LogicLink.java` | Registered AuxRedstonePayload in network payloads |
+
+### Deployed
+- **Jar**: `logiclink-0.1.0.jar` → ATM10 mods folder
