@@ -440,4 +440,93 @@ public class LogicLinkSceneAnimations {
                 .pointAt(util.vector().blockSurface(new BlockPos(3, 1, 3), Direction.NORTH));
         scene.idle(80);
     }
+
+    /**
+     * Contraption Remote overview: shows seat-based controller activation,
+     * redstone link control, and motor binding.
+     * Schematic (7x4x7): Contraption Remote at (3,1,3) facing south,
+     * Create seat at (3,1,4), Redstone Link at (1,1,3), Lamp at (1,1,1),
+     * Logic Drive at (5,1,3), Shaft at (6,1,3).
+     */
+    public static void contraptionRemoteOverview(SceneBuilder scene, SceneBuildingUtil util) {
+        scene.title("contraption_remote_overview", "Contraption Remote — Gamepad Controller Block");
+        scene.configureBasePlate(0, 0, 7);
+
+        // Show base plate rising
+        scene.world().showSection(util.select().layer(0), Direction.UP);
+        scene.idle(10);
+
+        // Show the Contraption Remote block
+        scene.world().showSection(util.select().position(3, 1, 3), Direction.DOWN);
+        scene.idle(10);
+        scene.overlay().showOutline(PonderPalette.GREEN, "remote", util.select().position(3, 1, 3), 80);
+        scene.overlay().showText(80)
+                .text("The Contraption Remote maps keyboard and gamepad input to redstone links and motors")
+                .attachKeyFrame()
+                .placeNearTarget()
+                .pointAt(util.vector().blockSurface(new BlockPos(3, 1, 3), Direction.UP));
+        scene.idle(100);
+
+        // Show the seat
+        scene.world().showSection(util.select().position(3, 1, 4), Direction.NORTH);
+        scene.idle(10);
+        scene.overlay().showOutline(PonderPalette.BLUE, "seat", util.select().position(3, 1, 4), 60);
+        scene.overlay().showText(60)
+                .text("Place a Create seat nearby — sit down first, then right-click the controller to activate")
+                .attachKeyFrame()
+                .placeNearTarget()
+                .pointAt(util.vector().blockSurface(new BlockPos(3, 1, 4), Direction.UP));
+        scene.idle(80);
+
+        // Show shift-right-click to configure
+        scene.overlay().showControls(
+                util.vector().blockSurface(new BlockPos(3, 1, 3), Direction.UP),
+                Pointing.DOWN, 50
+        ).rightClick();
+        scene.overlay().showText(60)
+                .text("Shift + right-click while standing to open the config GUI — set motor bindings and aux redstone channels")
+                .attachKeyFrame()
+                .placeNearTarget()
+                .pointAt(util.vector().blockSurface(new BlockPos(3, 1, 3), Direction.NORTH));
+        scene.idle(80);
+
+        // Show the redstone link and lamp
+        scene.world().showSection(util.select().position(1, 1, 3), Direction.DOWN);
+        scene.world().showSection(util.select().position(1, 1, 1), Direction.DOWN);
+        scene.idle(10);
+        scene.overlay().showOutline(PonderPalette.RED, "redstone",
+                util.select().position(1, 1, 3).add(util.select().position(1, 1, 1)), 80);
+        scene.overlay().showText(80)
+                .text("8 aux channels fire Create Redstone Link signals — power 1-15, toggle or momentary mode")
+                .attachKeyFrame()
+                .placeNearTarget()
+                .pointAt(util.vector().blockSurface(new BlockPos(1, 1, 3), Direction.UP));
+        scene.idle(100);
+
+        // Show the logic drive and shaft
+        scene.world().showSection(util.select().position(5, 1, 3), Direction.DOWN);
+        scene.world().showSection(util.select().position(6, 1, 3), Direction.DOWN);
+        scene.idle(10);
+        scene.overlay().showOutline(PonderPalette.OUTPUT, "motor",
+                util.select().position(5, 1, 3).add(util.select().position(6, 1, 3)), 80);
+        scene.overlay().showText(80)
+                .text("12 motor slots map gamepad sticks and triggers to drives and motors with configurable speed")
+                .attachKeyFrame()
+                .placeNearTarget()
+                .pointAt(util.vector().blockSurface(new BlockPos(5, 1, 3), Direction.UP));
+        scene.idle(100);
+
+        // Contraption usage
+        scene.overlay().showOutline(PonderPalette.GREEN, "all",
+                util.select().position(3, 1, 3)
+                        .add(util.select().position(3, 1, 4))
+                        .add(util.select().position(1, 1, 3))
+                        .add(util.select().position(5, 1, 3)), 80);
+        scene.overlay().showText(80)
+                .text("Works on moving contraptions — assemble with Super Glue and control from the seat while moving")
+                .attachKeyFrame()
+                .placeNearTarget()
+                .pointAt(util.vector().centerOf(3, 1, 3));
+        scene.idle(100);
+    }
 }

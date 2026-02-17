@@ -21,6 +21,9 @@ A Minecraft NeoForge mod that bridges **Create mod's** logistics system with **C
 - **Item Requests** — Send items through Create's packaging/delivery system from Lua scripts.
 - **Wireless Sensor Discovery** — Logic Links can discover all Logic Sensors on the network via `getSensors()`.
 - **Ponder Tutorials** — All 5 blocks have animated Create-style (W) key tutorials with tagged categories.
+- **Logic Remote Item** — Handheld gamepad controller that bridges keyboard/gamepad input to Create's Redstone Link network and LogicLink drives/motors. Bind buttons to redstone frequencies, map analog sticks to motor speeds, and configure up to 8 aux channels with variable power levels (1–15) and toggle/momentary modes. Right-click a Redstone Link to bind, right-click a Drive/Motor to add as target, shift-right-click to open the config GUI.
+- **Contraption Remote Block** — Placeable controller block with integrated seat mechanics. Sit on an adjacent Create seat, then right-click the block to take control. Gamepad/keyboard input drives bound motors and fires redstone link signals — works on stationary builds and on moving contraptions. Shift-right-click while standing opens the config GUI, which stores the profile in the block entity (no held item needed). Supports the same 12 motor bindings and 8 aux redstone channels as the Logic Remote.
+- **Gamepad Support** — Full Xbox-style gamepad input via GLFW. 15 buttons, 6 axes (left/right stick + triggers), auto-detection of connected controllers, multi-gamepad selection.
 
 ## Requirements
 
@@ -296,6 +299,71 @@ When the **Create: Storage** mod (`fxntstorage`) is installed, two additional pe
 | `getItemSummary()` | [item] | Unique items with totals |
 | `findItems(query)` | [item] | Search by partial name |
 
+## Logic Remote
+
+A handheld gamepad controller item that maps keyboard and gamepad input to Create's Redstone Link network and LogicLink drives/motors. No computer or Lua needed — all control is real-time from the player's input.
+
+### Usage
+
+| Action | Effect |
+|--------|--------|
+| **Right-click** (air) | Toggle ACTIVE mode — input is captured and sent as signals |
+| **Shift + right-click** (air) | Open the Control Config GUI |
+| **Right-click** on Redstone Link | Enter BIND mode — press a button/axis to bind it to that link's frequency |
+| **Right-click** on Logic Drive / Creative Logic Motor | Add as a control target (up to 8) |
+| **Shift + right-click** on Logic Link hub | Link the remote for device discovery |
+
+### Control Config GUI
+
+Three-panel configuration screen:
+
+| Panel | Content |
+|-------|---------|
+| **Left — Devices** | Scrollable list of hub-connected motors/drives |
+| **Center — Motor Bindings** | 12 slots mapping gamepad directions to motor speed/direction |
+| **Right — Aux Bindings** | 8 slots mapping buttons to redstone link frequencies with power (1–15) and toggle/momentary mode |
+
+**Motor binding slots:** L-Stick (W/S/A/D), R-Stick (↑/↓/←/→), LT/RT/LB/RB (Q/E/Z/C)
+**Aux binding slots:** Numpad 1–8 (keyboard) or D-pad + face buttons (gamepad)
+
+### Binding Flow
+
+1. Link the remote to a Logic Link hub (shift-right-click the hub block)
+2. Open the config GUI and assign motors/drives to binding slots
+3. Set speed, direction, and sequential options per motor slot
+4. For aux channels: pick two frequency items and set power level (1–15)
+5. Right-click in air to activate — your input now controls everything in real time
+
+## Contraption Remote
+
+A placeable controller block that provides the same gamepad/keyboard control as the Logic Remote, but stored in a block entity. Designed for permanent installations and moving contraptions.
+
+### Usage
+
+| Action | Effect |
+|--------|--------|
+| **Shift + right-click** (standing) | Open the Control Config GUI (profile saved to block) |
+| **Right-click** (seated on adjacent Create seat) | Activate controller — gamepad input is routed to bound targets |
+| **Right-click** (standing, no item) | Show status in chat |
+| **Dismount seat** (Shift) | Automatically deactivates controller |
+
+### How It Works
+
+1. Place the Contraption Remote block
+2. Place a Create seat nearby
+3. Shift-right-click the block to configure motor and aux bindings
+4. Sit on the seat, then right-click the Contraption Remote
+5. Your keyboard/gamepad input now controls bound motors and fires redstone link signals
+6. Works on stationary builds and on moving contraptions (assembled with Create's glue)
+
+### Contraption Behavior
+
+When the block is assembled onto a contraption:
+- The controller stays active with a 10-tick grace period during assembly transitions
+- Motor control packets target in-world block entities directly (independent of block position)
+- Aux redstone signals use the embedded profile — no held-item or block-entity lookup needed
+- The redstone link network is global (frequency-matched), so signals reach receivers anywhere in loaded chunks
+
 ## Crafting Recipes
 
 All blocks and items use shaped crafting recipes with Create and vanilla ingredients.
@@ -388,6 +456,9 @@ All blocks and items use shaped crafting recipes with Create and vanilla ingredi
 └─────────────┴────────────────┴─────────────┘
 ```
 
+### Logic Remote & Contraption Remote
+Currently available via creative tab or `/give` command. Crafting recipes coming soon.
+
 ## Building from Source
 
 ```bash
@@ -424,7 +495,11 @@ src/main/java/com/apocscode/logiclink/
 │   ├── TrainControllerBlock.java          # Train Controller block
 │   ├── TrainControllerBlockEntity.java    # Train control logic
 │   ├── LogicDriveBlock.java               # Logic Drive block
-│   └── LogicDriveBlockEntity.java         # Drive data storage
+│   ├── LogicDriveBlockEntity.java         # Drive data storage
+│   ├── LogicRemoteItem.java              # Handheld gamepad controller item
+│   ├── LogicRemoteMenu.java              # 50-slot ghost frequency config menu
+│   ├── ContraptionRemoteBlock.java       # Placeable gamepad controller block
+│   └── ContraptionRemoteBlockEntity.java # Block entity with profile, targets, gamepad state
 ├── peripheral/
 │   ├── LogicLinkPeripheral.java           # 14 Lua functions
 │   ├── LogicLinkPeripheralProvider.java   # Registers all peripherals with CC
@@ -444,6 +519,13 @@ src/main/java/com/apocscode/logiclink/
 │   ├── SensorNetwork.java                 # Sensor registry by frequency UUID
 │   ├── NetworkHighlightPayload.java       # Server→client highlight packet
 │   └── VirtualRedstoneLink.java           # IRedstoneLinkable impl for virtual channels
+├── controller/
+│   ├── ControlProfile.java               # Motor + aux binding configuration (12 motors, 8 aux)
+│   ├── RemoteClientHandler.java          # Client-side controller state machine (IDLE/ACTIVE/BIND)
+│   └── RemoteServerHandler.java          # Server-side signal dispatch
+├── input/
+│   ├── ControllerOutput.java             # Gamepad/keyboard input aggregation
+│   └── GamepadInputs.java                # GLFW gamepad polling (15 buttons, 6 axes)
 └── client/
     ├── NetworkHighlightRenderer.java      # Create-style outline renderer
     ├── SignalGhostRenderer.java           # In-world signal highlight boxes
@@ -454,6 +536,8 @@ src/main/java/com/apocscode/logiclink/
     ├── TrainMapRenderer.java              # Network map rendering engine
     ├── TrainMapTexture.java               # Render-to-texture for map
     ├── LogicLinkClientSetup.java          # Registers Ponder plugin on FMLClientSetupEvent
+    ├── ControlConfigScreen.java           # Motor + aux binding config GUI (item & block mode)
+    ├── MotorConfigScreen.java             # Legacy motor config screen
     └── ponder/
         ├── LogicLinkPonderPlugin.java     # PonderPlugin impl: 12 tags + scene registration
         ├── LogicLinkPonderScenes.java     # Registers 5 storyboards with tag highlighting

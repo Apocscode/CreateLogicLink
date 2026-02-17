@@ -1,0 +1,39 @@
+{
+    "name": "Contraption Remote",
+    "icon": "logiclink:contraption_remote",
+    "category": "logiclink:controllers",
+    "sortnum": 1,
+    "pages": [
+        {
+            "type": "patchouli:spotlight",
+            "item": "logiclink:contraption_remote",
+            "title": "Contraption Remote",
+            "text": "A placeable $(thing)controller block$() that provides the same gamepad/keyboard control as the Logic Remote, but stored in a block entity. Designed for $(thing)permanent installations$() and $(thing)moving contraptions$().$(br2)Place next to a Create seat, sit down, and right-click the block to take control. Supports 12 motor bindings and 8 aux redstone channels."
+        },
+        {
+            "type": "patchouli:text",
+            "title": "Usage",
+            "text": "$(bold)Interactions:$()$(br2)$(li)$(thing)Shift + right-click$() (standing) — Open the Control Config GUI (profile saved to block)$(br)$(li)$(thing)Right-click$() (seated nearby) — Activate controller$(br)$(li)$(thing)Right-click$() (standing, no item) — Show status in chat$(br)$(li)$(thing)Dismount$() (Shift while seated) — Automatically deactivates controller$(br2)The control profile is saved in the block entity, so no item needs to be held."
+        },
+        {
+            "type": "patchouli:text",
+            "title": "Setup Guide",
+            "text": "$(bold)Step-by-step:$()$(br2)$(bold)1.$() Place the Contraption Remote block$(br)$(bold)2.$() Place a $(thing)Create seat$() nearby$(br)$(bold)3.$() Shift-right-click the block to configure motor and aux bindings$(br)$(bold)4.$() Sit on the seat$(br)$(bold)5.$() Right-click the Contraption Remote$(br)$(bold)6.$() Your keyboard/gamepad input now controls bound motors and fires redstone link signals$(br2)The config GUI is the same three-panel layout as the Logic Remote: devices, motor bindings, and aux bindings."
+        },
+        {
+            "type": "patchouli:text",
+            "title": "On Contraptions",
+            "text": "The Contraption Remote is designed to work on $(thing)moving contraptions$() assembled with Create's Super Glue:$(br2)$(li)A $(thing)10-tick grace period$() handles the brief transition when Create assembles/disassembles the contraption$(br)$(li)Motor control packets target in-world block entities $(thing)directly$() — independent of the block's position$(br)$(li)Aux redstone signals use an $(thing)embedded profile$() in the packet — no block-entity lookup needed$(br)$(li)The Redstone Link network is $(thing)global$() — signals reach receivers anywhere in loaded chunks"
+        },
+        {
+            "type": "patchouli:text",
+            "title": "Motor & Aux Config",
+            "text": "$(bold)Motor Bindings (12 slots):$()$(br)$(li)L-Stick (W/S/A/D) — slots 0–3$(br)$(li)R-Stick (↑/↓/←/→) — slots 4–7$(br)$(li)Triggers + Bumpers (Q/E/Z/C) — slots 8–11$(br2)$(bold)Aux Redstone (8 channels):$()$(br)$(li)Numpad 1–8 or D-pad + face buttons$(br)$(li)Configurable power level (1–15)$(br)$(li)Toggle or momentary mode$(br)$(li)Each channel maps to a Create Redstone Link frequency pair"
+        },
+        {
+            "type": "patchouli:text",
+            "title": "Peripheral Access",
+            "text": "The Contraption Remote also registers as a CC:Tweaked peripheral:$(br2)$(li)Peripheral type: $(thing)\"contraption_remote\"$()$(br2)This allows computers to read the controller's state, check if it's active, and interact with the bound targets programmatically. Place a computer adjacent to the block to access it.$(br2)$(bold)Tip:$() The block can be used $(thing)without$() a computer — all gamepad/keyboard control works standalone via the built-in config GUI."
+        }
+    ]
+}

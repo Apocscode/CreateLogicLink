@@ -52,5 +52,13 @@ public class LogicLinkPonderScenes {
                 LogicLinkSceneAnimations::logicDriveOverview,
                 LogicLinkPonderPlugin.TAG_MOTOR_KINETICS
         );
+
+        // Contraption Remote — placeable gamepad controller (highlights gamepad tag)
+        helper.addStoryBoard(
+                ResourceLocation.fromNamespaceAndPath(LogicLink.MOD_ID, "contraption_remote"),
+                "contraption_remote/overview",
+                LogicLinkSceneAnimations::contraptionRemoteOverview,
+                LogicLinkPonderPlugin.TAG_CTRL_GAMEPAD
+        );
     }
 }

@@ -1,0 +1,39 @@
+{
+    "name": "Logic Remote",
+    "icon": "logiclink:logic_remote",
+    "category": "logiclink:controllers",
+    "sortnum": 0,
+    "pages": [
+        {
+            "type": "patchouli:spotlight",
+            "item": "logiclink:logic_remote",
+            "title": "Logic Remote",
+            "text": "A handheld $(thing)gamepad controller$() that maps keyboard and gamepad input directly to Create's $(thing)Redstone Link$() network and LogicLink $(thing)drives/motors$(). No computer or Lua code needed — all control is real-time from player input.$(br2)Supports 12 motor bindings, 8 aux redstone channels, and full Xbox-style gamepad input."
+        },
+        {
+            "type": "patchouli:text",
+            "title": "Basic Usage",
+            "text": "$(bold)Interactions:$()$(br2)$(li)$(thing)Right-click$() (air) — Toggle ACTIVE mode: input is captured and sent as signals$(br)$(li)$(thing)Shift + right-click$() (air) — Open the Control Config GUI$(br)$(li)$(thing)Right-click$() on Redstone Link — Enter BIND mode: press a button to bind it to that link$(br)$(li)$(thing)Right-click$() on Drive/Motor — Add as a control target (up to 8)$(br)$(li)$(thing)Shift + right-click$() on Logic Link hub — Link for device discovery"
+        },
+        {
+            "type": "patchouli:text",
+            "title": "Motor Bindings",
+            "text": "The Logic Remote supports $(bold)12 motor binding slots$(), each mapping a gamepad direction to a hub-connected motor or drive:$(br2)$(li)$(thing)L-Stick$() (W/S/A/D) — slots 0–3$(br)$(li)$(thing)R-Stick$() (↑/↓/←/→) — slots 4–7$(br)$(li)$(thing)LT/RT/LB/RB$() (Q/E/Z/C) — slots 8–11$(br2)Each slot can target a specific drive/motor with configurable speed and direction. When the mapped key is pressed, the target receives the configured speed."
+        },
+        {
+            "type": "patchouli:text",
+            "title": "Aux Redstone Channels",
+            "text": "$(bold)8 auxiliary redstone channels$() that fire Create Redstone Link signals:$(br2)$(li)$(thing)Numpad 1–8$() (keyboard) or D-pad + face buttons (gamepad)$(br)$(li)Each channel has a frequency pair (two items), a power level ($(thing)1–15$()), and a mode$(br)$(li)$(thing)Momentary$() — signal is active only while the key is held$(br)$(li)$(thing)Toggle$() — press to activate, press again to deactivate$(br2)Configure frequencies and power levels in the Control Config GUI (shift-right-click)."
+        },
+        {
+            "type": "patchouli:text",
+            "title": "Getting Started",
+            "text": "$(bold)Step-by-step setup:$()$(br2)$(bold)1.$() Shift-right-click a $(item)Logic Link$() hub to link the remote$(br)$(bold)2.$() Open the config GUI (shift-right-click in air)$(br)$(bold)3.$() Assign motors/drives from the left panel to binding slots$(br)$(bold)4.$() Set speed, direction, and options per slot$(br)$(bold)5.$() For aux channels: pick frequency items and set power$(br)$(bold)6.$() Right-click in air to activate — your input controls everything in real time"
+        },
+        {
+            "type": "patchouli:text",
+            "title": "Gamepad Support",
+            "text": "Full $(thing)Xbox-style gamepad$() support via GLFW:$(br2)$(li)$(thing)15 buttons$() — A, B, X, Y, bumpers, back, start, guide, stick clicks, D-pad$(br)$(li)$(thing)6 axes$() — left/right stick X/Y, left/right trigger$(br)$(li)Auto-detection of connected controllers$(br)$(li)Multi-gamepad selection when multiple are connected$(br2)Gamepad input is merged with keyboard input — keyboard always takes priority when both are pressed simultaneously."
+        }
+    ]
+}

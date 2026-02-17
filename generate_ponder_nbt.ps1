@@ -213,4 +213,39 @@ Write-Structure `
     -Blocks $logicBlocks `
     -SizeX 7 -SizeY 4 -SizeZ 7
 
-Write-Host "`nDone! Both motor ponder schematics generated."
+# ============================================================
+# Contraption Remote Scene
+# Layout: Contraption Remote at (3,1,3) facing south,
+#         Create seat at (3,1,4),
+#         Redstone Link at (1,1,3), Lamp at (1,1,1),
+#         Logic Drive at (5,1,3), Shaft at (6,1,3)
+# ============================================================
+
+$contraptionPalette = @(
+    @{ Name = "minecraft:air"; Props = @{} },
+    @{ Name = "minecraft:smooth_stone"; Props = @{} },
+    @{ Name = "logiclink:contraption_remote"; Props = @{ facing = "south" } },
+    @{ Name = "create:seat"; Props = @{ color = "brown" } },
+    @{ Name = "create:redstone_link"; Props = @{ facing = "up"; powered = "false" } },
+    @{ Name = "minecraft:redstone_lamp"; Props = @{ lit = "false" } },
+    @{ Name = "logiclink:logic_drive"; Props = @{ facing = "east"; active = "false" } },
+    @{ Name = "create:shaft"; Props = @{ axis = "x"; waterlogged = "false" } }
+)
+
+$contraptionBlocks = Get-FloorBlocks 1  # Floor
+$contraptionBlocks += @(
+    @{ X = 3; Y = 1; Z = 3; State = 2 },  # contraption_remote
+    @{ X = 3; Y = 1; Z = 4; State = 3 },  # seat
+    @{ X = 1; Y = 1; Z = 3; State = 4 },  # redstone_link
+    @{ X = 1; Y = 1; Z = 1; State = 5 },  # redstone_lamp
+    @{ X = 5; Y = 1; Z = 3; State = 6 },  # logic_drive
+    @{ X = 6; Y = 1; Z = 3; State = 7 }   # shaft
+)
+
+Write-Structure `
+    -OutputPath "$basePath\contraption_remote\overview.nbt" `
+    -Palette $contraptionPalette `
+    -Blocks $contraptionBlocks `
+    -SizeX 7 -SizeY 4 -SizeZ 7
+
+Write-Host "`nDone! All ponder schematics generated."

@@ -100,6 +100,72 @@ A CC:Tweaked-controlled rotation modifier that sits inline on a shaft. Functions
 - **Sequences:** Rotate steps (degrees at modifier), wait steps, modifier-change steps with optional looping
 - **Kinematics Debounce:** Rapid Lua property changes are coalesced into a single kinetic network update per tick to prevent block popping
 
+### Logic Remote (Item)
+
+A handheld gamepad controller item that maps keyboard and gamepad input directly to Create's Redstone Link network and LogicLink drives/motors. No computer or Lua code needed.
+
+- **Appearance:** Custom item model, stacks to 1
+- **Registration:** `logic_remote` item, `logic_remote` menu (50-slot ghost inventory)
+- **Interactions:**
+  - **Right-click (air):** Toggle ACTIVE mode — gamepad input captured and sent as signals
+  - **Shift + right-click (air):** Open ControlConfigScreen GUI
+  - **Right-click on Redstone Link:** Enter BIND mode — press button/axis to bind to link frequency
+  - **Right-click on Logic Drive / Creative Logic Motor:** Add as target (up to 8)
+  - **Shift + right-click on Logic Link hub:** Link remote for device discovery
+- **Item NBT Data:**
+  - `HubX/Y/Z`, `HubLinked`, `HubLabel` — linked Logic Link hub
+  - `Targets` — up to 8 drive/motor positions with types
+  - `Items` — 50-slot ghost inventory for frequency pairs (15 buttons × 2 + 10 axes × 2)
+  - `ControlProfile` — motor and aux binding configuration
+- **ControlProfile:** 12 motor bindings (L-Stick WASD, R-Stick arrows, LT/RT/LB/RB) + 8 aux redstone bindings (Numpad 1-8 / D-pad + face buttons)
+- **Aux Channels:** Each channel has frequency pair (two items), power level (1-15), momentary/toggle mode
+
+### Contraption Remote (Block)
+
+A placeable controller block that provides the same gamepad/keyboard control as the Logic Remote, stored in a block entity. Designed for permanent installations and moving contraptions.
+
+- **Appearance:** Directional block with shaped hitbox (base step, side pillars, back wall, control surface), Create-style controls look
+- **Map Color:** Light blue
+- **Base Class:** `HorizontalDirectionalBlock`
+- **Block Entity:** `ContraptionRemoteBlockEntity` — stores targets, profile, gamepad state
+- **Peripheral Type:** `"contraption_remote"` (CC:Tweaked peripheral)
+- **Interactions:**
+  - **Right-click (seated on adjacent Create seat):** Activate controller mode
+  - **Shift + right-click (standing):** Open ControlConfigScreen (profile saved to block entity)
+  - **Right-click (standing, no item):** Show status in chat
+  - **Dismount (Shift):** Auto-deactivates controller
+- **Block Entity Data:**
+  - `targets` — up to 8 motor/drive positions
+  - `controlProfile` — ControlProfile with motor + aux bindings
+  - `label` — user-assigned label
+  - `lecternPos` — optional linked CTC controller
+  - Direct control state: `directDriveModifier`, `directMotorSpeed`, etc.
+  - Gamepad state: `gamepadButtons`, `gamepadAxes`, `gamepadTimeout`
+- **Server Tick:** Runs every 2 ticks; reads controller state, applies to bound targets
+- **Contraption Behavior:**
+  - 10-tick grace period during Create assembly/disassembly transitions
+  - Motor packets target in-world block entities directly (position-independent)
+  - Aux redstone uses embedded profile in packet — no block-entity lookup needed on contraption
+  - Redstone Link network is global (frequency-matched, works across all loaded chunks)
+
+### Controller Input System
+
+- **GamepadInputs.java:** GLFW gamepad polling (Xbox-style layout)
+  - 15 buttons: A, B, X, Y, bumpers, back, start, guide, stick clicks, D-pad (4)
+  - 6 axes (10 named directions): L/R stick X±/Y±, L/R trigger
+  - Auto-detection of single gamepad, multi-gamepad selection on button press
+- **ControllerOutput.java:** Input aggregation — merges gamepad + keyboard, encodes to compact packet format
+- **RemoteClientHandler.java:** Client-side state machine with three modes:
+  - `IDLE` — no controller activity
+  - `ACTIVE` — gamepad/keyboard input read every tick, sent as packets (item mode or block mode)
+  - `BIND` — press button to bind to a Redstone Link frequency
+- **Packet Rate:** Throttled to every 5 ticks per category (button, axis, motor, aux)
+- **Network Packets:**
+  - `AuxRedstonePayload` — aux channel states + optional embedded ControlProfile tag (for block mode)
+  - `MotorAxisPayload` — motor direction/speed, targets block entity directly
+  - `RemoteButtonPayload` + `RemoteAxisPayload` — hub-based button/axis (item mode only)
+  - `SeatInputPayload` — Create-style seat input for block mode buttons/axes
+
 ---
 
 ## Train Monitor & Signal Diagnostics
@@ -681,16 +747,16 @@ All blocks and items use shaped crafting recipes with Create and vanilla ingredi
 
 ## Ponder System (W Key Tutorials)
 
-All 5 blocks have Create-style animated Ponder tutorials, accessible by pressing **(W)** while hovering over the item in JEI or inventory.
+6 blocks + items have Create-style animated Ponder tutorials, accessible by pressing **(W)** while hovering over the item in JEI or inventory.
 
 ### Architecture
 
 | Class | Purpose |
 |---|---|
 | `LogicLinkClientSetup` | Registers plugin via `PonderIndex.addPlugin()` on `FMLClientSetupEvent` |
-| `LogicLinkPonderPlugin` | `PonderPlugin` implementation — registers 12 tags and 5 scenes |
+| `LogicLinkPonderPlugin` | `PonderPlugin` implementation — registers 15 tags and 6 scenes |
 | `LogicLinkPonderScenes` | Maps each block to a storyboard + schematic path + primary tag |
-| `LogicLinkSceneAnimations` | 5 `PonderStoryBoard` methods with multi-step animated sequences |
+| `LogicLinkSceneAnimations` | 6 `PonderStoryBoard` methods with multi-step animated sequences |
 
 ### Tags (Left-Panel Icons)
 
@@ -708,6 +774,9 @@ All 5 blocks have Create-style animated Ponder tutorials, accessible by pressing
 | `motor_kinetics` | — | Both Motors | Rotation output |
 | `motor_computers` | — | Both Motors | Computer control |
 | `motor_sequences` | — | Both Motors | Sequenced operations |
+| `ctrl_gamepad` | Controls | Contraption Remote | Gamepad input |
+| `ctrl_redstone` | Redstone Link | Contraption Remote | Redstone channels |
+| `ctrl_motors` | Logic Drive | Contraption Remote | Motor control |
 
 ### Scene Animations
 
@@ -721,22 +790,26 @@ All 5 blocks have Create-style animated Ponder tutorials, accessible by pressing
 
 **Logic Drive Overview** (7×4×7) — Shows orange input side, light blue output side, modifier/sequence concepts
 
+**Contraption Remote Overview** (7×4×7) — Seat-based controller with redstone link, lamp, drive, and shaft — demonstrates setup and contraption usage
+
 ---
 
 ## Peripheral Summary
 
-| Peripheral Type | Block | Functions | Category |
+| Peripheral Type | Block/Item | Functions | Category |
 |---|---|---|---|
 | `logiclink` | Logic Link | 14 | Logistics network |
 | `logicsensor` | Logic Sensor | 7 | Machine data |
 | `redstone_controller` | Redstone Controller | 8 | Wireless redstone |
 | `creative_logic_motor` | Creative Logic Motor | 16 | Rotation source |
 | `logic_drive` | Logic Drive | 17 | Rotation modifier |
+| `contraption_remote` | Contraption Remote | — | Gamepad controller block |
 | `storage_controller` | Storage Controller* | 14 | Storage network |
 | `storage_interface` | Storage Interface* | 10 | Storage access |
 | `train_monitor` | Train Monitor | — | Train network map |
+| — | Logic Remote (item) | — | Handheld gamepad controller |
 | — | Signal Tablet (item) | — | Field signal diagnostics |
-| **Total** | **9 blocks + 1 item** | **86+** | |
+| **Total** | **10 blocks + 2 items** | **86+** | |
 
 *\*Requires Create: Storage mod*
 

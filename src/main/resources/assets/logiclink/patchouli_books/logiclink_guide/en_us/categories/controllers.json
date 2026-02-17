@@ -1,0 +1,6 @@
+{
+    "name": "Controllers",
+    "description": "Gamepad and keyboard controllers for real-time input. The Logic Remote is a handheld item, while the Contraption Remote is a placeable block — both map input to redstone links and motors without any Lua code.",
+    "icon": "logiclink:logic_remote",
+    "sortnum": 5
+}

@@ -807,25 +807,49 @@ Fixed the Contraption Remote block going IDLE immediately after a contraption st
 
 ---
 
-## Session 7v — Fix Aux Redstone in Block Mode (Contraption Remote)
+## Session 7v — Fix Aux Redstone in Block Mode + Full Documentation
 **Date:** 2026-02-17
 
 ### Commits
 - `5dbabf4` — Add grace period for block mode passenger check (contraption assembly)
 - `04c7476` — Fix aux redstone in block mode: embed profile tag in packet
+- `TBD` — Add comprehensive documentation for Logic Remote & Contraption Remote
 
 ### Summary
-Fixed two issues with the Contraption Remote block:
+Fixed two issues with the Contraption Remote block, then added complete documentation across all systems:
+
+#### Bug Fixes
 
 1. **Grace period for contraption assembly** (from 7u continued): Added a 10-tick grace period (`blockModeGraceTicks`) for the `isPassenger()` check in block mode. When Create assembles a contraption, the seat entity may be briefly removed/recreated, causing the passenger check to fail momentarily. The grace period prevents the controller from dropping to IDLE during this transition.
 
 2. **Aux redstone channels broken in block mode**: The `AuxRedstonePayload` server handler required the player to hold a `LogicRemoteItem` to load the `ControlProfile` (which contains frequency bindings for aux channels). In block mode, the player doesn't hold the item — they activated the controller from a block. The handler early-returned with a warning, so no aux redstone signals were ever sent. Fix: `AuxRedstonePayload` now carries an optional `CompoundTag` with the serialized `ControlProfile`. In block mode, the client embeds the cached profile in the packet. The server uses the embedded profile when present, falling back to held-item lookup for item mode. This also handles contraptions where the block entity isn't at its original world position.
 
+#### Documentation (Logic Remote & Contraption Remote — previously zero coverage)
+
+3. **README.md**: Added feature descriptions for Logic Remote, Contraption Remote, and Gamepad Support to the features list. Added full "Logic Remote" section (usage table, config GUI layout, binding flow, gamepad support). Added full "Contraption Remote" section (usage, setup guide, contraption behavior). Added crafting note (creative-only for now). Updated project structure with controller/input packages.
+
+4. **Patchouli In-Game Guide**: Created new "Controllers" category (sortnum 5, logic_remote icon). Created 6-page Logic Remote entry (spotlight, usage, motor bindings, aux channels, getting started, gamepad). Created 6-page Contraption Remote entry (spotlight, usage, setup guide, contraption behavior, motor/aux config, peripheral access). Updated overview entry: added Logic Remote + Contraption Remote to "The Blocks" list and `contraption_remote` to peripheral names.
+
+5. **Ponder System**: Added 3 new tags (`ctrl_gamepad`, `ctrl_redstone`, `ctrl_motors`) with icons (Controls, Redstone Link, Logic Drive). Registered Contraption Remote Ponder scene with schematic (7×4×7: remote, seat, redstone link, lamp, logic drive, shaft). Created animated scene with 6 key frames: block intro, seat mechanics, config GUI, aux redstone channels, motor bindings, contraption usage. Added component association (left-panel icons for Contraption Remote). Generated NBT schematic via `generate_ponder_nbt.ps1`.
+
+6. **MOD_DOCUMENTATION.md**: Added full Logic Remote item section (interactions, NBT data, ControlProfile, aux channels). Added full Contraption Remote block section (block entity data, server tick, contraption behavior). Added Controller Input System section (GamepadInputs, ControllerOutput, RemoteClientHandler state machine, packets). Updated Ponder documentation (15 tags, 6 scenes, new table entries). Updated Peripheral Summary table (10 blocks + 2 items).
+
 ### Files Changed
 | File | Change |
 |------|--------|
-| network/AuxRedstonePayload.java | Added optional `@Nullable CompoundTag profileTag` field to record; updated StreamCodec to read/write optional tag; handler now uses embedded profile when present, falls back to held-item lookup |
-| controller/RemoteClientHandler.java | In block mode, sends `AuxRedstonePayload(newAux, profileTag)` with cached profile serialized; added 10-tick grace period for passenger check |
+| network/AuxRedstonePayload.java | Added optional `@Nullable CompoundTag profileTag` field; updated StreamCodec; handler uses embedded profile when present |
+| controller/RemoteClientHandler.java | Block mode sends `AuxRedstonePayload(newAux, profileTag)`; 10-tick grace period |
+| README.md | Added Logic Remote, Contraption Remote, Gamepad features + full sections + project structure |
+| MOD_DOCUMENTATION.md | Added controller blocks/items sections, input system docs, updated Ponder + Peripheral Summary |
+| Patchouli: categories/controllers.json | New "Controllers" category |
+| Patchouli: entries/controllers/logic_remote.json | New 6-page Logic Remote guide entry |
+| Patchouli: entries/controllers/contraption_remote.json | New 6-page Contraption Remote guide entry |
+| Patchouli: entries/getting_started/overview.json | Added Logic Remote + Contraption Remote to blocks list + peripheral names |
+| client/ponder/LogicLinkPonderPlugin.java | Added 3 controller tags (gamepad, redstone, motors) + tag items + component associations |
+| client/ponder/LogicLinkPonderScenes.java | Registered Contraption Remote scene |
+| client/ponder/LogicLinkSceneAnimations.java | Added `contraptionRemoteOverview()` animated scene |
+| generate_ponder_nbt.ps1 | Added Contraption Remote schematic generation |
+| assets/logiclink/ponder/contraption_remote/overview.nbt | Generated Ponder schematic |
 
 ### Deployed
 - Jar: logiclink-0.1.0.jar to ATM10 mods folder

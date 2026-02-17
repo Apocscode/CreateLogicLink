@@ -55,6 +55,14 @@ public class LogicLinkPonderPlugin implements PonderPlugin {
     public static final ResourceLocation TAG_MOTOR_SEQUENCES =
             ResourceLocation.fromNamespaceAndPath(LogicLink.MOD_ID, "motor_sequences");
 
+    // === Controller left-panel tags ===
+    public static final ResourceLocation TAG_CTRL_GAMEPAD =
+            ResourceLocation.fromNamespaceAndPath(LogicLink.MOD_ID, "ctrl_gamepad");
+    public static final ResourceLocation TAG_CTRL_REDSTONE =
+            ResourceLocation.fromNamespaceAndPath(LogicLink.MOD_ID, "ctrl_redstone");
+    public static final ResourceLocation TAG_CTRL_MOTORS =
+            ResourceLocation.fromNamespaceAndPath(LogicLink.MOD_ID, "ctrl_motors");
+
     @Override
     public String getModId() {
         return LogicLink.MOD_ID;
@@ -284,6 +292,52 @@ public class LogicLinkPonderPlugin implements PonderPlugin {
                 .add(rl(LogicLink.MOD_ID, "logic_drive"));
 
         // ================================================================
+        // CONTROLLER TAGS
+        // ================================================================
+
+        // Gamepad tag — controller/gamepad icon (use Create's controls item)
+        helper.registerTag(TAG_CTRL_GAMEPAD)
+                .addToIndex()
+                .item(createItem("controls"), true, false)
+                .title("Gamepad Input")
+                .description("Map keyboard and Xbox-style gamepad input to Create machines in real time")
+                .register();
+
+        // Redstone tag — redstone link icon
+        helper.registerTag(TAG_CTRL_REDSTONE)
+                .addToIndex()
+                .item(createItem("redstone_link"), true, false)
+                .title("Redstone Channels")
+                .description("8 auxiliary redstone channels with configurable power (1-15) and toggle/momentary modes")
+                .register();
+
+        // Motors tag — logic drive icon
+        helper.registerTag(TAG_CTRL_MOTORS)
+                .addToIndex()
+                .item(ModRegistry.LOGIC_DRIVE_ITEM.get(), true, false)
+                .title("Motor Control")
+                .description("12 motor binding slots mapping gamepad directions to drives and motors")
+                .register();
+
+        // Gamepad tag items
+        helper.addToTag(TAG_CTRL_GAMEPAD)
+                .add(rl(LogicLink.MOD_ID, "logic_remote"))
+                .add(rl(LogicLink.MOD_ID, "contraption_remote"));
+
+        // Redstone tag items
+        helper.addToTag(TAG_CTRL_REDSTONE)
+                .add(rl("create", "redstone_link"))
+                .add(rl(LogicLink.MOD_ID, "logic_remote"))
+                .add(rl(LogicLink.MOD_ID, "contraption_remote"));
+
+        // Motor control tag items
+        helper.addToTag(TAG_CTRL_MOTORS)
+                .add(rl(LogicLink.MOD_ID, "creative_logic_motor"))
+                .add(rl(LogicLink.MOD_ID, "logic_drive"))
+                .add(rl(LogicLink.MOD_ID, "logic_remote"))
+                .add(rl(LogicLink.MOD_ID, "contraption_remote"));
+
+        // ================================================================
         // ASSOCIATE TAGS WITH OUR BLOCKS (controls LEFT-side panel icons)
         // ================================================================
 
@@ -316,6 +370,12 @@ public class LogicLinkPonderPlugin implements PonderPlugin {
                 .add(TAG_MOTOR_KINETICS)
                 .add(TAG_MOTOR_COMPUTERS)
                 .add(TAG_MOTOR_SEQUENCES);
+
+        // Contraption Remote: show gamepad, redstone, motors on left
+        helper.addToComponent(rl(LogicLink.MOD_ID, "contraption_remote"))
+                .add(TAG_CTRL_GAMEPAD)
+                .add(TAG_CTRL_REDSTONE)
+                .add(TAG_CTRL_MOTORS);
     }
 
     private static ResourceLocation rl(String namespace, String path) {

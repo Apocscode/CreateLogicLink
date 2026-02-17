@@ -20,7 +20,7 @@
         {
             "type": "patchouli:text",
             "title": "The Blocks",
-            "text": "$(li)$(item)Logic Link$() — Hub for inventory, item requests, wireless device control$(br)$(li)$(item)Logic Sensor$() — Reads data from any Create machine$(br)$(li)$(item)Redstone Controller$() — Wireless redstone via Lua$(br)$(li)$(item)Creative Logic Motor$() — Rotation source$(br)$(li)$(item)Logic Drive$() — Rotation modifier$(br)$(li)$(item)Train Controller$() — Global train monitoring$(br)$(li)$(item)Train Monitor$() — Visual train map"
+            "text": "$(li)$(item)Logic Link$() — Hub for inventory, item requests, wireless device control$(br)$(li)$(item)Logic Sensor$() — Reads data from any Create machine$(br)$(li)$(item)Redstone Controller$() — Wireless redstone via Lua$(br)$(li)$(item)Creative Logic Motor$() — Rotation source$(br)$(li)$(item)Logic Drive$() — Rotation modifier$(br)$(li)$(item)Train Controller$() — Global train monitoring$(br)$(li)$(item)Train Monitor$() — Visual train map$(br)$(li)$(item)Logic Remote$() — Handheld gamepad controller$(br)$(li)$(item)Contraption Remote$() — Placeable gamepad controller block"
         },
         {
             "type": "patchouli:text",
@@ -30,7 +30,7 @@
         {
             "type": "patchouli:text",
             "title": "Peripheral Names",
-            "text": "Each block registers as a CC peripheral with a specific type name:$(br2)$(li)$(thing)\"logiclink\"$() — Logic Link$(br)$(li)$(thing)\"logicsensor\"$() — Logic Sensor$(br)$(li)$(thing)\"redstone_controller\"$() — Redstone Controller$(br)$(li)$(thing)\"creative_logic_motor\"$() — Creative Logic Motor$(br)$(li)$(thing)\"logic_drive\"$() — Logic Drive$(br)$(li)$(thing)\"train_controller\"$() — Train Controller$(br)$(li)$(thing)\"storage_controller\"$() — Storage Controller$(br)$(li)$(thing)\"storage_interface\"$() — Storage Interface"
+            "text": "Each block registers as a CC peripheral with a specific type name:$(br2)$(li)$(thing)\"logiclink\"$() — Logic Link$(br)$(li)$(thing)\"logicsensor\"$() — Logic Sensor$(br)$(li)$(thing)\"redstone_controller\"$() — Redstone Controller$(br)$(li)$(thing)\"creative_logic_motor\"$() — Creative Logic Motor$(br)$(li)$(thing)\"logic_drive\"$() — Logic Drive$(br)$(li)$(thing)\"train_controller\"$() — Train Controller$(br)$(li)$(thing)\"contraption_remote\"$() — Contraption Remote$(br)$(li)$(thing)\"storage_controller\"$() — Storage Controller$(br)$(li)$(thing)\"storage_interface\"$() — Storage Interface"
         }
     ]
 }
