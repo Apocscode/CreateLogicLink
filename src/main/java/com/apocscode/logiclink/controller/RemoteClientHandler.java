@@ -262,6 +262,24 @@ public class RemoteClientHandler {
         GamepadInputs.GetControls();
         output.fillFromGamepad(false);
 
+        // In block mode, also merge WASD keyboard input into axes
+        if (activeBlockPos != null) {
+            long window = mc.getWindow().getWindow();
+            boolean wKey = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_W) == GLFW.GLFW_PRESS;
+            boolean sKey = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_S) == GLFW.GLFW_PRESS;
+            boolean aKey = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_A) == GLFW.GLFW_PRESS;
+            boolean dKey = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_D) == GLFW.GLFW_PRESS;
+            boolean spaceKey = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_SPACE) == GLFW.GLFW_PRESS;
+
+            // WASD → left stick axes (axis 1 = Y forward/back, axis 0 = X left/right)
+            if (wKey && output.axis[1] == 0) output.axis[1] = 15;          // full forward
+            if (sKey && output.axis[1] == 0) output.axis[1] = 15 | 16;     // full backward (sign bit)
+            if (aKey && output.axis[0] == 0) output.axis[0] = 15 | 16;     // full left (sign bit)
+            if (dKey && output.axis[0] == 0) output.axis[0] = 15;          // full right
+            // Space → A button (index 0)
+            if (spaceKey) output.buttons[0] = true;
+        }
+
         if (MODE == Mode.ACTIVE) {
             short pressedKeys = output.encodeButtons();
             int axis = output.encodeAxis();

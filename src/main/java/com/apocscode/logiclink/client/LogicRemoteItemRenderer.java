@@ -66,6 +66,11 @@ public class LogicRemoteItemRenderer extends CustomRenderedItemModelRenderer {
     static LerpedFloat equipProgress = LerpedFloat.linear().startWithValue(0);
     static ArrayList<LerpedFloat> buttons = new ArrayList<>(15);
 
+    // Block-mode (Contraption Remote) animation state — separate from item-mode
+    static ArrayList<LerpedFloat> blockButtons = new ArrayList<>(15);
+    private static short blockButtonStates = 0;
+    private static int blockAxisStates = 0;
+
     /**
      * Button/element positions on the controller model.
      * Indices 0-3: D-pad (not used as offsets here, 0-3 face buttons rendered at model origin).
@@ -93,6 +98,7 @@ public class LogicRemoteItemRenderer extends CustomRenderedItemModelRenderer {
     static {
         for (int i = 0; i < 15; i++) {
             buttons.add(LerpedFloat.linear().startWithValue(0));
+            blockButtons.add(LerpedFloat.linear().startWithValue(0));
         }
     }
 
@@ -112,13 +118,23 @@ public class LogicRemoteItemRenderer extends CustomRenderedItemModelRenderer {
      * Advance button depression lerps — called every client tick.
      */
     public static void tick() {
-        if (Minecraft.getInstance().isPaused()
-                || RemoteClientHandler.MODE == RemoteClientHandler.Mode.IDLE) return;
+        if (Minecraft.getInstance().isPaused()) return;
 
-        short states = RemoteClientHandler.buttonStates;
-        for (int i = 0; i < buttons.size(); i++) {
-            LerpedFloat btn = buttons.get(i);
-            boolean pressed = (states & (1 << i)) != 0;
+        // Item-mode: chase button states from RemoteClientHandler
+        if (RemoteClientHandler.MODE != RemoteClientHandler.Mode.IDLE) {
+            short states = RemoteClientHandler.buttonStates;
+            for (int i = 0; i < buttons.size(); i++) {
+                LerpedFloat btn = buttons.get(i);
+                boolean pressed = (states & (1 << i)) != 0;
+                btn.chase(pressed ? 1.0 : 0.0, 0.4f, LerpedFloat.Chaser.EXP);
+                btn.tickChaser();
+            }
+        }
+
+        // Block-mode: chase button states from synced BE state
+        for (int i = 0; i < blockButtons.size(); i++) {
+            LerpedFloat btn = blockButtons.get(i);
+            boolean pressed = (blockButtonStates & (1 << i)) != 0;
             btn.chase(pressed ? 1.0 : 0.0, 0.4f, LerpedFloat.Chaser.EXP);
             btn.tickChaser();
         }
@@ -128,6 +144,15 @@ public class LogicRemoteItemRenderer extends CustomRenderedItemModelRenderer {
         for (LerpedFloat btn : buttons) {
             btn.startWithValue(0);
         }
+    }
+
+    /**
+     * Set the block-mode button/axis target states (called from ContraptionRemoteRenderer).
+     * The block-mode LerpedFloats in tick() will chase these targets.
+     */
+    public static void setBlockRenderState(short buttonStates, int axisStates) {
+        blockButtonStates = buttonStates;
+        blockAxisStates = axisStates;
     }
 
     // ---- Render entry points ----
@@ -230,6 +255,10 @@ public class LogicRemoteItemRenderer extends CustomRenderedItemModelRenderer {
         float b = s * -0.75f;
         int index = 0;
 
+        // Select the correct button LerpedFloat list:
+        // LECTERN mode uses blockButtons (driven by BE sync), NORMAL uses buttons (driven by RemoteClientHandler)
+        ArrayList<LerpedFloat> activeButtons = (renderType == RenderType.LECTERN) ? blockButtons : buttons;
+
         // Bind mode light flicker
         if (renderType == RenderType.NORMAL
                 && RemoteClientHandler.MODE == RemoteClientHandler.Mode.BIND) {
@@ -242,20 +271,20 @@ public class LogicRemoteItemRenderer extends CustomRenderedItemModelRenderer {
 
         // Face buttons 0-3 (A/B/X/Y) — rendered at their model-baked positions
         BakedModel button = BUTTON_DOWN.get();
-        renderButton(renderer, ms, light, pt, button, b, index++, renderDepression, false);
+        renderButton(renderer, ms, light, pt, button, b, index++, renderDepression, false, activeButtons);
         button = BUTTON_RIGHT.get();
-        renderButton(renderer, ms, light, pt, button, b, index++, renderDepression, false);
+        renderButton(renderer, ms, light, pt, button, b, index++, renderDepression, false, activeButtons);
         button = BUTTON_LEFT.get();
-        renderButton(renderer, ms, light, pt, button, b, index++, renderDepression, false);
+        renderButton(renderer, ms, light, pt, button, b, index++, renderDepression, false, activeButtons);
         button = BUTTON_UP.get();
-        renderButton(renderer, ms, light, pt, button, b, index++, renderDepression, false);
+        renderButton(renderer, ms, light, pt, button, b, index++, renderDepression, false, activeButtons);
 
         // Buttons 4-5: triggers (LB/RB bumpers) using trigger model with position offset
         button = TRIGGER.get();
         while (index < 6) {
             ms.pushPose();
             msr.translate(positionList[index - 4]);
-            renderButton(renderer, ms, light, pt, button, b, index, renderDepression, true);
+            renderButton(renderer, ms, light, pt, button, b, index, renderDepression, true, activeButtons);
             ms.popPose();
             index++;
         }
@@ -266,7 +295,7 @@ public class LogicRemoteItemRenderer extends CustomRenderedItemModelRenderer {
             if (index != 9 && index != 10) {
                 ms.pushPose();
                 msr.translate(positionList[index - 4]);
-                renderButton(renderer, ms, light, pt, button, b, index, renderDepression, false);
+                renderButton(renderer, ms, light, pt, button, b, index, renderDepression, false, activeButtons);
                 ms.popPose();
             }
             index++;
@@ -274,8 +303,8 @@ public class LogicRemoteItemRenderer extends CustomRenderedItemModelRenderer {
 
         // Joysticks (left and right) — rendered at model origin, no axis tilt (keyboard input)
         button = JOYSTICK.get();
-        renderJoystick(renderer, ms, light, pt, button, b, renderDepression, false);
-        renderJoystick(renderer, ms, light, pt, button, b, renderDepression, true);
+        renderJoystick(renderer, ms, light, pt, button, b, renderDepression, false, activeButtons);
+        renderJoystick(renderer, ms, light, pt, button, b, renderDepression, true, activeButtons);
 
         ms.popPose();
         ms.popPose();
@@ -286,10 +315,11 @@ public class LogicRemoteItemRenderer extends CustomRenderedItemModelRenderer {
     protected static void renderButton(PartialItemModelRenderer renderer, PoseStack ms,
                                        int light, float pt, BakedModel button,
                                        float b, int index,
-                                       boolean renderDepression, boolean isSideway) {
+                                       boolean renderDepression, boolean isSideway,
+                                       ArrayList<LerpedFloat> buttonList) {
         ms.pushPose();
         if (renderDepression) {
-            float depression = b * buttons.get(index).getValue(pt);
+            float depression = b * buttonList.get(index).getValue(pt);
             if (isSideway) {
                 ms.translate(-depression, 0, 0);
             } else {
@@ -302,7 +332,8 @@ public class LogicRemoteItemRenderer extends CustomRenderedItemModelRenderer {
 
     protected static void renderJoystick(PartialItemModelRenderer renderer, PoseStack ms,
                                          int light, float pt, BakedModel joystick,
-                                         float b, boolean renderDepression, boolean isRight) {
+                                         float b, boolean renderDepression, boolean isRight,
+                                         ArrayList<LerpedFloat> buttonList) {
         ms.pushPose();
         // Translate the joystick model origin to the correct position on the controller
         Vec3 pos = positionList[isRight ? 6 : 5].subtract(0.46875, 0.46875, 0.46875);
@@ -311,7 +342,7 @@ public class LogicRemoteItemRenderer extends CustomRenderedItemModelRenderer {
 
         // Joystick press depression (buttons index 9 = left stick, 10 = right stick)
         if (renderDepression) {
-            float depression = b * buttons.get(isRight ? 10 : 9).getValue(pt);
+            float depression = b * buttonList.get(isRight ? 10 : 9).getValue(pt);
             ms.translate(0, depression, 0);
         }
         renderer.renderSolid(joystick, light);

@@ -93,6 +93,12 @@ public class ContraptionRemoteBlockEntity extends BlockEntity {
                 gamepadButtons = 0;
                 gamepadAxes = 0;
                 gamepadInputDirty = false;
+                // Clear render state and sync to clients
+                renderButtonStates = 0;
+                renderAxisStates = 0;
+                if (level != null && !level.isClientSide) {
+                    level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+                }
             }
         }
 
@@ -226,7 +232,9 @@ public class ContraptionRemoteBlockEntity extends BlockEntity {
     private boolean gamepadInputDirty = false;
     /** Timeout counter â€” if no gamepad input received, stop applying after N ticks. */
     private int gamepadTimeout = 0;
-
+    // Client-synced button/axis state for the renderer
+    private short renderButtonStates = 0;
+    private int renderAxisStates = 0;
     /**
      * Called from SeatInputPayload handler when an activated player sends gamepad input.
      * Decodes button/axis state and applies to all bound targets.
@@ -237,6 +245,13 @@ public class ContraptionRemoteBlockEntity extends BlockEntity {
         this.gamepadInputDirty = true;
         this.gamepadTimeout = 20; // 1 second timeout
         this.active = true;
+
+        // Update render state and sync to clients
+        this.renderButtonStates = buttons;
+        this.renderAxisStates = axes;
+        if (level != null && !level.isClientSide) {
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+        }
 
         if (level == null || level.isClientSide) return;
 
@@ -386,6 +401,16 @@ public class ContraptionRemoteBlockEntity extends BlockEntity {
         }
     }
 
+    // ==================== Render State Getters ====================
+
+    public short getRenderButtonStates() {
+        return renderButtonStates;
+    }
+
+    public int getRenderAxisStates() {
+        return renderAxisStates;
+    }
+
     // ==================== NBT ====================
 
     @Override
@@ -397,6 +422,10 @@ public class ContraptionRemoteBlockEntity extends BlockEntity {
             tag.putInt("LecternY", lecternPos.getY());
             tag.putInt("LecternZ", lecternPos.getZ());
         }
+
+        // Save render state for client sync
+        tag.putShort("RenderButtons", renderButtonStates);
+        tag.putInt("RenderAxes", renderAxisStates);
 
         if (!label.isEmpty()) {
             tag.putString("Label", label);
@@ -425,6 +454,10 @@ public class ContraptionRemoteBlockEntity extends BlockEntity {
         } else {
             lecternPos = null;
         }
+
+        // Load render state from sync
+        renderButtonStates = tag.getShort("RenderButtons");
+        renderAxisStates = tag.getInt("RenderAxes");
 
         label = tag.getString("Label");
 

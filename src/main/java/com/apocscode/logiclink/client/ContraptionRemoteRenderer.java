@@ -50,7 +50,11 @@ public class ContraptionRemoteRenderer extends SafeBlockEntityRenderer<Contrapti
 
         // The controller is always "active" visually on the block (shows powered base + buttons)
         boolean active = true;
-        boolean renderDepression = false;
+        boolean renderDepression = true;
+
+        // Update block-mode animation targets from the BE's synced input state
+        LogicRemoteItemRenderer.setBlockRenderState(
+                be.getRenderButtonStates(), be.getRenderAxisStates());
 
         // Match the block's facing direction
         Direction facing = be.getBlockState().getValue(HorizontalDirectionalBlock.FACING);

@@ -1,6 +1,7 @@
 package com.apocscode.logiclink.block;
 
 import com.apocscode.logiclink.ModRegistry;
+import com.apocscode.logiclink.controller.RemoteClientHandler;
 
 import com.mojang.serialization.MapCodec;
 import net.minecraft.ChatFormatting;
@@ -28,6 +29,8 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.Shapes;
 import net.minecraft.world.phys.shapes.VoxelShape;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 
 import org.jetbrains.annotations.Nullable;
 
@@ -160,6 +163,14 @@ public class ContraptionRemoteBlock extends HorizontalDirectionalBlock implement
             return InteractionResult.SUCCESS;
         }
 
+        // Right-click while seated = toggle controller mode
+        if (player.isPassenger()) {
+            if (level.isClientSide) {
+                toggleControllerClient(pos);
+            }
+            return InteractionResult.SUCCESS;
+        }
+
         return InteractionResult.PASS;
     }
 
@@ -182,6 +193,21 @@ public class ContraptionRemoteBlock extends HorizontalDirectionalBlock implement
             return ItemInteractionResult.SUCCESS;
         }
 
+        // Right-click while seated = toggle controller mode
+        if (player.isPassenger()) {
+            if (level.isClientSide) {
+                toggleControllerClient(pos);
+            }
+            return ItemInteractionResult.SUCCESS;
+        }
+
         return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+    }
+
+    // ==================== Controller Toggle ====================
+
+    @OnlyIn(Dist.CLIENT)
+    private static void toggleControllerClient(BlockPos pos) {
+        RemoteClientHandler.toggleForBlock(pos);
     }
 }
