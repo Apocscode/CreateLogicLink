@@ -173,12 +173,8 @@ public class LogicRemoteItem extends Item implements MenuProvider {
             return InteractionResultHolder.success(heldItem);
         }
 
-        // Right-click = toggle active mode
-        if (world.isClientSide)
-            CatnipServices.PLATFORM.executeOnClientOnly(() -> this::toggleActive);
-        player.getCooldowns().addCooldown(this, 2);
-
-        return InteractionResultHolder.success(heldItem);
+        // Plain right-click = do nothing (no toggle, no GUI)
+        return InteractionResultHolder.pass(heldItem);
     }
 
     @OnlyIn(Dist.CLIENT)
