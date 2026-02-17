@@ -268,3 +268,28 @@ Restored plain right-click on the Logic Remote item to toggle active controller 
 
 ### Deployed
 - **Jar**: `logiclink-0.1.0.jar` → ATM10 mods folder
+
+---
+
+## Session 6e — 2026-02-16 — Contraption Remote: Activate-Only + Auto-Idle + Antenna Glow
+
+### Commits
+- `65aaacd` — Contraption Remote: activate-only right-click, auto-idle on dismount, antenna glow
+
+### Summary
+Three behavior changes to the Contraption Remote block:
+
+1. **Right-click only activates** — `toggleForBlock()` replaced with `activateForBlock()`. Right-clicking the block while seated only activates controller mode; cannot toggle off by right-clicking again.
+2. **Auto-idle on seat dismount** — Added `!player.isPassenger()` check in `RemoteClientHandler.tick()` block-mode validation. When the player gets up from the seat, controller automatically goes IDLE with sound + chat message.
+3. **Antenna glow on active/off on idle** — Added `renderActive` boolean synced to client via `saveAdditional`/`getUpdateTag`. Set `true` in `applyGamepadInput()`, cleared to `false` on gamepad timeout. Renderer reads `be.isRenderActive()` to choose powered base (glowing `redstone_antenna_powered` texture) or normal model (non-glowing `redstone_antenna` texture).
+
+### Files Changed
+| File | Change |
+|------|--------|
+| `controller/RemoteClientHandler.java` | `activateForBlock()` (activate-only), auto-idle on `!isPassenger()` |
+| `block/ContraptionRemoteBlock.java` | Call `activateControllerClient()` instead of toggle |
+| `block/ContraptionRemoteBlockEntity.java` | Added `renderActive` boolean sync + getter |
+| `client/ContraptionRemoteRenderer.java` | Use `be.isRenderActive()` for active/antenna glow |
+
+### Deployed
+- **Jar**: `logiclink-0.1.0.jar` → ATM10 mods folder
