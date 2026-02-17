@@ -147,8 +147,13 @@ public class RemoteClientHandler {
         Minecraft mc = Minecraft.getInstance();
         MODE = Mode.ACTIVE;
         activeBlockPos = pos;
-        cachedAxisConfig = null;
+        // Load ControlProfile from held item for motor/aux bindings in block mode
         if (mc.player != null) {
+            ItemStack held = mc.player.getMainHandItem();
+            if (!(held.getItem() instanceof com.apocscode.logiclink.block.LogicRemoteItem))
+                held = mc.player.getOffhandItem();
+            cachedProfile = ControlProfile.fromItem(held);
+            cachedAxisConfig = cachedProfile.toAxisSlots();
             AllSoundEvents.CONTROLLER_CLICK.playAt(mc.player.level(), mc.player.blockPosition(), 1f, .75f, true);
             mc.player.displayClientMessage(
                     Component.literal("Controller ").withStyle(ChatFormatting.GOLD)
@@ -336,66 +341,66 @@ public class RemoteClientHandler {
                     axisPacketCooldown = PACKET_RATE;
                 }
                 axisStates = axis;
+            }
 
-                // ===== Motor Axis Control (8 axes: Keyboard + Gamepad) =====
-                if (motorAxisPacketCooldown > 0) motorAxisPacketCooldown--;
-                if (cachedAxisConfig != null) {
-                    long window = mc.getWindow().getWindow();
+            // ===== Motor Axis Control (8 axes: Keyboard + Gamepad) — runs in BOTH modes =====
+            if (motorAxisPacketCooldown > 0) motorAxisPacketCooldown--;
+            if (cachedAxisConfig != null) {
+                long window = mc.getWindow().getWindow();
 
-                    // Sample keyboard for 8 motor axes
-                    motorKeyValues[0] = computeKeyAxis(window, GLFW.GLFW_KEY_D, GLFW.GLFW_KEY_A);       // Left X
-                    motorKeyValues[1] = computeKeyAxis(window, GLFW.GLFW_KEY_W, GLFW.GLFW_KEY_S);       // Left Y
-                    motorKeyValues[2] = computeKeyAxis(window, GLFW.GLFW_KEY_RIGHT, GLFW.GLFW_KEY_LEFT); // Right X
-                    motorKeyValues[3] = computeKeyAxis(window, GLFW.GLFW_KEY_UP, GLFW.GLFW_KEY_DOWN);   // Right Y
-                    motorKeyValues[4] = keyValue(window, GLFW.GLFW_KEY_Q);    // LT
-                    motorKeyValues[5] = keyValue(window, GLFW.GLFW_KEY_E);    // RT
-                    motorKeyValues[6] = keyValue(window, GLFW.GLFW_KEY_Z);    // LB
-                    motorKeyValues[7] = keyValue(window, GLFW.GLFW_KEY_C);    // RB
+                // Sample keyboard for 8 motor axes
+                motorKeyValues[0] = computeKeyAxis(window, GLFW.GLFW_KEY_D, GLFW.GLFW_KEY_A);       // Left X
+                motorKeyValues[1] = computeKeyAxis(window, GLFW.GLFW_KEY_W, GLFW.GLFW_KEY_S);       // Left Y
+                motorKeyValues[2] = computeKeyAxis(window, GLFW.GLFW_KEY_RIGHT, GLFW.GLFW_KEY_LEFT); // Right X
+                motorKeyValues[3] = computeKeyAxis(window, GLFW.GLFW_KEY_UP, GLFW.GLFW_KEY_DOWN);   // Right Y
+                motorKeyValues[4] = keyValue(window, GLFW.GLFW_KEY_Q);    // LT
+                motorKeyValues[5] = keyValue(window, GLFW.GLFW_KEY_E);    // RT
+                motorKeyValues[6] = keyValue(window, GLFW.GLFW_KEY_Z);    // LB
+                motorKeyValues[7] = keyValue(window, GLFW.GLFW_KEY_C);    // RB
 
-                    // Detect keyboard changes
-                    boolean keysChanged = false;
-                    for (int i = 0; i < 8; i++) {
-                        if (motorKeyValues[i] != prevMotorKeyValues[i]) keysChanged = true;
-                    }
-
-                    if (keysChanged || motorAxisPacketCooldown == 0) {
-                        for (int i = 0; i < cachedAxisConfig.length; i++) {
-                            MotorConfigScreen.AxisSlot slot = cachedAxisConfig[i];
-                            if (slot.hasTarget() && (keysChanged || motorKeyValues[i] != 0)) {
-                                float dir = motorKeyValues[i];
-                                // Apply reversed flag
-                                if (slot.reversed && dir != 0) dir = -dir;
-                                PacketDistributor.sendToServer(new MotorAxisPayload(
-                                        slot.targetPos, slot.targetType,
-                                        dir, slot.speed, slot.sequential, slot.distance));
-                            }
-                        }
-                        System.arraycopy(motorKeyValues, 0, prevMotorKeyValues, 0, 8);
-                        if (keysChanged) {
-                            motorAxisPacketCooldown = PACKET_RATE;
-                        }
-                    }
+                // Detect keyboard changes
+                boolean keysChanged = false;
+                for (int i = 0; i < 8; i++) {
+                    if (motorKeyValues[i] != prevMotorKeyValues[i]) keysChanged = true;
                 }
 
-                // ===== Aux Redstone Channels (keys 1-8) =====
-                if (auxPacketCooldown > 0) auxPacketCooldown--;
-                if (cachedProfile != null) {
-                    long auxWindow = mc.getWindow().getWindow();
-                    byte newAux = 0;
-                    // Number keys 1-8 map to aux channels 0-7
-                    for (int i = 0; i < ControlProfile.MAX_AUX_BINDINGS; i++) {
-                        int keyCode = GLFW.GLFW_KEY_1 + i; // GLFW_KEY_1 through GLFW_KEY_8
-                        if (GLFW.glfwGetKey(auxWindow, keyCode) == GLFW.GLFW_PRESS) {
-                            newAux |= (byte) (1 << i);
+                if (keysChanged || motorAxisPacketCooldown == 0) {
+                    for (int i = 0; i < cachedAxisConfig.length; i++) {
+                        MotorConfigScreen.AxisSlot slot = cachedAxisConfig[i];
+                        if (slot.hasTarget() && (keysChanged || motorKeyValues[i] != 0)) {
+                            float dir = motorKeyValues[i];
+                            // Apply reversed flag
+                            if (slot.reversed && dir != 0) dir = -dir;
+                            PacketDistributor.sendToServer(new MotorAxisPayload(
+                                    slot.targetPos, slot.targetType,
+                                    dir, slot.speed, slot.sequential, slot.distance));
                         }
                     }
-                    if (newAux != prevAuxStates || (auxPacketCooldown == 0 && newAux != 0)) {
-                        PacketDistributor.sendToServer(new AuxRedstonePayload(newAux));
-                        prevAuxStates = newAux;
-                        if (newAux != prevAuxStates) auxPacketCooldown = PACKET_RATE;
+                    System.arraycopy(motorKeyValues, 0, prevMotorKeyValues, 0, 8);
+                    if (keysChanged) {
+                        motorAxisPacketCooldown = PACKET_RATE;
                     }
-                    auxStates = newAux;
                 }
+            }
+
+            // ===== Aux Redstone Channels (keys 1-8) — runs in BOTH modes =====
+            if (auxPacketCooldown > 0) auxPacketCooldown--;
+            if (cachedProfile != null) {
+                long auxWindow = mc.getWindow().getWindow();
+                byte newAux = 0;
+                // Number keys 1-8 map to aux channels 0-7
+                for (int i = 0; i < ControlProfile.MAX_AUX_BINDINGS; i++) {
+                    int keyCode = GLFW.GLFW_KEY_1 + i; // GLFW_KEY_1 through GLFW_KEY_8
+                    if (GLFW.glfwGetKey(auxWindow, keyCode) == GLFW.GLFW_PRESS) {
+                        newAux |= (byte) (1 << i);
+                    }
+                }
+                if (newAux != prevAuxStates || (auxPacketCooldown == 0 && newAux != 0)) {
+                    PacketDistributor.sendToServer(new AuxRedstonePayload(newAux));
+                    prevAuxStates = newAux;
+                    if (newAux != prevAuxStates) auxPacketCooldown = PACKET_RATE;
+                }
+                auxStates = newAux;
             }
         }
 
