@@ -14,6 +14,7 @@ import net.createmod.catnip.data.Couple;
 import net.createmod.catnip.platform.CatnipServices;
 
 import net.minecraft.ChatFormatting;
+import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.RegistryAccess;
 import net.minecraft.core.component.DataComponents;
@@ -21,7 +22,6 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.InteractionResultHolder;
@@ -166,9 +166,9 @@ public class LogicRemoteItem extends Item implements MenuProvider {
         ItemStack heldItem = player.getItemInHand(hand);
 
         if (player.isShiftKeyDown()) {
-            // Shift + right-click = open frequency config GUI
-            if (!world.isClientSide && player instanceof ServerPlayer sp) {
-                sp.openMenu(this, buf -> ItemStack.STREAM_CODEC.encode(buf, heldItem));
+            // Shift + right-click = open control config GUI (client-side)
+            if (world.isClientSide) {
+                openControlConfig();
             }
             return InteractionResultHolder.success(heldItem);
         }
@@ -190,6 +190,12 @@ public class LogicRemoteItem extends Item implements MenuProvider {
     private void toggleActive()
     {
         RemoteClientHandler.toggle();
+    }
+
+    @OnlyIn(Dist.CLIENT)
+    private void openControlConfig()
+    {
+        Minecraft.getInstance().setScreen(new com.apocscode.logiclink.client.ControlConfigScreen());
     }
 
     // ==================== Hub Linking ====================

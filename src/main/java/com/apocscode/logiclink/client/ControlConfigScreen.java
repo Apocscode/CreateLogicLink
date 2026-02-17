@@ -25,6 +25,8 @@ import com.apocscode.logiclink.LogicLink;
 import com.apocscode.logiclink.network.SaveControlProfilePayload;
 import net.neoforged.neoforge.network.PacketDistributor;
 
+import net.minecraft.Util;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -227,6 +229,9 @@ public class ControlConfigScreen extends Screen {
 
         // Back button (top-left)
         renderButton(g, mouseX, mouseY, guiLeft + 3, guiTop + 2, 32, 12, "\u2190 Back", BTN_IDLE, BTN_HOVER, WHITE);
+
+        // Bug report button (top, next to save)
+        renderButton(g, mouseX, mouseY, guiLeft + GUI_WIDTH - 70, guiTop + 2, 12, 12, "\u26A0", 0xFF994400, 0xFFCC6600, 0xFFFFDD00);
 
         // Save button (top-right) — flashes bright green after save
         int saveBg = saveFlashTicks > 0 ? GREEN : BTN_ACTIVE;
@@ -654,6 +659,12 @@ public class ControlConfigScreen extends Screen {
         if (isInside(mX, mY, guiLeft + 3, guiTop + 2, 32, 12)) {
             saveProfile();
             onClose();
+            return true;
+        }
+
+        // Bug report button
+        if (isInside(mX, mY, guiLeft + GUI_WIDTH - 70, guiTop + 2, 12, 12)) {
+            Util.getPlatform().openUri(URI.create("https://github.com/Apocscode/CreateLogicLink/issues"));
             return true;
         }
 
