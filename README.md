@@ -544,6 +544,10 @@ src/main/java/com/apocscode/logiclink/
         └── LogicLinkSceneAnimations.java  # 5 animated Ponder scenes
 ```
 
+## Acknowledgments
+
+The **Logic Remote** and **Contraption Remote** controller systems are inspired by and partially ported from [**Create: Tweaked Controllers**](https://github.com/getItemFromBlock/Create-Tweaked-Controllers) by [getItemFromBlock](https://github.com/getItemFromBlock). The gamepad input handling, frequency-based redstone binding, and lectern-mounted controller mechanics originate from that project.
+
 ## Contributing
 
 1. Fork the repository
