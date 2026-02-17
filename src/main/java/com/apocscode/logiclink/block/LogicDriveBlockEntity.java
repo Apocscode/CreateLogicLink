@@ -4,8 +4,9 @@ import com.apocscode.logiclink.LogicLink;
 import com.apocscode.logiclink.ModRegistry;
 import com.apocscode.logiclink.network.HubNetwork;
 import com.apocscode.logiclink.network.IHubDevice;
+import com.simibubi.create.content.kinetics.base.GeneratingKineticBlockEntity;
+import com.simibubi.create.content.kinetics.base.KineticBlock;
 import com.simibubi.create.content.kinetics.base.KineticBlockEntity;
-import com.simibubi.create.content.kinetics.transmission.SplitShaftBlockEntity;
 import com.simibubi.create.foundation.blockEntity.behaviour.BlockEntityBehaviour;
 
 import net.minecraft.ChatFormatting;
@@ -16,6 +17,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 
@@ -23,29 +25,42 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Block entity for the Logic Drive.
- * Takes external rotation input and modifies the output — acting as a
- * programmable clutch, gearshift, and sequenced gearshift in one.
+ * Block entity for the Logic Drive - a survival-friendly CC-controlled
+ * rotation generator that requires external kinetic input to operate.
  * <p>
- * Extends Create's {@link SplitShaftBlockEntity} which splits rotation
- * into two halves. The {@link #getRotationSpeedModifier(Direction)} method
- * controls what happens to the output side: 0 = off, 1 = pass through,
- * -1 = reverse, 2 = double speed, etc.
+ * Architecture: <b>Consumer + Generator</b>
+ * <ul>
+ *   <li><b>Input side</b> (FACING.opposite): reads rotation speed from the
+ *       adjacent kinetic block. The drive is NOT kinetically connected to the
+ *       input network - it only "senses" rotation on its input face.</li>
+ *   <li><b>Output side</b> (FACING): generates rotation at
+ *       inputSpeed x modifier, acting as an independent kinetic source with
+ *       limited stress capacity (256 SU).</li>
+ * </ul>
+ * Because the input and output are on separate kinetic networks, direction
+ * changes never cause speed conflicts or block breakage.
  * </p>
+ *
+ * Extends Create's {@link GeneratingKineticBlockEntity} so the output side
+ * behaves like a proper kinetic source (similar to a Creative Motor, but
+ * with finite stress capacity and input-dependent operation).
  */
-public class LogicDriveBlockEntity extends SplitShaftBlockEntity implements IHubDevice {
+public class LogicDriveBlockEntity extends GeneratingKineticBlockEntity implements IHubDevice {
 
-    /** Speed multiplier applied to input rotation. */
+    /** Base stress capacity provided when input rotation is present (in SU). */
+    public static final float STRESS_CAPACITY = 256.0f;
+
+    /** Speed multiplier applied to input rotation to determine output speed. */
     private float speedModifier = 1.0f;
 
-    /** Whether the drive is enabled (passes rotation through). */
+    /** Whether the drive is enabled (generates output). */
     private boolean enabled = true;
 
-    /** Whether to reverse input rotation. */
+    /** Whether to reverse output rotation direction. */
     private boolean reversed = false;
 
-    /** Deferred kinetic network update — coalesces rapid Lua changes into one tick. */
-    private boolean kinematicsNeedUpdate = false;
+    /** Cached input rotation speed read from the adjacent input-side block. */
+    private float cachedInputSpeed = 0;
 
     /** User-assigned label for hub identification. */
     private String hubLabel = "";
@@ -77,27 +92,64 @@ public class LogicDriveBlockEntity extends SplitShaftBlockEntity implements IHub
         super.addBehaviours(behaviours);
     }
 
-    // ==================== Speed Modification (core mechanic) ====================
+    // ==================== Input Rotation Reading ====================
 
     /**
-     * Called by Create's kinetic network to determine the speed ratio
-     * between the two shaft halves. This is the core of the split shaft:
-     * <ul>
-     *   <li>Return 1.0 = pass through unchanged</li>
-     *   <li>Return -1.0 = reverse direction</li>
-     *   <li>Return 0.0 = disconnect (clutch off)</li>
-     *   <li>Return 2.0 = double speed (at cost of stress)</li>
-     * </ul>
+     * Reads the rotation speed of the kinetic block adjacent to the input face.
+     * The drive is NOT kinetically connected to this block - it only reads its speed.
+     *
+     * Validates that:
+     * 1. A KineticBlockEntity exists on the input face
+     * 2. That block has a shaft pointing toward our input face
+     * 3. The shaft axes are aligned
+     *
+     * @return The input neighbor's rotation speed in RPM, or 0 if no valid input.
+     */
+    private float readInputRotation() {
+        if (level == null) return 0;
+        BlockState state = getBlockState();
+        if (!state.hasProperty(LogicDriveBlock.FACING)) return 0;
+
+        Direction outputFace = state.getValue(LogicDriveBlock.FACING);
+        Direction inputFace = outputFace.getOpposite();
+        Direction.Axis ourAxis = outputFace.getAxis();
+
+        BlockPos inputPos = worldPosition.relative(inputFace);
+        BlockEntity inputBe = level.getBlockEntity(inputPos);
+        if (inputBe instanceof KineticBlockEntity kbe) {
+            BlockState neighborState = kbe.getBlockState();
+            if (neighborState.getBlock() instanceof KineticBlock kinBlock) {
+                // Check the neighbor has a shaft pointing toward us on the same axis
+                if (kinBlock.hasShaftTowards(level, inputPos, neighborState, inputFace.getOpposite())
+                        && kinBlock.getRotationAxis(neighborState) == ourAxis) {
+                    return kbe.getSpeed();
+                }
+            }
+        }
+        return 0;
+    }
+
+    // ==================== Kinetic Generation ====================
+
+    /**
+     * Returns the speed this drive generates on the output side.
+     * <p>
+     * Output = cachedInputSpeed x modifier x (reversed ? -1 : 1)
+     * <br>Clamped to +/-256 RPM (Create's hard limit).
+     * <p>
+     * During sequences, the step's modifier override is used instead.
      */
     @Override
-    public float getRotationSpeedModifier(Direction face) {
+    public float getGeneratedSpeed() {
         if (!enabled) return 0;
+        if (cachedInputSpeed == 0) return 0;
 
-        // If running a sequence, use the sequence's modifier
+        // During a sequence, use the sequence's modifier
         if (sequenceIndex >= 0 && sequenceIndex < sequence.size()) {
             DriveInstruction instr = sequence.get(sequenceIndex);
             if (instr.type == DriveInstruction.Type.ROTATE) {
-                return sequenceModifierOverride;
+                float output = cachedInputSpeed * sequenceModifierOverride;
+                return Math.max(-256, Math.min(256, output));
             }
             if (instr.type == DriveInstruction.Type.WAIT) {
                 return 0; // Stop during wait
@@ -107,20 +159,19 @@ public class LogicDriveBlockEntity extends SplitShaftBlockEntity implements IHub
         float mod = speedModifier;
         if (reversed) mod = -mod;
 
-        // The source side should return 1.0 (unchanged), the output side
-        // gets the modifier. SplitShaftBlockEntity already handles which
-        // side is which via getSourceFacing().
-        if (face == getSourceFacing()) return 1.0f;
+        float output = cachedInputSpeed * mod;
+        return Math.max(-256, Math.min(256, output));
+    }
 
-        // Clamp so output never exceeds Create's 256 RPM hard limit
-        float inputSpeed = Math.abs(getSpeed());
-        if (inputSpeed > 0 && Math.abs(mod) > 1.0f) {
-            float maxMod = 256.0f / inputSpeed;
-            if (mod > maxMod) mod = maxMod;
-            else if (mod < -maxMod) mod = -maxMod;
-        }
-
-        return mod;
+    /**
+     * Stress capacity provided by the drive on the output network.
+     * Only available when input rotation is present.
+     */
+    @Override
+    public float calculateAddedStressCapacity() {
+        float capacity = cachedInputSpeed != 0 ? STRESS_CAPACITY : 0;
+        this.lastCapacityProvided = capacity;
+        return capacity;
     }
 
     // ==================== Lua-Callable Methods ====================
@@ -129,7 +180,7 @@ public class LogicDriveBlockEntity extends SplitShaftBlockEntity implements IHub
         if (this.enabled == enabled) return;
         this.enabled = enabled;
         updateBlockState();
-        kinematicsNeedUpdate = true;
+        updateGeneratedRotation();
         setChanged();
     }
 
@@ -140,7 +191,7 @@ public class LogicDriveBlockEntity extends SplitShaftBlockEntity implements IHub
     public void setReversed(boolean reversed) {
         if (this.reversed == reversed) return;
         this.reversed = reversed;
-        kinematicsNeedUpdate = true;
+        updateGeneratedRotation();
         setChanged();
     }
 
@@ -152,7 +203,7 @@ public class LogicDriveBlockEntity extends SplitShaftBlockEntity implements IHub
         float clamped = Math.max(-16.0f, Math.min(16.0f, modifier));
         if (this.speedModifier == clamped) return;
         this.speedModifier = clamped;
-        kinematicsNeedUpdate = true;
+        updateGeneratedRotation();
         setChanged();
     }
 
@@ -160,15 +211,28 @@ public class LogicDriveBlockEntity extends SplitShaftBlockEntity implements IHub
         return speedModifier;
     }
 
+    /**
+     * Gets the input rotation speed from the adjacent block on the input face.
+     * Reads the neighbor's speed, NOT our own network speed.
+     */
     public float getInputSpeed() {
+        return cachedInputSpeed;
+    }
+
+    /**
+     * Gets the output rotation speed (our generated speed on the output network).
+     */
+    public float getOutputSpeed() {
         return getSpeed();
     }
 
-    public float getOutputSpeed() {
-        if (!enabled) return 0;
-        float mod = speedModifier;
-        if (reversed) mod = -mod;
-        return getSpeed() * mod;
+    public float getStressCapacityValue() {
+        return calculateAddedStressCapacity();
+    }
+
+    public float getStressUsageValue() {
+        if (level == null) return 0;
+        return lastStressApplied;
     }
 
     // ==================== Sequence API ====================
@@ -181,8 +245,7 @@ public class LogicDriveBlockEntity extends SplitShaftBlockEntity implements IHub
         sequenceDegreesRemaining = 0;
         sequenceLoop = false;
         if (wasRunning) {
-            detachKinetics();
-            attachKinetics();
+            updateGeneratedRotation();
         }
         setChanged();
     }
@@ -208,8 +271,7 @@ public class LogicDriveBlockEntity extends SplitShaftBlockEntity implements IHub
         this.sequenceIndex = 0;
         this.enabled = true;
         startCurrentStep();
-        detachKinetics();
-        attachKinetics();
+        updateGeneratedRotation();
         setChanged();
     }
 
@@ -219,8 +281,7 @@ public class LogicDriveBlockEntity extends SplitShaftBlockEntity implements IHub
         sequenceTimer = 0;
         sequenceDegreesRemaining = 0;
         if (wasRunning) {
-            detachKinetics();
-            attachKinetics();
+            updateGeneratedRotation();
         }
         setChanged();
     }
@@ -249,22 +310,24 @@ public class LogicDriveBlockEntity extends SplitShaftBlockEntity implements IHub
 
         if (level.isClientSide) return;
 
-        // Coalesce rapid Lua property changes into a single kinetic update per tick
-        if (kinematicsNeedUpdate) {
-            kinematicsNeedUpdate = false;
-            detachKinetics();
-            attachKinetics();
+        // Check if input rotation has changed
+        float newInput = readInputRotation();
+        if (newInput != cachedInputSpeed) {
+            cachedInputSpeed = newInput;
+            updateGeneratedRotation();
         }
 
+        // Sequence processing
         if (sequenceIndex < 0 || sequenceIndex >= sequence.size()) return;
 
         DriveInstruction instr = sequence.get(sequenceIndex);
 
         switch (instr.type) {
             case ROTATE:
-                float inputSpeed = Math.abs(getSpeed());
-                if (inputSpeed > 0) {
-                    float degreesPerTick = inputSpeed * Math.abs(sequenceModifierOverride) * 0.3f;
+                // Use generated speed (which factors in input + modifier)
+                float outputSpeed = Math.abs(getGeneratedSpeed());
+                if (outputSpeed > 0) {
+                    float degreesPerTick = outputSpeed * 0.3f;
                     sequenceDegreesRemaining -= degreesPerTick;
                     if (sequenceDegreesRemaining <= 0) {
                         advanceSequence();
@@ -292,7 +355,7 @@ public class LogicDriveBlockEntity extends SplitShaftBlockEntity implements IHub
         switch (instr.type) {
             case ROTATE:
                 sequenceDegreesRemaining = Math.abs(instr.degreesOrTicks);
-                sequenceModifierOverride = instr.modifierOrValue >= 0 ? Math.abs(instr.modifierOrValue) : -Math.abs(instr.modifierOrValue);
+                sequenceModifierOverride = Math.abs(instr.modifierOrValue);
                 // Direction from sign of degrees
                 if (instr.degreesOrTicks < 0) {
                     sequenceModifierOverride = -sequenceModifierOverride;
@@ -304,8 +367,7 @@ public class LogicDriveBlockEntity extends SplitShaftBlockEntity implements IHub
             case SET_MODIFIER:
                 break;
         }
-        detachKinetics();
-        attachKinetics();
+        updateGeneratedRotation();
     }
 
     private void advanceSequence() {
@@ -315,8 +377,7 @@ public class LogicDriveBlockEntity extends SplitShaftBlockEntity implements IHub
                 sequenceIndex = 0;
             } else {
                 sequenceIndex = -1;
-                detachKinetics();
-                attachKinetics();
+                updateGeneratedRotation();
                 return;
             }
         }
@@ -356,7 +417,6 @@ public class LogicDriveBlockEntity extends SplitShaftBlockEntity implements IHub
     public boolean addToGoggleTooltip(List<Component> tooltip, boolean isPlayerSneaking) {
         super.addToGoggleTooltip(tooltip, isPlayerSneaking);
 
-        // Always show Logic Drive status
         tooltip.add(Component.literal("    ")
             .append(Component.literal("Logic Drive").withStyle(ChatFormatting.WHITE)));
 
@@ -371,15 +431,28 @@ public class LogicDriveBlockEntity extends SplitShaftBlockEntity implements IHub
                 .append(Component.literal(hubLabel).withStyle(ChatFormatting.AQUA)));
         }
 
-        String state = enabled ? (reversed ? "Reversed" : "Active") : "Disabled";
+        String stateStr = enabled ? (reversed ? "Reversed" : "Active") : "Disabled";
         ChatFormatting stateColor = enabled ? (reversed ? ChatFormatting.GOLD : ChatFormatting.GREEN) : ChatFormatting.RED;
         tooltip.add(Component.literal("    ")
             .append(Component.literal("State: ").withStyle(ChatFormatting.GRAY))
-            .append(Component.literal(state).withStyle(stateColor)));
+            .append(Component.literal(stateStr).withStyle(stateColor)));
 
         tooltip.add(Component.literal("    ")
             .append(Component.literal("Modifier: ").withStyle(ChatFormatting.GRAY))
             .append(Component.literal("x" + speedModifier).withStyle(ChatFormatting.AQUA)));
+
+        tooltip.add(Component.literal("    ")
+            .append(Component.literal("Input: ").withStyle(ChatFormatting.GRAY))
+            .append(Component.literal(cachedInputSpeed + " RPM").withStyle(
+                cachedInputSpeed != 0 ? ChatFormatting.GREEN : ChatFormatting.RED)));
+
+        tooltip.add(Component.literal("    ")
+            .append(Component.literal("Output: ").withStyle(ChatFormatting.GRAY))
+            .append(Component.literal(getSpeed() + " RPM").withStyle(ChatFormatting.AQUA)));
+
+        tooltip.add(Component.literal("    ")
+            .append(Component.literal("Capacity: ").withStyle(ChatFormatting.GRAY))
+            .append(Component.literal(calculateAddedStressCapacity() + " su").withStyle(ChatFormatting.YELLOW)));
 
         return true;
     }
@@ -393,11 +466,12 @@ public class LogicDriveBlockEntity extends SplitShaftBlockEntity implements IHub
     // ==================== NBT Persistence ====================
 
     @Override
-    public void write(CompoundTag tag, HolderLookup.Provider registries, boolean clientPacket) {
+    protected void write(CompoundTag tag, HolderLookup.Provider registries, boolean clientPacket) {
         super.write(tag, registries, clientPacket);
         tag.putFloat("SpeedModifier", speedModifier);
         tag.putBoolean("Enabled", enabled);
         tag.putBoolean("Reversed", reversed);
+        tag.putFloat("CachedInputSpeed", cachedInputSpeed);
         if (!hubLabel.isEmpty()) {
             tag.putString("HubLabel", hubLabel);
         }
@@ -424,6 +498,7 @@ public class LogicDriveBlockEntity extends SplitShaftBlockEntity implements IHub
         speedModifier = tag.getFloat("SpeedModifier");
         enabled = tag.getBoolean("Enabled");
         reversed = tag.getBoolean("Reversed");
+        cachedInputSpeed = tag.getFloat("CachedInputSpeed");
         hubLabel = tag.getString("HubLabel");
         hubRegistered = false;
         sequenceLoop = tag.getBoolean("SequenceLoop");

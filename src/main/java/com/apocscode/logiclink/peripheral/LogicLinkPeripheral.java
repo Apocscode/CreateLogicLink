@@ -1088,6 +1088,8 @@ public class LogicLinkPeripheral implements IPeripheral {
             info.put("reversed", motor.isReversed());
             info.put("inputSpeed", (double) motor.getInputSpeed());
             info.put("outputSpeed", (double) motor.getOutputSpeed());
+            info.put("stressCapacity", (double) motor.getStressCapacityValue());
+            info.put("stressUsage", (double) motor.getStressUsageValue());
             info.put("sequenceRunning", motor.isSequenceRunning());
             info.put("sequenceSize", motor.getSequenceSize());
         } else {

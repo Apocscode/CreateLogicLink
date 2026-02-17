@@ -132,6 +132,25 @@ public class LogicDrivePeripheral implements IPeripheral {
         return blockEntity.getOutputSpeed();
     }
 
+    /**
+     * Gets the stress capacity provided by this drive on the output network.
+     * Returns 256 SU when input rotation is present, 0 otherwise.
+     * @return Stress capacity in SU.
+     */
+    @LuaFunction(mainThread = true)
+    public final float getStressCapacity() {
+        return blockEntity.getStressCapacityValue();
+    }
+
+    /**
+     * Gets the stress currently consumed from the output network.
+     * @return Stress usage in SU.
+     */
+    @LuaFunction(mainThread = true)
+    public final float getStressUsage() {
+        return blockEntity.getStressUsageValue();
+    }
+
     // ==================== Sequence Control ====================
 
     /**

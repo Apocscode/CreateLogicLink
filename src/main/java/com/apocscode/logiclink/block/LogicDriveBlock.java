@@ -23,25 +23,28 @@ import net.minecraft.world.phys.shapes.CollisionContext;
 import net.minecraft.world.phys.shapes.VoxelShape;
 
 /**
- * Logic Drive — a CC:Tweaked-controlled rotation modifier.
- * Requires an external rotation source (shaft, water wheel, etc.) and
- * can modify, gate, or reverse that rotation via Lua scripts.
+ * Logic Drive — a CC:Tweaked-controlled survival rotation generator.
+ * Reads rotation from an adjacent kinetic source on the input face and
+ * independently generates modified rotation on the output face.
  * <p>
- * Functions like a programmable Clutch + Gearshift + Sequenced Gearshift
- * all in one, controlled from a CC:Tweaked computer. Uses Create's
- * gearshift-style model with a horizontal axis shaft passing through.
+ * Architecture: <b>Consumer + Generator</b><br>
+ * The input side senses adjacent rotation without kinetic connection.
+ * The output side generates rotation as an independent kinetic source
+ * with 256 SU stress capacity. Because the two sides are on separate
+ * kinetic networks, direction changes never cause speed conflicts.
  * </p>
  * <p>
  * The block has a {@link #FACING} property indicating the <b>output</b>
- * direction. The opposite face is the <b>input</b> (drive) side.
+ * direction. The opposite face is the <b>input</b> (sensor) side.
  * Orange stripe = input, light blue stripe = CC-controlled output.
  * </p>
  * <h3>Capabilities:</h3>
  * <ul>
- *   <li>On/Off (clutch) — disconnect rotation</li>
- *   <li>Reverse — flip rotation direction</li>
+ *   <li>On/Off (clutch) — stop generating rotation</li>
+ *   <li>Reverse — flip output rotation direction</li>
  *   <li>Speed modifier — scale input speed (×0.5, ×1, ×2, etc.)</li>
  *   <li>Sequenced rotation — degree-based rotation steps</li>
+ *   <li>Survival stress — 256 SU capacity, respects Create stress rules</li>
  * </ul>
  */
 public class LogicDriveBlock extends KineticBlock
@@ -92,8 +95,9 @@ public class LogicDriveBlock extends KineticBlock
 
     @Override
     public boolean hasShaftTowards(LevelReader level, BlockPos pos, BlockState state, Direction face) {
-        // Shaft passes through both ends of the horizontal axis
-        return face.getAxis() == state.getValue(FACING).getAxis();
+        // Output shaft only — the input side reads the neighbor's speed without
+        // a kinetic connection, so direction changes never cause speed conflicts.
+        return face == state.getValue(FACING);
     }
 
     // ==================== IBE ====================
