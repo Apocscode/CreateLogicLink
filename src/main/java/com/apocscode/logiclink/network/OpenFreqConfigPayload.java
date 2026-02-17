@@ -5,10 +5,15 @@ import com.apocscode.logiclink.block.LogicRemoteItem;
 import com.apocscode.logiclink.controller.LogicRemoteMenu;
 
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
@@ -56,10 +61,17 @@ public record OpenFreqConfigPayload() implements CustomPacketPayload {
 
             // Open the menu — this triggers LogicRemoteConfigScreen on the client
             final ItemStack controller = heldItem;
-            serverPlayer.openMenu(
-                    (LogicRemoteItem) controller.getItem(),
-                    buf -> ItemStack.STREAM_CODEC.encode(buf, controller)
-            );
+            serverPlayer.openMenu(new MenuProvider() {
+                @Override
+                public Component getDisplayName() {
+                    return controller.getHoverName();
+                }
+
+                @Override
+                public AbstractContainerMenu createMenu(int id, Inventory inv, Player player) {
+                    return LogicRemoteMenu.create(id, inv, controller);
+                }
+            }, buf -> ItemStack.STREAM_CODEC.encode(buf, controller));
         });
     }
 }

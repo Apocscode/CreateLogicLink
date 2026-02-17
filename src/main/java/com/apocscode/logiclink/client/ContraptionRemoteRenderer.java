@@ -59,11 +59,12 @@ public class ContraptionRemoteRenderer extends SafeBlockEntityRenderer<Contrapti
         ms.pushPose();
 
         // Position the controller on the angled tray.
-        // The tray surface is at approximately y=12.1 pixels (0.756 blocks).
-        // CTC lectern uses (0.5, 1.45, 0.5) but our tray is lower and shifted back.
-        msr.translate(0.5, 1.0, 0.6875);
+        // Center at (0.5, y, 0.5) BEFORE rotating so the model stays centered
+        // regardless of facing direction (fixes direction-dependent offset).
+        msr.translate(0.5, 1.25, 0.5);
         msr.rotateYDegrees(AngleHelper.horizontalAngle(facing) - 90.0f);
-        msr.translate(0.28, 0.0, 0.0);
+        // Offset forward onto the tray and tilt to match tray angle
+        msr.translate(0.28, 0.0, -0.1875);
         msr.rotateZDegrees(-22.0f);
 
         LogicRemoteItemRenderer.renderInLectern(

@@ -3,7 +3,6 @@ package com.apocscode.logiclink.block;
 import com.apocscode.logiclink.LogicLink;
 import com.apocscode.logiclink.ModRegistry;
 import com.apocscode.logiclink.client.LogicRemoteItemRenderer;
-import com.apocscode.logiclink.controller.LogicRemoteMenu;
 import com.apocscode.logiclink.controller.RemoteClientHandler;
 import com.apocscode.logiclink.network.HubNetwork;
 import com.apocscode.logiclink.network.IHubDevice;
@@ -21,14 +20,10 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.InteractionResultHolder;
-import net.minecraft.world.MenuProvider;
-import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
@@ -53,16 +48,16 @@ import java.util.function.Consumer;
  * Matches CTC's TweakedLinkedControllerItem behavior:
  * <ul>
  *   <li>Right-click: toggle active mode (gamepad → redstone link signals)</li>
- *   <li>Shift + right-click: open frequency configuration GUI (ghost item slots)</li>
  *   <li>Right-click on Redstone Link: enter bind mode (assign button/axis to link)</li>
  *   <li>Right-click on Logic Drive/Motor: add as drive/motor target</li>
+ *   <li>Shift + right-click on Logic Hub: link to hub</li>
  * </ul>
  * <p>
  * 50 ghost slots: 15 buttons × 2 frequency items + 10 axes × 2 frequency items.
  * Active mode reads GLFW gamepad input, encodes button/axis states, and sends
  * them to the server which maps frequencies to Create's Redstone Link network.
  */
-public class LogicRemoteItem extends Item implements MenuProvider {
+public class LogicRemoteItem extends Item {
 
     /** Maximum number of drive/motor targets that can be bound. */
     public static final int MAX_TARGETS = 8;
@@ -216,18 +211,7 @@ public class LogicRemoteItem extends Item implements MenuProvider {
         return tag.contains("HubLabel") ? tag.getString("HubLabel") : "";
     }
 
-    // ==================== MenuProvider ====================
-
-    @Override
-    public AbstractContainerMenu createMenu(int id, Inventory inv, Player player) {
-        ItemStack heldItem = player.getMainHandItem();
-        return LogicRemoteMenu.create(id, inv, heldItem);
-    }
-
-    @Override
-    public Component getDisplayName() {
-        return getDescription();
-    }
+    // MenuProvider removed — no GUI on right-click (CTC parity)
 
     // ==================== Frequency Items (Ghost Inventory) ====================
 
