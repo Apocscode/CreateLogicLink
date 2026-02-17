@@ -42,8 +42,9 @@ public class LogicLinkClientSetup {
     @SubscribeEvent
     public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerBlockEntityRenderer(ModRegistry.TRAIN_MONITOR_BE.get(), TrainMonitorRenderer::new);
+        event.registerBlockEntityRenderer(ModRegistry.CONTRAPTION_REMOTE_BE.get(), ContraptionRemoteRenderer::new);
         event.registerEntityRenderer(ModRegistry.REMOTE_SEAT.get(), RemoteSeatRenderer::new);
-        LogicLink.LOGGER.info("Train Monitor renderer + Remote Seat renderer registered.");
+        LogicLink.LOGGER.info("Train Monitor + Contraption Remote + Remote Seat renderers registered.");
     }
 
     @SubscribeEvent

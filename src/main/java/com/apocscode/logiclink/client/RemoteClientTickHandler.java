@@ -23,8 +23,9 @@ public class RemoteClientTickHandler {
 
     @SubscribeEvent
     public static void onClientTick(ClientTickEvent.Post event) {
+        LogicRemoteItemRenderer.earlyTick();    // equip progress (before input)
         RemoteClientHandler.tick();
         SeatInputHandler.tick();
-        LogicRemoteItemRenderer.tick();
+        LogicRemoteItemRenderer.tick();         // button depression (after input)
     }
 }

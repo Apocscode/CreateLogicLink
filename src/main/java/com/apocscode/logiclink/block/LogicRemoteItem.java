@@ -164,25 +164,12 @@ public class LogicRemoteItem extends Item implements MenuProvider {
     {
         ItemStack heldItem = player.getItemInHand(hand);
 
-        // Shift + right-click in main hand = open control panel GUI
-        if (player.isShiftKeyDown() && hand == InteractionHand.MAIN_HAND)
-        {
-            if (!world.isClientSide && player instanceof ServerPlayer sp && player.mayBuild())
-                sp.openMenu(this, buf -> {
-                    ItemStack.STREAM_CODEC.encode(buf, heldItem);
-                });
-            return InteractionResultHolder.success(heldItem);
-        }
+        // Right-click = toggle active mode (no GUI — CTC parity)
+        if (world.isClientSide)
+            CatnipServices.PLATFORM.executeOnClientOnly(() -> this::toggleActive);
+        player.getCooldowns().addCooldown(this, 2);
 
-        // Normal right-click = toggle active mode
-        if (!player.isShiftKeyDown())
-        {
-            if (world.isClientSide)
-                CatnipServices.PLATFORM.executeOnClientOnly(() -> this::toggleActive);
-            player.getCooldowns().addCooldown(this, 2);
-        }
-
-        return InteractionResultHolder.pass(heldItem);
+        return InteractionResultHolder.success(heldItem);
     }
 
     @OnlyIn(Dist.CLIENT)
@@ -353,9 +340,7 @@ public class LogicRemoteItem extends Item implements MenuProvider {
         }
 
         tooltip.add(Component.empty());
-        tooltip.add(Component.literal("Right-click: Toggle controller (WASD)")
-                .withStyle(ChatFormatting.DARK_GRAY));
-        tooltip.add(Component.literal("Shift + Right-click: Open control panel")
+        tooltip.add(Component.literal("Right-click: Toggle controller")
                 .withStyle(ChatFormatting.DARK_GRAY));
         tooltip.add(Component.literal("Shift + Click Logic Link: Link to hub")
                 .withStyle(ChatFormatting.DARK_GRAY));
