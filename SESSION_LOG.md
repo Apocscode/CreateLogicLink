@@ -759,3 +759,27 @@ Deprecated the original 2-page CTC-style config screen (button/axis frequency sl
 
 ### Deployed
 - Jar: logiclink-0.1.0.jar to ATM10 mods folder
+
+---
+
+## Session 7t — Add ControlConfigScreen to Contraption Remote Block
+**Date:** 2026-02-17
+
+### Commits
+- `6dae246` — Add ControlConfigScreen to Contraption Remote block
+
+### Summary
+Added full ControlConfigScreen (motor bindings, aux redstone, frequency picker) support to the Contraption Remote block, mirroring the Logic Remote item's features. The key difference is the interaction model: shift+right-click while standing opens the config GUI (since normal right-click is used for seated controller activation). Created a new SaveBlockProfilePayload packet (Client?Server) to persist ControlProfile data to the block entity. ControlConfigScreen now supports dual-mode operation: item mode (Logic Remote) and block mode (Contraption Remote block). In block mode, device discovery scans for drives/motors near the block position using HubNetwork. RemoteClientHandler.activateForBlock() now loads the profile from the block entity instead of from a held item.
+
+### Files Changed
+| File | Change |
+|------|--------|
+| block/ContraptionRemoteBlockEntity.java | Added ControlProfile field with getter/setter, NBT save/load for profile persistence |
+| block/ContraptionRemoteBlock.java | Added shift+right-click interaction to open ControlConfigScreen(blockPos); added openBlockConfigScreen() client method; added Minecraft import |
+| network/SaveBlockProfilePayload.java | NEW — Client?Server packet with BlockPos + CompoundTag; handler validates distance (64 blocks), loads ControlProfile, saves to block entity |
+| client/ControlConfigScreen.java | Added dual-mode: configBlockPos field, two constructors (item vs block), init() loads from block entity; saveProfile()/autoSave() use SaveBlockProfilePayload in block mode; discoverDevices() scans near block position |
+| controller/RemoteClientHandler.java | activateForBlock() loads ControlProfile from ContraptionRemoteBlockEntity instead of held item; added BlockEntity import |
+| LogicLink.java | Registered SaveBlockProfilePayload; added import |
+
+### Deployed
+- Jar: logiclink-0.1.0.jar to ATM10 mods folder
