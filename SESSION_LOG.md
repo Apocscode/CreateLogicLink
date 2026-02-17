@@ -207,3 +207,44 @@ In-game testing showed the controller model was still off-center on the block (e
   - `LogicRemoteItem.java`: Plain right-click now does nothing (was calling `RemoteClientHandler.toggle()` which showed a WASD overlay panel). Shift+right-click still opens freq config GUI.
 
 *Last updated: 2026-02-16 — Session 6b*
+
+---
+
+## Session 6c — 2026-02-16 — Seated Controller Station
+
+### Commits
+- `caba8d3` — Remove WASD HUD overlay from Logic Remote
+- `dc020ba` — Seated controller station: Contraption Remote activates from Create seat with animated buttons
+
+### Summary
+Transformed the Contraption Remote block into a seated controller station — player sits on a Create seat in front of the block, right-clicks to activate, and sees the same animated button/joystick model as the Logic Remote item. Both gamepad and WASD+Space keyboard input supported.
+
+**Activation gate:**
+- `ContraptionRemoteBlock`: Right-click now checks `player.isPassenger()` — only activates controller mode when the player is seated (on any entity, including Create seats). Unseat first to exit.
+
+**Keyboard input (WASD+Space):**
+- `RemoteClientHandler`: When in block mode (`activeBlockPos != null`), reads GLFW key state after gamepad fill. W=forward (axis 1 positive), S=backward (axis 1 negative), A=left (axis 0 negative), D=right (axis 0 positive), Space=A button. Gamepad takes priority if axis already has a value.
+
+**Client-synced render state:**
+- `ContraptionRemoteBlockEntity`: Added `renderButtonStates` (short) and `renderAxisStates` (int) fields, synced via `saveAdditional`/`getUpdateTag`/`getUpdatePacket`. Updated in `applyGamepadInput()` with `level.sendBlockUpdated()`. Cleared when gamepad times out.
+
+**Animated buttons on block:**
+- `LogicRemoteItemRenderer`: Added separate `blockButtons` LerpedFloat list (15 entries) driven by `blockButtonStates` static field. `tick()` now chases both item-mode (`buttons`) and block-mode (`blockButtons`) independently. `renderButton()`/`renderJoystick()` accept `buttonList` parameter to select which animation source to use.
+- `ContraptionRemoteRenderer`: Reads `be.getRenderButtonStates()`/`getRenderAxisStates()`, calls `setBlockRenderState()`, passes `renderDepression=true` to `renderInLectern()`.
+
+**HUD overlay removal:**
+- Removed WASD overlay layer registration from `LogicLinkClientSetup` (commit `caba8d3`).
+
+### Files Changed
+| File | Change |
+|------|--------|
+| `block/ContraptionRemoteBlock.java` | Right-click gated by `isPassenger()`, restored `toggleControllerClient()` |
+| `controller/RemoteClientHandler.java` | WASD+Space keyboard input merge in block mode |
+| `block/ContraptionRemoteBlockEntity.java` | Added `renderButtonStates`/`renderAxisStates` with sync + getters |
+| `client/ContraptionRemoteRenderer.java` | Read BE state, set block render state, `renderDepression=true` |
+| `client/LogicRemoteItemRenderer.java` | Separate `blockButtons` list, parameterized render helpers |
+| `client/LogicLinkClientSetup.java` | Removed WASD overlay registration |
+
+### Deployed
+- **Jar**: `logiclink-0.1.0.jar` → ATM10 mods folder
+
