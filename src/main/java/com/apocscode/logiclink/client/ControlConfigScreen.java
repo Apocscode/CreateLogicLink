@@ -367,8 +367,8 @@ public class ControlConfigScreen extends Screen {
             String speedStr = (editingSpeedSlot == index) ? speedEditBuffer + "_" : slot.speed + " RPM";
             g.drawString(font, speedStr, speedX + 2, dirY + 1, WHITE, false);
 
-            // Sequential/Continuous toggle (bottom row, left side)
-            int seqBtnX = x + 4;
+            // Sequential/Continuous toggle (bottom row, under direction)
+            int seqBtnX = dirX;
             int seqBtnY = y + SLOT_H - 11;
             int seqBtnW = 14;
             boolean seqHover = isInside(mouseX, mouseY, seqBtnX, seqBtnY, seqBtnW, 10);
@@ -568,7 +568,7 @@ public class ControlConfigScreen extends Screen {
                 }
 
                 // Sequential/Continuous toggle
-                int seqBtnX = slotX + 4;
+                int seqBtnX = slotX + slotW - 80;
                 int seqBtnY = sy + SLOT_H - 11;
                 if (isInside(mX, mY, seqBtnX, seqBtnY, 14, 10)) {
                     mb.sequential = !mb.sequential;
@@ -699,7 +699,7 @@ public class ControlConfigScreen extends Screen {
 
                 // Distance scroll (when sequential)
                 if (mb.sequential) {
-                    int distX = motorPanelX + 2 + 4 + 16;
+                    int distX = motorPanelX + 2 + slotW - 80 + 16;
                     int distY = sy + SLOT_H - 11;
                     if (isInside(mX, mY, distX, distY, 32, 10)) {
                         int delta = (int) Math.signum(scrollY);
