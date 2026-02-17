@@ -279,7 +279,7 @@ public class ControlConfigScreen extends Screen {
                 g.drawString(font, icon + " " + dev.label, panelX + 5, dy + 1, col, false);
 
                 String posStr = dev.pos.getX() + "," + dev.pos.getY() + "," + dev.pos.getZ();
-                g.drawString(font, posStr, panelX + 5, dy + 8, TEXT_DIM, false);
+                g.drawString(font, posStr, panelX + 5, dy + 8, YELLOW, false);
             }
 
             // Scroll indicators
