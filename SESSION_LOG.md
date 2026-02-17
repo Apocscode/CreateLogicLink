@@ -739,3 +739,23 @@ Fixed two aux redstone issues: (1) Power level was hardcoded to 15 — the `rece
 
 ### Deployed
 - Jar: logiclink-0.1.0.jar to ATM10 mods folder
+
+---
+
+## Session 7s — Deprecate Old Config Pages, Direct ControlConfigScreen
+**Date:** 2026-02-17
+
+### Commits
+- `2c54fd8` — Deprecate old 2-page config, shift+click opens ControlConfigScreen directly, add bug button
+
+### Summary
+Deprecated the original 2-page CTC-style config screen (button/axis frequency slots). Shift+right-click on the Logic Remote now opens the ControlConfigScreen directly (client-side) instead of the old container-based LogicRemoteConfigScreen with its 2 tabs. Removed the page button. Added a bug report button (⚠ icon) to the ControlConfigScreen title bar that opens the GitHub issues page. The old LogicRemoteConfigScreen and LogicRemoteScreen files remain in the codebase but are no longer reachable via normal interaction.
+
+### Files Changed
+| File | Change |
+|------|--------|
+| block/LogicRemoteItem.java | Changed shift+right-click from server-side openMenu to client-side ControlConfigScreen; added openControlConfig() method; added Minecraft import; removed unused ServerPlayer import |
+| client/ControlConfigScreen.java | Added bug report button (⚠) in title bar with click handler opening GitHub issues; added Util and URI imports |
+
+### Deployed
+- Jar: logiclink-0.1.0.jar to ATM10 mods folder
