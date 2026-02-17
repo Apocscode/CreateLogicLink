@@ -10,6 +10,7 @@ import net.createmod.catnip.data.Couple;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
@@ -19,6 +20,7 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import java.util.ArrayList;
+import org.jetbrains.annotations.Nullable;
 
 /**
  * Client→Server packet for auxiliary redstone channel control.
@@ -27,10 +29,20 @@ import java.util.ArrayList;
  * Each aux channel maps to a Create Redstone Link frequency pair
  * configured in the ControlProfile. The signal strength is the
  * configured power level (1-15) when active, or 0 when inactive.
+ * <p>
+ * In block mode, the profile tag is embedded in the packet since
+ * the server can't load it from a held item or block entity
+ * (block may be on a moving contraption).
  */
 public record AuxRedstonePayload(
-        byte auxStates  // 8 bits, one per aux channel (bit 0 = channel 0, etc.)
+        byte auxStates,  // 8 bits, one per aux channel (bit 0 = channel 0, etc.)
+        @Nullable CompoundTag profileTag  // null = load from held item; non-null = use this profile
 ) implements CustomPacketPayload {
+
+    /** Convenience constructor for item mode (no embedded profile). */
+    public AuxRedstonePayload(byte auxStates) {
+        this(auxStates, null);
+    }
 
     public static final Type<AuxRedstonePayload> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(LogicLink.MOD_ID, "aux_redstone"));
@@ -39,36 +51,51 @@ public record AuxRedstonePayload(
             new StreamCodec<>() {
                 @Override
                 public AuxRedstonePayload decode(FriendlyByteBuf buf) {
-                    return new AuxRedstonePayload(buf.readByte());
+                    byte states = buf.readByte();
+                    boolean hasProfile = buf.readBoolean();
+                    CompoundTag tag = hasProfile ? buf.readNbt() : null;
+                    return new AuxRedstonePayload(states, tag);
                 }
 
                 @Override
                 public void encode(FriendlyByteBuf buf, AuxRedstonePayload payload) {
                     buf.writeByte(payload.auxStates);
+                    buf.writeBoolean(payload.profileTag != null);
+                    if (payload.profileTag != null) {
+                        buf.writeNbt(payload.profileTag);
+                    }
                 }
             };
 
     /**
      * Server-side handler — reads ControlProfile from the player's held item
-     * and activates/deactivates redstone link signals for each aux channel.
+     * OR from the embedded profile tag (block mode), and activates/deactivates
+     * redstone link signals for each aux channel.
      */
     public static void handle(AuxRedstonePayload payload, IPayloadContext context) {
         context.enqueueWork(() -> {
             if (!(context.player() instanceof ServerPlayer sp)) return;
 
-            // Get ControlProfile from held item
-            ItemStack held = sp.getMainHandItem();
-            if (!(held.getItem() instanceof LogicRemoteItem)) {
-                held = sp.getOffhandItem();
+            ControlProfile profile;
+
+            if (payload.profileTag != null) {
+                // Block mode: profile embedded in packet (block may be on contraption)
+                profile = ControlProfile.load(payload.profileTag);
+            } else {
+                // Item mode: load from held LogicRemoteItem
+                ItemStack held = sp.getMainHandItem();
                 if (!(held.getItem() instanceof LogicRemoteItem)) {
-                    LogicLink.LOGGER.warn("[AuxRedstone] Player not holding LogicRemote!");
-                    return;
+                    held = sp.getOffhandItem();
+                    if (!(held.getItem() instanceof LogicRemoteItem)) {
+                        LogicLink.LOGGER.warn("[AuxRedstone] Player not holding LogicRemote and no embedded profile!");
+                        return;
+                    }
                 }
+                profile = ControlProfile.load(
+                        held.getOrDefault(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
+                                net.minecraft.world.item.component.CustomData.EMPTY).copyTag().getCompound("ControlProfile"));
             }
 
-            ControlProfile profile = ControlProfile.load(
-                    held.getOrDefault(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
-                            net.minecraft.world.item.component.CustomData.EMPTY).copyTag().getCompound("ControlProfile"));
             BlockPos playerPos = sp.blockPosition();
 
             // Build frequency lists and power values for RemoteServerHandler

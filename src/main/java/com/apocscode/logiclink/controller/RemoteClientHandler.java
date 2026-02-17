@@ -509,7 +509,14 @@ public class RemoteClientHandler {
                 prevRawAux = rawPressed;
 
                 if (newAux != prevAuxStates || (auxPacketCooldown == 0 && newAux != 0)) {
-                    PacketDistributor.sendToServer(new AuxRedstonePayload(newAux));
+                    if (activeBlockPos != null && cachedProfile != null) {
+                        // Block mode: embed profile tag in packet (block entity may be on contraption)
+                        net.minecraft.nbt.CompoundTag profileTag = cachedProfile.save();
+                        PacketDistributor.sendToServer(new AuxRedstonePayload(newAux, profileTag));
+                    } else {
+                        // Item mode: server loads profile from held item
+                        PacketDistributor.sendToServer(new AuxRedstonePayload(newAux));
+                    }
                     prevAuxStates = newAux;
                     auxPacketCooldown = PACKET_RATE;
                 }
