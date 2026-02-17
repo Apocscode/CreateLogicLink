@@ -523,3 +523,24 @@ Expanded the motor binding system from 8 bidirectional axes to 12 unidirectional
 
 ### Deployed
 - **Jar**: `logiclink-0.1.0.jar` → ATM10 mods folder
+
+---
+
+## Session 7h -- 2026-02-17 -- Logic Drive Consumer+Generator Architecture
+
+### Commits
+- `a7d5290` -- Rewrite Logic Drive as Consumer+Generator
+
+### Summary
+Rewrote LogicDriveBlockEntity from SplitShaftBlockEntity to GeneratingKineticBlockEntity. Input side reads neighbor speed without kinetic connection. Output side generates rotation independently (256 SU capacity). Direction changes no longer cause block breakage.
+
+### Files Changed
+| File | Change |
+|------|--------|
+| block/LogicDriveBlockEntity.java | Full rewrite: SplitShaft to GeneratingKinetic |
+| block/LogicDriveBlock.java | hasShaftTowards output-only |
+| peripheral/LogicDrivePeripheral.java | Added getStressCapacity and getStressUsage |
+| peripheral/LogicLinkPeripheral.java | getRemoteMotorInfo includes stress for drives |
+
+### Deployed
+- Jar: logiclink-0.1.0.jar to ATM10 mods folder
