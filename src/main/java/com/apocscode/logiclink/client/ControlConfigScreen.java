@@ -1,5 +1,6 @@
 package com.apocscode.logiclink.client;
 
+import com.apocscode.logiclink.block.ContraptionRemoteBlockEntity;
 import com.apocscode.logiclink.block.LogicLinkBlockEntity;
 import com.apocscode.logiclink.block.LogicRemoteItem;
 import com.apocscode.logiclink.controller.ControlProfile;
@@ -22,6 +23,7 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
 import com.apocscode.logiclink.LogicLink;
+import com.apocscode.logiclink.network.SaveBlockProfilePayload;
 import com.apocscode.logiclink.network.SaveControlProfilePayload;
 import net.neoforged.neoforge.network.PacketDistributor;
 
@@ -130,8 +132,19 @@ public class ControlConfigScreen extends Screen {
     /** Ticks remaining for save flash feedback. */
     private int saveFlashTicks = 0;
 
+    /** Block position for block mode (null = item mode). */
+    private final BlockPos configBlockPos;
+
+    /** Item mode constructor. */
     public ControlConfigScreen() {
         super(Component.literal("Control Configuration"));
+        this.configBlockPos = null;
+    }
+
+    /** Block mode constructor — loads/saves profile from block entity at pos. */
+    public ControlConfigScreen(BlockPos blockPos) {
+        super(Component.literal("Control Configuration"));
+        this.configBlockPos = blockPos;
     }
 
     @Override
@@ -140,26 +153,28 @@ public class ControlConfigScreen extends Screen {
         guiLeft = (this.width - GUI_WIDTH) / 2;
         guiTop = (this.height - GUI_HEIGHT) / 2;
 
-        // Load profile from held item
+        // Load profile
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player != null) {
+        if (configBlockPos != null && mc.level != null) {
+            // Block mode: load from block entity
+            BlockEntity be = mc.level.getBlockEntity(configBlockPos);
+            if (be instanceof ContraptionRemoteBlockEntity remote) {
+                profile = remote.getControlProfile();
+                // Make a deep copy so edits don't modify the BE directly
+                profile = ControlProfile.load(profile.save());
+            } else {
+                profile = new ControlProfile();
+            }
+        } else if (mc.player != null) {
+            // Item mode: load from held item
             ItemStack stack = getRemoteItem(mc);
             profile = ControlProfile.fromItem(stack);
-            // Debug: log what we loaded
             int motorCount = 0;
             for (int i = 0; i < ControlProfile.MAX_MOTOR_BINDINGS; i++) {
                 if (profile.getMotorBinding(i).hasTarget()) motorCount++;
             }
-            LogicLink.LOGGER.info("[ControlConfigScreen] init() loaded profile from {}: {} motors bound, item={}",
-                    stack.getItem().getClass().getSimpleName(), motorCount,
-                    stack.has(net.minecraft.core.component.DataComponents.CUSTOM_DATA) ? "has CustomData" : "NO CustomData");
-            if (stack.has(net.minecraft.core.component.DataComponents.CUSTOM_DATA)) {
-                net.minecraft.nbt.CompoundTag dbgTag = stack.getOrDefault(
-                        net.minecraft.core.component.DataComponents.CUSTOM_DATA,
-                        net.minecraft.world.item.component.CustomData.EMPTY).copyTag();
-                LogicLink.LOGGER.info("[ControlConfigScreen] CustomData keys: {}, hasControlProfile={}, hasAxisConfig={}",
-                        dbgTag.getAllKeys(), dbgTag.contains("ControlProfile"), dbgTag.contains("AxisConfig"));
-            }
+            LogicLink.LOGGER.info("[ControlConfigScreen] init() loaded profile from {}: {} motors bound",
+                    stack.getItem().getClass().getSimpleName(), motorCount);
         } else {
             profile = new ControlProfile();
         }
@@ -185,6 +200,26 @@ public class ControlConfigScreen extends Screen {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.level == null) return;
 
+        int range = HubNetwork.DEFAULT_RANGE;
+
+        if (configBlockPos != null) {
+            // Block mode: use the block's position as center to discover nearby devices
+            linkedHubLabel = "Block Mode";
+            linkedHubPos = configBlockPos;
+            List<BlockEntity> devices = HubNetwork.getDevicesInRange(mc.level, configBlockPos, range);
+            for (BlockEntity be : devices) {
+                if (be instanceof IHubDevice device) {
+                    String type = device.getDeviceType();
+                    if ("drive".equals(type) || "creative_motor".equals(type)) {
+                        String label = device.getHubLabel().isEmpty() ? type : device.getHubLabel();
+                        availableDevices.add(new DeviceInfo(device.getDevicePos(), type, label));
+                    }
+                }
+            }
+            return;
+        }
+
+        // Item mode: get hub from held remote
         ItemStack remoteStack = getRemoteItem(mc);
         if (remoteStack.isEmpty() || !(remoteStack.getItem() instanceof LogicRemoteItem)) return;
 
@@ -194,7 +229,6 @@ public class ControlConfigScreen extends Screen {
         linkedHubPos = hubPos;
         linkedHubLabel = LogicRemoteItem.getLinkedHubLabel(remoteStack);
 
-        int range = HubNetwork.DEFAULT_RANGE;
         BlockEntity hubBe = mc.level.getBlockEntity(hubPos);
         if (hubBe instanceof LogicLinkBlockEntity hub) {
             range = hub.getHubRange();
@@ -1096,6 +1130,20 @@ public class ControlConfigScreen extends Screen {
     private void saveProfile() {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
+
+        if (configBlockPos != null) {
+            // Block mode: save to block entity via SaveBlockProfilePayload
+            PacketDistributor.sendToServer(new SaveBlockProfilePayload(configBlockPos, profile.save()));
+            // Also update client-side block entity for immediate feedback
+            if (mc.level != null) {
+                BlockEntity be = mc.level.getBlockEntity(configBlockPos);
+                if (be instanceof ContraptionRemoteBlockEntity remote) {
+                    remote.setControlProfile(profile);
+                }
+            }
+            return;
+        }
+
         ItemStack stack = getRemoteItem(mc);
         if (!stack.isEmpty()) {
             // Update client-side for immediate feedback
@@ -1148,6 +1196,21 @@ public class ControlConfigScreen extends Screen {
         }
         LogicLink.LOGGER.info("[ControlConfigScreen] autoSave() sending {} motors to server, tag keys={}",
                 motorCount, savedTag.getAllKeys());
+
+        if (configBlockPos != null) {
+            // Block mode: save to block entity
+            PacketDistributor.sendToServer(new SaveBlockProfilePayload(configBlockPos, savedTag));
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.level != null) {
+                BlockEntity be = mc.level.getBlockEntity(configBlockPos);
+                if (be instanceof ContraptionRemoteBlockEntity remote) {
+                    remote.setControlProfile(profile);
+                    LogicLink.LOGGER.info("[ControlConfigScreen] autoSave() updated client-side block entity");
+                }
+            }
+            return;
+        }
+
         PacketDistributor.sendToServer(new SaveControlProfilePayload(savedTag));
         // Also update client-side item for immediate feedback
         Minecraft mc = Minecraft.getInstance();

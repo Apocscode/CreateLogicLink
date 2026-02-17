@@ -3,6 +3,8 @@ package com.apocscode.logiclink.block;
 import com.apocscode.logiclink.ModRegistry;
 import com.apocscode.logiclink.controller.RemoteClientHandler;
 
+import net.minecraft.client.Minecraft;
+
 import com.mojang.serialization.MapCodec;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -154,10 +156,19 @@ public class ContraptionRemoteBlock extends HorizontalDirectionalBlock implement
                                                 BlockHitResult hitResult) {
         // Context-based interaction:
         //   Seated → right-click activates controller mode (no shift — shift dismounts seats)
+        //   Standing + shift → open ControlConfigScreen (configure bindings)
         //   Standing → right-click shows status
         if (player.isPassenger()) {
             if (level.isClientSide) {
                 activateControllerClient(pos);
+            }
+            return InteractionResult.SUCCESS;
+        }
+
+        // Standing + shift: open config screen
+        if (player.isShiftKeyDown()) {
+            if (level.isClientSide) {
+                openBlockConfigScreen(pos);
             }
             return InteractionResult.SUCCESS;
         }
@@ -182,10 +193,19 @@ public class ContraptionRemoteBlock extends HorizontalDirectionalBlock implement
 
         // Context-based interaction:
         //   Seated → right-click activates controller mode
+        //   Standing + shift → open ControlConfigScreen
         //   Standing → right-click shows status
         if (player.isPassenger()) {
             if (level.isClientSide) {
                 activateControllerClient(pos);
+            }
+            return ItemInteractionResult.SUCCESS;
+        }
+
+        // Standing + shift: open config screen
+        if (player.isShiftKeyDown()) {
+            if (level.isClientSide) {
+                openBlockConfigScreen(pos);
             }
             return ItemInteractionResult.SUCCESS;
         }
@@ -205,5 +225,11 @@ public class ContraptionRemoteBlock extends HorizontalDirectionalBlock implement
     @OnlyIn(Dist.CLIENT)
     private static void activateControllerClient(BlockPos pos) {
         RemoteClientHandler.activateForBlock(pos);
+    }
+
+    @OnlyIn(Dist.CLIENT)
+    private static void openBlockConfigScreen(BlockPos pos) {
+        Minecraft.getInstance().setScreen(
+                new com.apocscode.logiclink.client.ControlConfigScreen(pos));
     }
 }

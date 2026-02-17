@@ -35,6 +35,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.shapes.VoxelShape;
 import net.neoforged.neoforge.network.PacketDistributor;
 
@@ -154,12 +155,14 @@ public class RemoteClientHandler {
         Minecraft mc = Minecraft.getInstance();
         MODE = Mode.ACTIVE;
         activeBlockPos = pos;
-        // Load ControlProfile from held item for motor/aux bindings in block mode
-        if (mc.player != null) {
-            ItemStack held = mc.player.getMainHandItem();
-            if (!(held.getItem() instanceof com.apocscode.logiclink.block.LogicRemoteItem))
-                held = mc.player.getOffhandItem();
-            cachedProfile = ControlProfile.fromItem(held);
+        // Load ControlProfile from the block entity for motor/aux bindings
+        if (mc.player != null && mc.level != null) {
+            BlockEntity be = mc.level.getBlockEntity(pos);
+            if (be instanceof com.apocscode.logiclink.block.ContraptionRemoteBlockEntity remote) {
+                cachedProfile = remote.getControlProfile();
+            } else {
+                cachedProfile = new ControlProfile();
+            }
             cachedAxisConfig = cachedProfile.toAxisSlots();
             AllSoundEvents.CONTROLLER_CLICK.playAt(mc.player.level(), mc.player.blockPosition(), 1f, .75f, true);
             mc.player.displayClientMessage(

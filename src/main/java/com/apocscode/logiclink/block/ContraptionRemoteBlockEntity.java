@@ -4,6 +4,7 @@ import com.apocscode.logiclink.LogicLink;
 import com.apocscode.logiclink.ModRegistry;
 import com.apocscode.logiclink.compat.TweakedControllerCompat;
 import com.apocscode.logiclink.compat.TweakedControllerReader;
+import com.apocscode.logiclink.controller.ControlProfile;
 import com.apocscode.logiclink.network.HubNetwork;
 import com.apocscode.logiclink.network.IHubDevice;
 
@@ -58,6 +59,9 @@ public class ContraptionRemoteBlockEntity extends BlockEntity {
 
     /** User-assigned label. */
     private String label = "";
+
+    /** Control profile for motor + aux bindings (mirrors Logic Remote item's profile). */
+    private ControlProfile controlProfile = new ControlProfile();
 
     // ==================== Direct Control State (standalone, no CTC needed) ====================
     /** Current drive speed modifier set via GUI. */
@@ -439,6 +443,9 @@ public class ContraptionRemoteBlockEntity extends BlockEntity {
             tag.putString("Label", label);
         }
 
+        // Save control profile
+        tag.put("ControlProfile", controlProfile.save());
+
         if (!targets.isEmpty()) {
             ListTag list = new ListTag();
             for (TargetEntry t : targets) {
@@ -469,6 +476,13 @@ public class ContraptionRemoteBlockEntity extends BlockEntity {
         renderActive = tag.getBoolean("RenderActive");
 
         label = tag.getString("Label");
+
+        // Load control profile
+        if (tag.contains("ControlProfile")) {
+            controlProfile = ControlProfile.load(tag.getCompound("ControlProfile"));
+        } else {
+            controlProfile = new ControlProfile();
+        }
 
         targets.clear();
         if (tag.contains("Targets")) {
@@ -501,4 +515,18 @@ public class ContraptionRemoteBlockEntity extends BlockEntity {
     // ==================== Data ====================
 
     public record TargetEntry(BlockPos pos, String type) {}
+
+    // ==================== Control Profile ====================
+
+    public ControlProfile getControlProfile() {
+        return controlProfile;
+    }
+
+    public void setControlProfile(ControlProfile profile) {
+        this.controlProfile = profile;
+        setChanged();
+        if (level != null && !level.isClientSide) {
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+        }
+    }
 }
