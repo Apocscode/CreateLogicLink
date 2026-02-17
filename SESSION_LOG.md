@@ -152,3 +152,29 @@ Complete overhaul to make the Logic Remote visually and behaviorally identical t
 - **Jar**: `logiclink-0.1.0.jar` (503,956 bytes) → ATM10 mods folder
 
 *Last updated: 2026-02-16 — Session 5*
+
+---
+
+## Session 6 — 2026-02-16 — Fix Block TESR Position & Remove GUI
+
+### Commits
+- `4ab3fe3` — Fix controller position on block, remove right-click GUI
+
+### Summary
+Fixed three in-game bugs reported after Session 5 testing:
+
+1. **Controller model too low on Contraption Remote block** — Raised y-translate from 1.0 to 1.25 in `ContraptionRemoteRenderer`
+2. **Controller model offset depends on block facing direction** — Root cause: initial translate used z=0.6875 (not centered), so the Y rotation pivoted it off-center differently for each facing. Fixed by centering at z=0.5 before rotating, then applying the z-offset (-0.1875) in rotated local space
+3. **Right-click GUI still opening on Logic Remote item** — Removed `implements MenuProvider` from `LogicRemoteItem`, deleted `createMenu()` and `getDisplayName()` methods. Moved MenuProvider to inline anonymous class in `OpenFreqConfigPayload` handler (freq config still works if reachable)
+
+### Files Changed
+| File | Change |
+|------|--------|
+| `client/ContraptionRemoteRenderer.java` | Center z at 0.5, raise y to 1.25, offset z after rotation |
+| `block/LogicRemoteItem.java` | Remove `implements MenuProvider`, `createMenu()`, `getDisplayName()`, unused imports |
+| `network/OpenFreqConfigPayload.java` | Inline anonymous MenuProvider instead of casting LogicRemoteItem |
+
+### Deployed
+- **Jar**: `logiclink-0.1.0.jar` (504,633 bytes) → ATM10 mods folder
+
+*Last updated: 2026-02-16 — Session 6*
