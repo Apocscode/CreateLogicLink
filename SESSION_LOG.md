@@ -547,7 +547,25 @@ Rewrote LogicDriveBlockEntity from SplitShaftBlockEntity to GeneratingKineticBlo
 
 ---
 
-## Session 7i -- 2026-02-17 -- Drive Marker Color Swap + ControlProfile 12-Slot Fix
+## Session 7j -- 2026-02-17 -- Fix Stick Animation Direction + Motor Speed Override
+
+### Commits
+- `1d6634f` -- Fix stick animation direction + motor speed per-slot override
+
+### Summary
+1. **Joystick tilt animation reversed** — The 3D joystick stick on the Logic Remote was tilting the wrong direction. W (forward) tilted the stick toward the player instead of away. Fixed by negating `tiltX` and removing negation from `tiltZ` in `renderJoystick()`.
+2. **Motor speed per-slot override** — When two direction slots (e.g., L Up and L Down) targeted the same motor with different speeds, pressing one direction would send both a spin packet (from the active slot) and a STOP packet (from the inactive slot with axisValue=0). The STOP always won because `keysChanged` was global. Fixed: zero-value packets are now only sent when that specific slot's key actually changed (released), not when any unrelated key changed.
+3. **Legacy AxisConfig save** — Server-side SaveControlProfilePayload was capping legacy AxisConfig at 8 slots; now saves all 12.
+
+### Files Changed
+| File | Change |
+|------|--------|
+| client/LogicRemoteItemRenderer.java | Negate tiltX, un-negate tiltZ for correct stick direction |
+| controller/RemoteClientHandler.java | Per-slot key change detection for motor axis packets |
+| network/SaveControlProfilePayload.java | Legacy AxisConfig writes all 12 slots |
+
+### Deployed
+- Jar: logiclink-0.1.0.jar to ATM10 mods folder
 
 ### Commits
 - `53c45d6` -- Swap drive marker colors: blue=input, orange=output
