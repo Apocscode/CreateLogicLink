@@ -677,3 +677,21 @@ Changed the x,y,z coordinate text color in the device picker list from TEXT_DIM 
 
 ### Deployed
 - Jar: logiclink-0.1.0.jar to ATM10 mods folder
+
+---
+
+## Session 7p -- 2026-02-17 -- Frequency Item Picker for Aux Redstone Channels
+
+### Commits
+- `ead96f0` -- Add frequency item picker for aux redstone channels
+
+### Summary
+Added a complete frequency item picker system for the aux redstone channels. Each aux slot now shows two 12x12 item icon boxes on the bottom row (for freq1 and freq2). Clicking either opens a centered search popup overlay with a text field and scrollable item list showing 16x16 item icons with names. Typing filters items by name or registry ID. Clicking an item sets the frequency, closing the popup. A clear (x) button appears when frequencies are set. The picker renders item icons scaled to 0.75x in the slot boxes (matching Create's Redstone Link aesthetic). Added `charTyped` override for proper text input, scroll support in popup, and ESC/click-outside to close.
+
+### Files Changed
+| File | Change |
+|------|--------|
+| client/ControlConfigScreen.java | Added freqPicker state fields, renderFreqPicker popup, freq icon boxes in renderAuxSlot, click/scroll/keyboard handlers, openFreqPicker/updateFreqPickerResults/charTyped helpers |
+
+### Deployed
+- Jar: logiclink-0.1.0.jar to ATM10 mods folder
