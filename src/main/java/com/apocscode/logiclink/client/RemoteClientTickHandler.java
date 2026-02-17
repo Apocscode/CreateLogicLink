@@ -13,6 +13,7 @@ import net.neoforged.neoforge.client.event.ClientTickEvent;
  * Client-side tick handler for the Logic Remote controller.
  * Calls RemoteClientHandler.tick() every client tick to process
  * gamepad input and send button/axis packets while in ACTIVE mode.
+ * Also advances the LogicRemoteItemRenderer animation each tick.
  * <p>
  * Separate from LogicLinkClientSetup because this subscribes to
  * NeoForge.EVENT_BUS (game events) rather than Bus.MOD (mod lifecycle).
@@ -24,5 +25,6 @@ public class RemoteClientTickHandler {
     public static void onClientTick(ClientTickEvent.Post event) {
         RemoteClientHandler.tick();
         SeatInputHandler.tick();
+        LogicRemoteItemRenderer.tick();
     }
 }

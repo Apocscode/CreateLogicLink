@@ -290,34 +290,34 @@ public class GenerateTextures {
         int W = 32;
         BufferedImage img = new BufferedImage(W, W, BufferedImage.TYPE_INT_ARGB);
 
-        // --- Color palette ---
-        int bodyBase   = 0xFF3C3C3C; // dark grey controller body
-        int bodyLight  = 0xFF484848; // body highlight
-        int bodyDark   = 0xFF2E2E2E; // body shadow/edge
-        int bodyEdge   = 0xFF222222; // outline
-        int trayBg     = 0xFF505050; // tray/casing background
+        // --- Color palette (brighter for visibility on the block tray) ---
+        int bodyBase   = 0xFF505050; // medium grey controller body
+        int bodyLight  = 0xFF626262; // body highlight
+        int bodyDark   = 0xFF3E3E3E; // body shadow/edge
+        int bodyEdge   = 0xFF2A2A2A; // outline
+        int trayBg     = 0xFF787878; // tray/casing background (lighter contrast)
 
-        int stickBase  = 0xFF555555; // joystick base ring
-        int stickTop   = 0xFF6A6A6A; // joystick cap
-        int stickDot   = 0xFF787878; // joystick highlight dot
-        int stickRim   = 0xFF444444; // joystick rim shadow
+        int stickBase  = 0xFF6A6A6A; // joystick base ring
+        int stickTop   = 0xFF828282; // joystick cap
+        int stickDot   = 0xFF969696; // joystick highlight dot
+        int stickRim   = 0xFF585858; // joystick rim shadow
 
-        int dpadCol    = 0xFF585858; // d-pad color
-        int dpadLight  = 0xFF666666; // d-pad highlight
-        int dpadDark   = 0xFF464646; // d-pad shadow
-        int dpadCenter = 0xFF4C4C4C; // d-pad center indent
+        int dpadCol    = 0xFF6E6E6E; // d-pad color
+        int dpadLight  = 0xFF808080; // d-pad highlight
+        int dpadDark   = 0xFF5A5A5A; // d-pad shadow
+        int dpadCenter = 0xFF606060; // d-pad center indent
 
-        int btnY       = 0xFFD4C432; // Yellow - Y
-        int btnX       = 0xFF3264C8; // Blue   - X
-        int btnB       = 0xFFCC3232; // Red    - B
-        int btnA       = 0xFF32B432; // Green  - A
-        int btnYH      = 0xFFE8D848; // Y highlight
-        int btnXH      = 0xFF4878E0; // X highlight
-        int btnBH      = 0xFFE04848; // B highlight
-        int btnAH      = 0xFF48CC48; // A highlight
+        int btnY       = 0xFFE8D848; // Yellow - Y (brighter)
+        int btnX       = 0xFF4878E0; // Blue   - X (brighter)
+        int btnB       = 0xFFE04848; // Red    - B (brighter)
+        int btnA       = 0xFF48CC48; // Green  - A (brighter)
+        int btnYH      = 0xFFF8E860; // Y highlight
+        int btnXH      = 0xFF6090F0; // X highlight
+        int btnBH      = 0xFFF06060; // B highlight
+        int btnAH      = 0xFF60E060; // A highlight
 
-        int startSel   = 0xFF5A5A5A; // start/select button
-        int startSelH  = 0xFF6A6A6A; // highlight
+        int startSel   = 0xFF707070; // start/select button
+        int startSelH  = 0xFF808080; // highlight
 
         int brass      = 0xFFD4A833; // brass accent
         int brassD     = 0xFFC09020; // brass shadow

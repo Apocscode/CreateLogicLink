@@ -2,13 +2,13 @@ package com.apocscode.logiclink.block;
 
 import com.apocscode.logiclink.LogicLink;
 import com.apocscode.logiclink.ModRegistry;
+import com.apocscode.logiclink.client.LogicRemoteItemRenderer;
 import com.apocscode.logiclink.controller.LogicRemoteMenu;
 import com.apocscode.logiclink.controller.RemoteClientHandler;
 import com.apocscode.logiclink.network.HubNetwork;
 import com.apocscode.logiclink.network.IHubDevice;
 import com.simibubi.create.AllBlocks;
 import com.simibubi.create.content.redstone.link.RedstoneLinkNetworkHandler.Frequency;
-import com.simibubi.create.content.redstone.link.controller.LinkedControllerItemRenderer;
 import com.simibubi.create.foundation.item.render.SimpleCustomRenderer;
 import net.createmod.catnip.data.Couple;
 import net.createmod.catnip.platform.CatnipServices;
@@ -76,7 +76,7 @@ public class LogicRemoteItem extends Item implements MenuProvider {
     @Override
     @OnlyIn(Dist.CLIENT)
     public void initializeClient(Consumer<IClientItemExtensions> consumer) {
-        consumer.accept(SimpleCustomRenderer.create(this, new LinkedControllerItemRenderer()));
+        consumer.accept(SimpleCustomRenderer.create(this, new LogicRemoteItemRenderer()));
     }
 
     // ==================== Interaction (CTC-style) ====================

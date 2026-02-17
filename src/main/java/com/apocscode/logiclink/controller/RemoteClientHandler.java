@@ -174,6 +174,9 @@ public class RemoteClientHandler {
         keyA = false;
         keyD = false;
 
+        // Reset renderer button animations
+        com.apocscode.logiclink.client.LogicRemoteItemRenderer.resetButtons();
+
         if (activeBlockPos != null) {
             // Block mode: send zero input to the block entity
             PacketDistributor.sendToServer(new SeatInputPayload(activeBlockPos, (short) 0, 0));
