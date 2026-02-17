@@ -72,8 +72,8 @@ public record MotorAxisPayload(
             if (be instanceof LogicDriveBlockEntity drive) {
                 if (payload.sequential && payload.sequenceDistance > 0) {
                     // Sequential mode: move a fixed distance then stop.
-                    // Only trigger on axis press (value != 0), not on release.
-                    if (Math.abs(payload.axisValue) > 0.01f) {
+                    // Require >50% deflection to trigger (prevents accidental analog triggers).
+                    if (Math.abs(payload.axisValue) > 0.5f) {
                         drive.stopSequence();
                         drive.clearSequence();
                         float degrees = payload.sequenceDistance * 360.0f;
@@ -83,9 +83,9 @@ public record MotorAxisPayload(
                         drive.runSequence(false);
                     }
                 } else {
-                    // Continuous mode: set speed while axis is held
+                    // Continuous mode: proportional speed from analog input
                     if (Math.abs(payload.axisValue) > 0.01f) {
-                        float modifier = Math.signum(payload.axisValue)
+                        float modifier = payload.axisValue
                                 * Math.max(1.0f, speed / 16.0f);
                         drive.setSpeedModifier(modifier);
                         drive.setMotorEnabled(true);
@@ -97,7 +97,8 @@ public record MotorAxisPayload(
             } else if (be instanceof CreativeLogicMotorBlockEntity motor) {
                 if (payload.sequential && payload.sequenceDistance > 0) {
                     // Sequential mode: rotate a fixed number of degrees then stop.
-                    if (Math.abs(payload.axisValue) > 0.01f) {
+                    // Require >50% deflection to trigger.
+                    if (Math.abs(payload.axisValue) > 0.5f) {
                         motor.stopSequence();
                         motor.clearSequence();
                         float degrees = payload.sequenceDistance * 360.0f;
@@ -106,9 +107,9 @@ public record MotorAxisPayload(
                         motor.runSequence(false);
                     }
                 } else {
-                    // Continuous mode
+                    // Continuous mode: proportional speed from analog input
                     if (Math.abs(payload.axisValue) > 0.01f) {
-                        int motorSpeed = (int) (Math.signum(payload.axisValue) * speed);
+                        int motorSpeed = (int) (payload.axisValue * speed);
                         motor.setMotorSpeed(motorSpeed);
                         motor.setEnabled(true);
                     } else {

@@ -358,6 +358,49 @@ public class RemoteClientHandler {
                 motorKeyValues[6] = keyValue(window, GLFW.GLFW_KEY_Z);    // LB
                 motorKeyValues[7] = keyValue(window, GLFW.GLFW_KEY_C);    // RB
 
+                // Merge gamepad analog input — keyboard takes priority (overrides gamepad)
+                if (GamepadInputs.HasGamepad()) {
+                    float deadzone = 0.15f;
+                    // Left stick X (GLFW axis 0)
+                    if (motorKeyValues[0] == 0) {
+                        float v = GamepadInputs.GetAxis(0);
+                        if (Math.abs(v) > deadzone) motorKeyValues[0] = v;
+                    }
+                    // Left stick Y (GLFW axis 1) — inverted: GLFW negative=up, we want up=positive
+                    if (motorKeyValues[1] == 0) {
+                        float v = -GamepadInputs.GetAxis(1);
+                        if (Math.abs(v) > deadzone) motorKeyValues[1] = v;
+                    }
+                    // Right stick X (GLFW axis 2)
+                    if (motorKeyValues[2] == 0) {
+                        float v = GamepadInputs.GetAxis(2);
+                        if (Math.abs(v) > deadzone) motorKeyValues[2] = v;
+                    }
+                    // Right stick Y (GLFW axis 3) — inverted
+                    if (motorKeyValues[3] == 0) {
+                        float v = -GamepadInputs.GetAxis(3);
+                        if (Math.abs(v) > deadzone) motorKeyValues[3] = v;
+                    }
+                    // Left trigger (GLFW axis 4) — range [-1,1] → normalize to [0,1]
+                    if (motorKeyValues[4] == 0) {
+                        float v = (GamepadInputs.GetAxis(4) + 1f) / 2f;
+                        if (v > deadzone) motorKeyValues[4] = v;
+                    }
+                    // Right trigger (GLFW axis 5) — range [-1,1] → normalize to [0,1]
+                    if (motorKeyValues[5] == 0) {
+                        float v = (GamepadInputs.GetAxis(5) + 1f) / 2f;
+                        if (v > deadzone) motorKeyValues[5] = v;
+                    }
+                    // Left bumper (button 4)
+                    if (motorKeyValues[6] == 0 && GamepadInputs.GetButton(4)) {
+                        motorKeyValues[6] = 1.0f;
+                    }
+                    // Right bumper (button 5)
+                    if (motorKeyValues[7] == 0 && GamepadInputs.GetButton(5)) {
+                        motorKeyValues[7] = 1.0f;
+                    }
+                }
+
                 // Detect keyboard changes
                 boolean keysChanged = false;
                 for (int i = 0; i < 8; i++) {
