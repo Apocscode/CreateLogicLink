@@ -1,6 +1,6 @@
 {
     "itemGroup.logiclink": "Logic Link",
-    "block.logiclink.logic_link": "Logic Link",
+    "block.logiclink.logic_link": "Logic Link Hub",
     "block.logiclink.logic_sensor": "Logic Sensor",
     "block.logiclink.redstone_controller": "Redstone Controller",
     "block.logiclink.creative_logic_motor": "Creative Logic Motor",
@@ -9,7 +9,7 @@
     "block.logiclink.train_monitor": "Train Network Monitor",
     "item.logiclink.signal_tablet": "Signal Diagnostic Tablet",
 
-    "logiclink.linked.tooltip": "Logic Link : Linked",
+    "logiclink.linked.tooltip": "Logic Link Hub : Linked",
     "logiclink.linked.tooltip_clear": "Right-click in air to clear",
     "logiclink.linked.tuned": "Frequency copied!",
     "logiclink.linked.cleared": "Frequency cleared",
@@ -34,9 +34,9 @@
     "logiclink.ponder.tag.sensor_heat": "Heat Sources",
     "logiclink.ponder.tag.sensor_heat.description": "The Logic Sensor reads heat level from Blaze Burners",
     "logiclink.ponder.tag.link_logistics": "Create Logistics",
-    "logiclink.ponder.tag.link_logistics.description": "The Logic Link bridges Create's logistics network with CC:Tweaked computers",
+    "logiclink.ponder.tag.link_logistics.description": "The Logic Link Hub bridges Create's logistics network with CC:Tweaked computers",
     "logiclink.ponder.tag.link_sensors": "Logic Sensors",
-    "logiclink.ponder.tag.link_sensors.description": "Logic Sensors provide wireless machine data to any Logic Link on the same network",
+    "logiclink.ponder.tag.link_sensors.description": "Logic Sensors provide wireless machine data to any Logic Link Hub on the same network",
     "logiclink.ponder.tag.link_computers": "CC:Tweaked Computers",
     "logiclink.ponder.tag.link_computers.description": "Place a CC:Tweaked computer adjacent to access the peripheral via Lua",
     "logiclink.ponder.tag.rc_redstone_links": "Redstone Links",
@@ -44,10 +44,10 @@
     "logiclink.ponder.tag.rc_lamps": "Redstone Outputs",
     "logiclink.ponder.tag.rc_lamps.description": "Control redstone-powered blocks like lamps and pistons wirelessly",
 
-    "logiclink.ponder.logic_link_overview.header": "Logic Link — Logistics Network Bridge",
+    "logiclink.ponder.logic_link_overview.header": "Logic Link Hub — Logistics Network Bridge",
     "logiclink.ponder.logic_link_overview.text_1": "Create's logistics network connects storage and packagers",
-    "logiclink.ponder.logic_link_overview.text_2": "Right-click a Stock Link to copy its frequency, then place the Logic Link",
-    "logiclink.ponder.logic_link_overview.text_3": "Place a CC:Tweaked computer adjacent — it detects the Logic Link as a peripheral",
+    "logiclink.ponder.logic_link_overview.text_2": "Right-click a Stock Link to copy its frequency, then place the Logic Link Hub",
+    "logiclink.ponder.logic_link_overview.text_3": "Place a CC:Tweaked computer adjacent — it detects the Logic Link Hub as a peripheral",
     "logiclink.ponder.logic_link_overview.text_4": "14 Lua functions: list items, request deliveries, read sensors, monitor gauges",
     "logiclink.ponder.logic_link_overview.text_5": "Access the entire network's inventory from a single computer",
 
@@ -56,7 +56,7 @@
     "logiclink.ponder.logic_sensor_overview.text_2": "Works with barrels, vaults, and any container",
     "logiclink.ponder.logic_sensor_overview.text_3": "Mount on Create machines to read kinetic speed and stress",
     "logiclink.ponder.logic_sensor_overview.text_4": "Reads inventory and fluid data from basins and tanks",
-    "logiclink.ponder.logic_sensor_overview.text_5": "Link sensors to a network for wireless access through any Logic Link",
+    "logiclink.ponder.logic_sensor_overview.text_5": "Link sensors to a network for wireless access through any Logic Link Hub",
     "logiclink.ponder.logic_sensor_overview.text_6": "7 Lua functions — getData(), getTargetData(), refresh(), and more",
 
     "logiclink.ponder.redstone_controller_overview.header": "Redstone Controller — Wireless Redstone",

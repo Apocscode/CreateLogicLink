@@ -4,7 +4,7 @@ A Minecraft NeoForge mod that bridges **Create mod's** logistics system with **C
 
 ## Features
 
-- **Logic Link Block** — Full-size peripheral block that connects to Create's logistics network. Query inventory, enumerate gauges/links, and request item deliveries via Lua (14 functions).
+- **Logic Link Hub Block** — Full-size peripheral block that connects to Create's logistics network. Query inventory, enumerate gauges/links, and request item deliveries via Lua (14 functions).
 - **Logic Sensor Block** — Thin surface-mount sensor that reads Create machine data (inventory, fluids, kinetic speed/stress, Blaze Burner heat). Attaches to any surface like a Stock Link (7 functions).
 - **Redstone Controller Block** — Programmatic control over Create's Redstone Link wireless network. One block manages unlimited frequency channels from Lua — no GUI, no physical Redstone Links needed (8 functions).
 - **Creative Logic Motor** — CC-controlled rotation source with unlimited stress capacity. Set speed, direction, and run timed sequences from Lua (16 functions).
@@ -19,7 +19,7 @@ A Minecraft NeoForge mod that bridges **Create mod's** logistics system with **C
   - **Yellow** = Warning (unsignaled junction)
 - **Network Highlighting** — Hold a linked item to see all blocks on the network outlined in Create's signature blue.
 - **Item Requests** — Send items through Create's packaging/delivery system from Lua scripts.
-- **Wireless Sensor Discovery** — Logic Links can discover all Logic Sensors on the network via `getSensors()`.
+- **Wireless Sensor Discovery** — Logic Link Hubs can discover all Logic Sensors on the network via `getSensors()`.
 - **Ponder Tutorials** — All 5 blocks have animated Create-style (W) key tutorials with tagged categories.
 - **Logic Remote Item** — Handheld gamepad controller that bridges keyboard/gamepad input to Create's Redstone Link network and LogicLink drives/motors. Bind buttons to redstone frequencies, map analog sticks to motor speeds, and configure up to 8 aux channels with variable power levels (1–15) and toggle/momentary modes. Right-click a Redstone Link to bind, right-click a Drive/Motor to add as target, shift-right-click to open the config GUI.
 - **Contraption Remote Block** — Placeable controller block with integrated seat mechanics. Sit on an adjacent Create seat, then right-click the block to take control. Gamepad/keyboard input drives bound motors and fires redstone link signals — works on stationary builds and on moving contraptions. Shift-right-click while standing opens the config GUI, which stores the profile in the block entity (no held item needed). Supports the same 12 motor bindings and 8 aux redstone channels as the Logic Remote.
@@ -47,9 +47,9 @@ Developed and tested with the **All The Mods 10 (ATM10)** modpack.
 
 ## Getting Started
 
-1. **Craft a Logic Link** — cross-shaped recipe (Ender Pearl, Brass Ingots, Andesite Casing, Comparator)
-2. **Right-click a Stock Link** (or any linked block) with the Logic Link item to copy the network frequency. The item glows purple when linked.
-3. **Place the Logic Link** next to a CC:Tweaked computer
+1. **Craft a Logic Link Hub** — cross-shaped recipe (Ender Pearl, Brass Ingots, Andesite Casing, Comparator)
+2. **Right-click a Stock Link** (or any linked block) with the Logic Link Hub item to copy the network frequency. The item glows purple when linked.
+3. **Place the Logic Link Hub** next to a CC:Tweaked computer
 4. **Wrap the peripheral** in a Lua script:
 
 ```lua
@@ -66,7 +66,7 @@ end
 
 1. **Right-click a Stock Link** with a Logic Sensor item to copy the same frequency
 2. **Place the sensor** on the face of a Create machine (basin, depot, shaft, tank, etc.)
-3. **Read sensor data** from the Logic Link:
+3. **Read sensor data** from the Logic Link Hub:
 
 ```lua
 local link = peripheral.wrap("logiclink")
@@ -131,8 +131,8 @@ Additional fields by block type:
 
 ## Network Highlighting
 
-Hold a linked Logic Link or Logic Sensor item to see all blocks on the network highlighted with Create-style alternating blue outlines. This includes:
-- Our Logic Link and Logic Sensor blocks
+Hold a linked Logic Link Hub or Logic Sensor item to see all blocks on the network highlighted with Create-style alternating blue outlines. This includes:
+- Our Logic Link Hub and Logic Sensor blocks
 - Create's Stock Links, Packager Links, and other logistics blocks
 
 The outlines follow actual block shapes (not full cubes) and match Create's visual style.
@@ -311,7 +311,7 @@ A handheld gamepad controller item that maps keyboard and gamepad input to Creat
 | **Shift + right-click** (air) | Open the Control Config GUI |
 | **Right-click** on Redstone Link | Enter BIND mode — press a button/axis to bind it to that link's frequency |
 | **Right-click** on Logic Drive / Creative Logic Motor | Add as a control target (up to 8) |
-| **Shift + right-click** on Logic Link hub | Link the remote for device discovery |
+| **Shift + right-click** on Logic Link Hub | Link the remote for device discovery |
 
 ### Control Config GUI
 
@@ -328,7 +328,7 @@ Three-panel configuration screen:
 
 ### Binding Flow
 
-1. Link the remote to a Logic Link hub (shift-right-click the hub block)
+1. Link the remote to a Logic Link Hub (shift-right-click the hub block)
 2. Open the config GUI and assign motors/drives to binding slots
 3. Set speed, direction, and sequential options per motor slot
 4. For aux channels: pick two frequency items and set power level (1–15)
@@ -368,7 +368,7 @@ When the block is assembled onto a contraption:
 
 All blocks and items use shaped crafting recipes with Create and vanilla ingredients.
 
-### Logic Link
+### Logic Link Hub
 ```
 ┌─────────────┬─────────────────┬─────────────┐
 │             │   Ender Pearl   │             │

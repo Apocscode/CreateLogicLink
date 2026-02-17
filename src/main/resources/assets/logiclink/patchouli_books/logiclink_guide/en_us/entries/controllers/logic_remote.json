@@ -13,7 +13,7 @@
         {
             "type": "patchouli:text",
             "title": "Basic Usage",
-            "text": "$(bold)Interactions:$()$(br2)$(li)$(thing)Right-click$() (air) — Toggle ACTIVE mode: input is captured and sent as signals$(br)$(li)$(thing)Shift + right-click$() (air) — Open the Control Config GUI$(br)$(li)$(thing)Right-click$() on Redstone Link — Enter BIND mode: press a button to bind it to that link$(br)$(li)$(thing)Right-click$() on Drive/Motor — Add as a control target (up to 8)$(br)$(li)$(thing)Shift + right-click$() on Logic Link hub — Link for device discovery"
+            "text": "$(bold)Interactions:$()$(br2)$(li)$(thing)Right-click$() (air) — Toggle ACTIVE mode: input is captured and sent as signals$(br)$(li)$(thing)Shift + right-click$() (air) — Open the Control Config GUI$(br)$(li)$(thing)Right-click$() on Redstone Link — Enter BIND mode: press a button to bind it to that link$(br)$(li)$(thing)Right-click$() on Drive/Motor — Add as a control target (up to 8)$(br)$(li)$(thing)Shift + right-click$() on Logic Link Hub — Link for device discovery"
         },
         {
             "type": "patchouli:text",
@@ -28,7 +28,7 @@
         {
             "type": "patchouli:text",
             "title": "Getting Started",
-            "text": "$(bold)Step-by-step setup:$()$(br2)$(bold)1.$() Shift-right-click a $(item)Logic Link$() hub to link the remote$(br)$(bold)2.$() Open the config GUI (shift-right-click in air)$(br)$(bold)3.$() Assign motors/drives from the left panel to binding slots$(br)$(bold)4.$() Set speed, direction, and options per slot$(br)$(bold)5.$() For aux channels: pick frequency items and set power$(br)$(bold)6.$() Right-click in air to activate — your input controls everything in real time"
+            "text": "$(bold)Step-by-step setup:$()$(br2)$(bold)1.$() Shift-right-click a $(item)Logic Link Hub$() to link the remote$(br)$(bold)2.$() Open the config GUI (shift-right-click in air)$(br)$(bold)3.$() Assign motors/drives from the left panel to binding slots$(br)$(bold)4.$() Set speed, direction, and options per slot$(br)$(bold)5.$() For aux channels: pick frequency items and set power$(br)$(bold)6.$() Right-click in air to activate — your input controls everything in real time"
         },
         {
             "type": "patchouli:text",

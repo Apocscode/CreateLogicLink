@@ -55,7 +55,7 @@ public class LogicLinkSceneAnimations {
         ).rightClick().withItem(new ItemStack(Items.ENDER_PEARL));
         scene.overlay().showOutline(PonderPalette.GREEN, "link", util.select().position(3, 1, 3), 80);
         scene.overlay().showText(80)
-                .text("Right-click a Stock Link to copy its frequency, then place the Logic Link")
+                .text("Right-click a Stock Link to copy its frequency, then place the Logic Link Hub")
                 .attachKeyFrame()
                 .placeNearTarget()
                 .pointAt(util.vector().blockSurface(new BlockPos(3, 1, 3), Direction.UP));
@@ -69,7 +69,7 @@ public class LogicLinkSceneAnimations {
         scene.overlay().showOutline(PonderPalette.OUTPUT, "computer",
                 util.select().position(4, 1, 3).add(util.select().position(4, 2, 3)), 80);
         scene.overlay().showText(80)
-                .text("Place a CC:Tweaked computer adjacent — it detects the Logic Link as a peripheral")
+                .text("Place a CC:Tweaked computer adjacent — it detects the Logic Link Hub as a peripheral")
                 .attachKeyFrame()
                 .placeNearTarget()
                 .pointAt(util.vector().blockSurface(new BlockPos(4, 1, 3), Direction.EAST));
@@ -176,7 +176,7 @@ public class LogicLinkSceneAnimations {
                         .add(util.select().position(3, 1, 4))
                         .add(util.select().position(4, 2, 4)), 80);
         scene.overlay().showText(80)
-                .text("Link sensors to a network for wireless access through any Logic Link")
+                .text("Link sensors to a network for wireless access through any Logic Link Hub")
                 .attachKeyFrame()
                 .placeNearTarget()
                 .pointAt(util.vector().centerOf(3, 2, 3));

@@ -56,7 +56,7 @@ import java.util.function.Consumer;
  *   <li>Shift + right-click: open frequency configuration GUI</li>
  *   <li>Right-click on Redstone Link: enter bind mode (assign button/axis to link)</li>
  *   <li>Right-click on Logic Drive/Motor: add as drive/motor target</li>
- *   <li>Shift + right-click on Logic Hub: link to hub</li>
+ *   <li>Shift + right-click on Logic Link Hub: link to hub</li>
  * </ul>
  * <p>
  * 50 ghost slots: 15 buttons × 2 frequency items + 10 axes × 2 frequency items.
@@ -201,7 +201,7 @@ public class LogicRemoteItem extends Item implements MenuProvider {
     // ==================== Hub Linking ====================
 
     /**
-     * Store a link to a Logic Hub (Logic Link block) in the item's NBT.
+     * Store a link to a Logic Link Hub in the item's NBT.
      */
     public static void linkToHub(ItemStack stack, BlockPos hubPos, String hubLabel) {
         CompoundTag tag = getOrCreateTag(stack);
@@ -356,7 +356,7 @@ public class LogicRemoteItem extends Item implements MenuProvider {
         tooltip.add(Component.empty());
         tooltip.add(Component.literal("Right-click: Toggle controller")
                 .withStyle(ChatFormatting.DARK_GRAY));
-        tooltip.add(Component.literal("Shift + Click Logic Link: Link to hub")
+        tooltip.add(Component.literal("Shift + Click Logic Link Hub: Link")
                 .withStyle(ChatFormatting.DARK_GRAY));
         tooltip.add(Component.literal("Click Redstone Link: Bind button/axis")
                 .withStyle(ChatFormatting.DARK_GRAY));

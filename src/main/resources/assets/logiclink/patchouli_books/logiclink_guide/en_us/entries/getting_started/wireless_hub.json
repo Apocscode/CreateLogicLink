@@ -7,7 +7,7 @@
         {
             "type": "patchouli:text",
             "title": "Wireless Hub",
-            "text": "The $(item)Logic Link$() can act as a $(thing)wireless hub$(), discovering and controlling nearby LogicLink devices without wired connections.$(br2)The hub scans for Logic Sensors, Creative Logic Motors, Logic Drives, and Redstone Controllers within range (default 64 blocks, max 256)."
+            "text": "The $(item)Logic Link Hub$() can act as a $(thing)wireless hub$(), discovering and controlling nearby LogicLink devices without wired connections.$(br2)The hub scans for Logic Sensors, Creative Logic Motors, Logic Drives, and Redstone Controllers within range (default 64 blocks, max 256)."
         },
         {
             "type": "patchouli:text",

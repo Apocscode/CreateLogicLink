@@ -306,8 +306,8 @@ public class MotorConfigScreen extends Screen {
 
         if (linkedHubPos == null) {
             g.drawString(font, "Shift+click a", panelX + 4, panelY + 18, TEXT_DIM, false);
-            g.drawString(font, "Logic Hub to", panelX + 4, panelY + 30, TEXT_DIM, false);
-            g.drawString(font, "link remote", panelX + 4, panelY + 40, TEXT_DIM, false);
+            g.drawString(font, "Logic Link Hub", panelX + 4, panelY + 30, TEXT_DIM, false);
+            g.drawString(font, "to link remote", panelX + 4, panelY + 40, TEXT_DIM, false);
         } else if (availableDevices.isEmpty()) {
             g.drawString(font, "No devices", panelX + 4, panelY + 18, TEXT_DIM, false);
             g.drawString(font, "Place motors/", panelX + 4, panelY + 30, TEXT_DIM, false);

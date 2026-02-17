@@ -37,14 +37,14 @@
 
 ## Blocks
 
-### Logic Link
+### Logic Link Hub
 
-A peripheral block that connects to Create's logistics network. Place it, right-click a Stock Link to copy the network frequency, then place the Logic Link next to a CC:Tweaked computer. The computer sees it as a `logiclink` peripheral.
+A peripheral block that connects to Create's logistics network. Place it, right-click a Stock Link to copy the network frequency, then place the Logic Link Hub next to a CC:Tweaked computer. The computer sees it as a `logiclink` peripheral.
 
 - **Appearance:** Full cube, andesite casing variant (polished andesite top, andesite casing sides/bottom), netherite block sound
 - **Map Color:** Emerald green (MapColor.EMERALD)
 - **Placement:** Horizontal directional (4 faces: N/S/E/W)
-- **Linking:** Right-click a Stock Link (or any linked Logic Link/Sensor) with the item to copy the frequency. Right-click air to clear.
+- **Linking:** Right-click a Stock Link (or any linked Logic Link Hub/Sensor) with the item to copy the frequency. Right-click air to clear.
 - **Enchantment glow:** Item glows purple when tuned to a network
 
 ### Logic Sensor
@@ -55,7 +55,7 @@ A thin wireless sensor block that attaches flat to any surface (floor, wall, cei
 - **Map Color:** Cyan (MapColor.COLOR_CYAN), copper grate sound
 - **Base Class:** `FaceAttachedHorizontalDirectionalBlock` — uses FACE (floor/wall/ceiling) + FACING (horizontal direction) blockstate properties, identical to Create's PackagerLinkBlock/Stock Link
 - **Placement:** Attaches flat to any surface — floor, wall, or ceiling. No support block required (canSurvive always returns true).
-- **Linking:** Same frequency system as Logic Link — right-click a Stock Link to copy frequency
+- **Linking:** Same frequency system as Logic Link Hub — right-click a Stock Link to copy frequency
 - **Enchantment glow:** Item glows purple when tuned
 - **Data refresh:** Every 20 ticks (1 second), reads the target block and caches the result
 
@@ -111,9 +111,9 @@ A handheld gamepad controller item that maps keyboard and gamepad input directly
   - **Shift + right-click (air):** Open ControlConfigScreen GUI
   - **Right-click on Redstone Link:** Enter BIND mode — press button/axis to bind to link frequency
   - **Right-click on Logic Drive / Creative Logic Motor:** Add as target (up to 8)
-  - **Shift + right-click on Logic Link hub:** Link remote for device discovery
+  - **Shift + right-click on Logic Link Hub:** Link remote for device discovery
 - **Item NBT Data:**
-  - `HubX/Y/Z`, `HubLinked`, `HubLabel` — linked Logic Link hub
+  - `HubX/Y/Z`, `HubLinked`, `HubLabel` — linked Logic Link Hub
   - `Targets` — up to 8 drive/motor positions with types
   - `Items` — 50-slot ghost inventory for frequency pairs (15 buttons × 2 + 10 axes × 2)
   - `ControlProfile` — motor and aux binding configuration
@@ -220,13 +220,13 @@ The tablet and in-world ghost box renderer use consistent color coding:
 
 ## Network Highlight System
 
-When a player holds a tuned Logic Link or Logic Sensor item, all blocks on the same logistics network are highlighted with outlines matching Create's visual style.
+When a player holds a tuned Logic Link Hub or Logic Sensor item, all blocks on the same logistics network are highlighted with outlines matching Create's visual style.
 
 ### How It Works
 
 1. **Server tick** (`LogicLink.onPlayerTick`): Every 5 ticks, checks if the player holds a tuned item in either hand. Extracts the frequency UUID.
 2. **Position gathering** (`LinkNetwork.sendNetworkHighlight`): Collects positions from three sources:
-   - Our Logic Link blocks (LinkNetwork registry)
+   - Our Logic Link Hub blocks (LinkNetwork registry)
    - Our Logic Sensor blocks (SensorNetwork registry)
    - **Create's logistics blocks** via `LogisticallyLinkedBehaviour.getAllPresent(freq)` — Stock Links, Packager Links, etc.
 3. **Network packet** (`NetworkHighlightPayload`): Sends all positions to the client
@@ -242,7 +242,7 @@ When a player holds a tuned Logic Link or Logic Sensor item, all blocks on the s
 
 ### What Gets Highlighted
 
-- ✅ Logic Link blocks
+- ✅ Logic Link Hub blocks
 - ✅ Logic Sensor blocks
 - ✅ Create Stock Links
 - ✅ Create Packager Links
@@ -260,7 +260,7 @@ Wrap with: `local link = peripheral.wrap("logiclink")`
 | Function | Returns | Description |
 |----------|---------|-------------|
 | `isLinked()` | `boolean` | Whether connected to a Create logistics network |
-| `getPosition()` | `{x, y, z}` | Position of this Logic Link block |
+| `getPosition()` | `{x, y, z}` | Position of this Logic Link Hub block |
 | `getNetworkID()` | `string` or `nil` | Network frequency UUID |
 | `getNetworkInfo()` | `table` | Summary: `{linked, networkId, position, itemTypes, totalItems}` |
 | `refresh()` | — | Force refresh cached inventory (normally auto-refreshes every 2s) |
@@ -539,11 +539,11 @@ F:\Controller\CreateLogicLink\
 
 ## Implementation History
 
-### Phase 1 — Core Logic Link
+### Phase 1 — Core Logic Link Hub
 
-1. **Logic Link block and block entity** — Connects to Create logistics networks via frequency UUID.
+1. **Logic Link Hub block and block entity** — Connects to Create logistics networks via frequency UUID.
 2. **Frequency linking system** — Right-click Stock Links to copy frequency, right-click air to clear.
-3. **CC:Tweaked peripheral registration** — Logic Link appears as `logiclink` peripheral.
+3. **CC:Tweaked peripheral registration** — Logic Link Hub appears as `logiclink` peripheral.
 4. **9 read-only Lua functions** — `isLinked`, `getPosition`, `getNetworkID`, `list`, `getItemCount`, `getItemTypeCount`, `getTotalItemCount`, `refresh`, `getNetworkInfo`.
 5. **2 item request functions** — `requestItem`, `requestItems`.
 6. **Factory Abstractions compatibility** — Detects mod at runtime, routes through GenericLogisticsManager via reflection.
@@ -559,11 +559,11 @@ F:\Controller\CreateLogicLink\
 10. **SensorNetwork static registry** — ConcurrentHashMap with WeakReferences.
 11. **CreateBlockReader utility** — Reads Create block data via reflection and NeoForge capabilities.
 12. **Logic Sensor peripheral** — 7 Lua functions for direct wired access.
-13. **`getSensors()` on Logic Link** — Wireless sensor discovery across the network.
+13. **`getSensors()` on Logic Link Hub** — Wireless sensor discovery across the network.
 
 ### Phase 4 — Textures & Visual Identity
 
-14. **Custom block textures** — Andesite casing variants for Logic Link/Sensor/Redstone Controller.
+14. **Custom block textures** — Andesite casing variants for Logic Link Hub/Sensor/Redstone Controller.
 
 ### Phase 5 — Network Highlight System
 
@@ -590,7 +590,7 @@ F:\Controller\CreateLogicLink\
 
 ### Phase 9 — Ponder Tutorials (W Key)
 
-26. **Ponder system** — Create-style animated tutorials for Logic Link, Logic Sensor, and Redstone Controller.
+26. **Ponder system** — Create-style animated tutorials for Logic Link Hub, Logic Sensor, and Redstone Controller.
 27. **9 Ponder tags** — Categorized with distinct item icons.
 28. **3 scene schematics** — `.nbt` Structure Block files.
 
@@ -634,7 +634,7 @@ F:\Controller\CreateLogicLink\
 
 All blocks and items use shaped crafting recipes with Create and vanilla ingredients.
 
-### Logic Link
+### Logic Link Hub
 ```
 ┌─────────────┬─────────────────┬─────────────┐
 │             │   Ender Pearl   │             │
@@ -643,7 +643,7 @@ All blocks and items use shaped crafting recipes with Create and vanilla ingredi
 ├─────────────┼─────────────────┼─────────────┤
 │             │   Comparator    │             │
 └─────────────┴─────────────────┴─────────────┘
-→ Logic Link ×1
+→ Logic Link Hub ×1
 ```
 
 ### Logic Sensor
@@ -734,7 +734,7 @@ All blocks and items use shaped crafting recipes with Create and vanilla ingredi
 
 | Item | Top | Middle | Bottom |
 |------|-----|--------|--------|
-| Logic Link | Ender Pearl | Brass + Andesite Casing + Brass | Comparator |
+| Logic Link Hub | Ender Pearl | Brass + Andesite Casing + Brass | Comparator |
 | Logic Sensor | Observer | Copper + Andesite Casing + Copper | Nether Quartz |
 | Redstone Controller | Ender Pearl | Brass + Andesite Casing + Brass | Redstone Block |
 | Creative Logic Motor | Ender Pearl | Brass + Electron Tube + Brass | Shaft |
@@ -766,9 +766,9 @@ All blocks and items use shaped crafting recipes with Create and vanilla ingredi
 | `sensor_kinetics` | Shaft | Logic Sensor | Kinetic components |
 | `sensor_fluids` | Fluid Tank | Logic Sensor | Fluid storage |
 | `sensor_heat` | Blaze Burner | Logic Sensor | Heat sources |
-| `link_logistics` | Stock Link | Logic Link | Create logistics |
-| `link_sensors` | Logic Sensor | Logic Link | Logic Sensors on network |
-| `link_computers` | CC Computer | Logic Link | CC:Tweaked computers |
+| `link_logistics` | Stock Link | Logic Link Hub | Create logistics |
+| `link_sensors` | Logic Sensor | Logic Link Hub | Logic Sensors on network |
+| `link_computers` | CC Computer | Logic Link Hub | CC:Tweaked computers |
 | `rc_redstone_links` | Redstone Link | Redstone Controller | Redstone Links |
 | `rc_lamps` | Redstone Lamp | Redstone Controller | Redstone outputs |
 | `motor_kinetics` | — | Both Motors | Rotation output |
@@ -780,7 +780,7 @@ All blocks and items use shaped crafting recipes with Create and vanilla ingredi
 
 ### Scene Animations
 
-**Logic Link Overview** (7×4×7) — Network bridge demonstration with inventory access
+**Logic Link Hub Overview** (7×4×7) — Network bridge demonstration with inventory access
 
 **Logic Sensor Overview** (7×4×7) — Sensor types on chest, barrel, shaft, basin
 
@@ -798,7 +798,7 @@ All blocks and items use shaped crafting recipes with Create and vanilla ingredi
 
 | Peripheral Type | Block/Item | Functions | Category |
 |---|---|---|---|
-| `logiclink` | Logic Link | 14 | Logistics network |
+| `logiclink` | Logic Link Hub | 14 | Logistics network |
 | `logicsensor` | Logic Sensor | 7 | Machine data |
 | `redstone_controller` | Redstone Controller | 8 | Wireless redstone |
 | `creative_logic_motor` | Creative Logic Motor | 16 | Rotation source |

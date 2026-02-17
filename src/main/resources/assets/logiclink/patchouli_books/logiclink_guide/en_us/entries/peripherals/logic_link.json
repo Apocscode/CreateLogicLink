@@ -1,5 +1,5 @@
 {
-    "name": "Logic Link",
+    "name": "Logic Link Hub",
     "icon": "logiclink:logic_link",
     "category": "logiclink:peripherals",
     "sortnum": 0,
@@ -8,13 +8,13 @@
             "type": "patchouli:spotlight",
             "item": "logiclink:logic_link",
             "link_recipe": true,
-            "title": "Logic Link",
+            "title": "Logic Link Hub",
             "text": "The central hub peripheral for $(thing)CreateLogicLink$(). Connects a CC:Tweaked computer to a Create logistics network for inventory access, item requests, and wireless device control.$(br2)Peripheral type: $(thing)\"logiclink\"$()"
         },
         {
             "type": "patchouli:crafting",
             "recipe": "logiclink:logic_link",
-            "text": "$(bold)Linking:$() Right-click the Logic Link $(italic)item$() on any Create linked block (Stock Link, Package Link, etc.) to copy the network frequency. Then place it next to a CC:Tweaked computer. Right-click in air to clear the stored frequency. Sneak+right-click to place without linking."
+            "text": "$(bold)Linking:$() Right-click the Logic Link Hub $(italic)item$() on any Create linked block (Stock Link, Package Link, etc.) to copy the network frequency. Then place it next to a CC:Tweaked computer. Right-click in air to clear the stored frequency. Sneak+right-click to place without linking."
         },
         {
             "type": "patchouli:text",
@@ -34,7 +34,7 @@
         {
             "type": "patchouli:text",
             "title": "Wireless Hub",
-            "text": "The Logic Link doubles as a $(thing)wireless hub$(), discovering nearby LogicLink devices without wires.$(br2)$(li)$(thing)getDevices()$() → [{id, type, label, position, distance, dimension}]$(br)$(li)$(thing)getHubRange()$() → int (default 64, max 256)$(br)$(li)$(thing)setHubRange(range)$()$(br)$(li)$(thing)setDeviceLabel(id, label)$()$(br)$(li)$(thing)getDeviceLabel(id)$() → string$(br2)$(#4488CC)local devs = link.getDevices()$(br)for _, d in ipairs(devs) do$(br)  print(d.id .. \" [\" .. d.type .. \"]\")$(br)end$()"
+            "text": "The Logic Link Hub doubles as a $(thing)wireless hub$(), discovering nearby LogicLink devices without wires.$(br2)$(li)$(thing)getDevices()$() → [{id, type, label, position, distance, dimension}]$(br)$(li)$(thing)getHubRange()$() → int (default 64, max 256)$(br)$(li)$(thing)setHubRange(range)$()$(br)$(li)$(thing)setDeviceLabel(id, label)$()$(br)$(li)$(thing)getDeviceLabel(id)$() → string$(br2)$(#4488CC)local devs = link.getDevices()$(br)for _, d in ipairs(devs) do$(br)  print(d.id .. \" [\" .. d.type .. \"]\")$(br)end$()"
         },
         {
             "type": "patchouli:text",

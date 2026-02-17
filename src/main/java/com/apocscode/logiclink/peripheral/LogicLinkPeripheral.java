@@ -237,7 +237,7 @@ public class LogicLinkPeripheral implements IPeripheral {
     @LuaFunction(mainThread = true)
     public final List<Map<String, Object>> getGauges() throws LuaException {
         if (!blockEntity.isLinked()) {
-            throw new LuaException("Logic Link is not connected to a network");
+            throw new LuaException("Logic Link Hub is not connected to a network");
         }
 
         UUID freqId = blockEntity.getNetworkFrequency();
@@ -344,7 +344,7 @@ public class LogicLinkPeripheral implements IPeripheral {
     @LuaFunction(mainThread = true)
     public final List<Map<String, Object>> getLinks() throws LuaException {
         if (!blockEntity.isLinked()) {
-            throw new LuaException("Logic Link is not connected to a network");
+            throw new LuaException("Logic Link Hub is not connected to a network");
         }
 
         UUID freqId = blockEntity.getNetworkFrequency();
@@ -396,7 +396,7 @@ public class LogicLinkPeripheral implements IPeripheral {
     @LuaFunction(mainThread = true)
     public final List<Map<String, Object>> getSensors() throws LuaException {
         if (!blockEntity.isLinked()) {
-            throw new LuaException("Logic Link is not connected to a network");
+            throw new LuaException("Logic Link Hub is not connected to a network");
         }
 
         UUID freqId = blockEntity.getNetworkFrequency();
@@ -448,7 +448,7 @@ public class LogicLinkPeripheral implements IPeripheral {
     @LuaFunction(mainThread = true)
     public final boolean requestItem(String itemName, int count, String address) throws LuaException {
         if (!blockEntity.isLinked()) {
-            throw new LuaException("Logic Link is not connected to a network");
+            throw new LuaException("Logic Link Hub is not connected to a network");
         }
         if (count <= 0) {
             throw new LuaException("Count must be greater than 0");
@@ -497,7 +497,7 @@ public class LogicLinkPeripheral implements IPeripheral {
     @LuaFunction(mainThread = true)
     public final boolean requestItems(Map<?, ?> items, String address) throws LuaException {
         if (!blockEntity.isLinked()) {
-            throw new LuaException("Logic Link is not connected to a network");
+            throw new LuaException("Logic Link Hub is not connected to a network");
         }
         if (address == null || address.isEmpty()) {
             throw new LuaException("Address cannot be empty");
