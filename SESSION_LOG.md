@@ -494,3 +494,32 @@ User confirmed keyboard W/S works for motor control, but gamepad joystick does n
 
 ### Deployed
 - **Jar**: `logiclink-0.1.0.jar` → ATM10 mods folder
+---
+
+## Session 7g — 2026-02-17 — 12 Unidirectional Motor Slots + Scrollable Motor Panel
+
+### Commits
+- `2d30dca` — Add scrollable motor panel for 12 unidirectional motor slots
+
+### Summary
+Expanded the motor binding system from 8 bidirectional axes to 12 unidirectional directions. Each joystick direction now gets its own independent motor slot, enabling full 4-direction control per stick.
+
+**Slot layout (12 total)**:
+- Slots 0–3: Left stick — L Up (W), L Down (S), L Left (A), L Right (D)
+- Slots 4–7: Right stick — R Up (↑), R Down (↓), R Left (←), R Right (→)
+- Slots 8–11: Triggers/bumpers — LT (Q), RT (E), LB (Z), RB (C)
+
+**Changes**:
+1. **ControlProfile** — `MAX_MOTOR_BINDINGS` 8→12, expanded axis labels/keys arrays, updated `migrateFromAxisConfig()` with old→new index mapping
+2. **RemoteClientHandler** — Rewrote keyboard sampling as 12 unidirectional `keyValue()` calls; gamepad merge splits each stick into 4 directions (up/down/left/right); overlay WASD derivation and renderKey indices updated
+3. **ControlConfigScreen** — Added scrollable motor panel (`motorScrollOffset`, `MOTOR_ROWS_VISIBLE=8`); scroll indicators (▲/▼ arrows); speed scroll-wheel still works when hovering speed field; keyColors extended to 12; `saveLegacyAxisConfig` writes all 12 slots
+
+### Files Changed
+| File | Change |
+|------|--------|
+| `controller/ControlProfile.java` | MAX_MOTOR_BINDINGS 8→12, labels/keys expanded, migration updated |
+| `controller/RemoteClientHandler.java` | 12 unidirectional keyboard+gamepad sampling, overlay/renderKey indices |
+| `client/ControlConfigScreen.java` | Scrollable motor panel, scroll indicators, extended key colors |
+
+### Deployed
+- **Jar**: `logiclink-0.1.0.jar` → ATM10 mods folder
