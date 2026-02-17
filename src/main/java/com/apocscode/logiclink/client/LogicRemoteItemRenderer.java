@@ -71,6 +71,10 @@ public class LogicRemoteItemRenderer extends CustomRenderedItemModelRenderer {
     private static short blockButtonStates = 0;
     private static int blockAxisStates = 0;
 
+    // Joystick axis tilt animation (4 axes: LX, LY, RX, RY) — item-mode and block-mode
+    static LerpedFloat[] joystickAxes = new LerpedFloat[4];
+    static LerpedFloat[] blockJoystickAxes = new LerpedFloat[4];
+
     /**
      * Button/element positions on the controller model.
      * Indices 0-3: D-pad (not used as offsets here, 0-3 face buttons rendered at model origin).
@@ -100,6 +104,10 @@ public class LogicRemoteItemRenderer extends CustomRenderedItemModelRenderer {
             buttons.add(LerpedFloat.linear().startWithValue(0));
             blockButtons.add(LerpedFloat.linear().startWithValue(0));
         }
+        for (int i = 0; i < 4; i++) {
+            joystickAxes[i] = LerpedFloat.linear().startWithValue(0);
+            blockJoystickAxes[i] = LerpedFloat.linear().startWithValue(0);
+        }
     }
 
     // ---- Tick ----
@@ -115,7 +123,7 @@ public class LogicRemoteItemRenderer extends CustomRenderedItemModelRenderer {
     }
 
     /**
-     * Advance button depression lerps — called every client tick.
+     * Advance button depression and joystick axis lerps — called every client tick.
      */
     public static void tick() {
         if (Minecraft.getInstance().isPaused()) return;
@@ -129,6 +137,8 @@ public class LogicRemoteItemRenderer extends CustomRenderedItemModelRenderer {
                 btn.chase(pressed ? 1.0 : 0.0, 0.4f, LerpedFloat.Chaser.EXP);
                 btn.tickChaser();
             }
+            // Item-mode: chase joystick axis tilt from RemoteClientHandler
+            tickJoystickAxes(joystickAxes, RemoteClientHandler.axisStates);
         }
 
         // Block-mode: chase button states from synced BE state
@@ -137,6 +147,25 @@ public class LogicRemoteItemRenderer extends CustomRenderedItemModelRenderer {
             boolean pressed = (blockButtonStates & (1 << i)) != 0;
             btn.chase(pressed ? 1.0 : 0.0, 0.4f, LerpedFloat.Chaser.EXP);
             btn.tickChaser();
+        }
+        // Block-mode: chase joystick axis tilt from synced BE state
+        tickJoystickAxes(blockJoystickAxes, blockAxisStates);
+    }
+
+    /**
+     * Decode packed axis int and chase joystick tilt LerpedFloats.
+     * Axes 0-3 are 5-bit encoded: bits 0-3 = magnitude (0-15), bit 4 = sign (negative).
+     * Decoded to float range -1.0 to 1.0.
+     */
+    private static void tickJoystickAxes(LerpedFloat[] axes, int packedAxes) {
+        for (int i = 0; i < 4; i++) {
+            int raw = (packedAxes >>> (i * 5)) & 0x1F;
+            int magnitude = raw & 0x0F;
+            boolean negative = (raw & 0x10) != 0;
+            float value = magnitude / 15.0f;
+            if (negative) value = -value;
+            axes[i].chase(value, 0.4f, LerpedFloat.Chaser.EXP);
+            axes[i].tickChaser();
         }
     }
 
@@ -301,10 +330,12 @@ public class LogicRemoteItemRenderer extends CustomRenderedItemModelRenderer {
             index++;
         }
 
-        // Joysticks (left and right) — rendered at model origin, no axis tilt (keyboard input)
+        // Joysticks (left and right) — rendered with axis tilt animation
         button = JOYSTICK.get();
-        renderJoystick(renderer, ms, light, pt, button, b, renderDepression, false, activeButtons);
-        renderJoystick(renderer, ms, light, pt, button, b, renderDepression, true, activeButtons);
+        renderJoystick(renderer, ms, light, pt, button, b, renderDepression, false, activeButtons,
+                renderType == RenderType.LECTERN ? blockJoystickAxes : joystickAxes);
+        renderJoystick(renderer, ms, light, pt, button, b, renderDepression, true, activeButtons,
+                renderType == RenderType.LECTERN ? blockJoystickAxes : joystickAxes);
 
         ms.popPose();
         ms.popPose();
@@ -333,7 +364,8 @@ public class LogicRemoteItemRenderer extends CustomRenderedItemModelRenderer {
     protected static void renderJoystick(PartialItemModelRenderer renderer, PoseStack ms,
                                          int light, float pt, BakedModel joystick,
                                          float b, boolean renderDepression, boolean isRight,
-                                         ArrayList<LerpedFloat> buttonList) {
+                                         ArrayList<LerpedFloat> buttonList,
+                                         LerpedFloat[] axisLerps) {
         ms.pushPose();
         // Translate the joystick model origin to the correct position on the controller
         Vec3 pos = positionList[isRight ? 6 : 5].subtract(0.46875, 0.46875, 0.46875);
@@ -345,6 +377,24 @@ public class LogicRemoteItemRenderer extends CustomRenderedItemModelRenderer {
             float depression = b * buttonList.get(isRight ? 10 : 9).getValue(pt);
             ms.translate(0, depression, 0);
         }
+
+        // Joystick tilt based on axis input
+        // Left stick: axes 0 (X) and 1 (Y). Right stick: axes 2 (X) and 3 (Y).
+        float maxTilt = 15.0f; // degrees
+        int xIdx = isRight ? 2 : 0;
+        int yIdx = isRight ? 3 : 1;
+        float tiltX = axisLerps[yIdx].getValue(pt) * maxTilt; // Y axis tilts around X (forward/back)
+        float tiltZ = -axisLerps[xIdx].getValue(pt) * maxTilt; // X axis tilts around Z (left/right)
+
+        if (tiltX != 0 || tiltZ != 0) {
+            var msr = TransformStack.of(ms);
+            // Pivot around the joystick base (center of the 1x1 nub at model space 0.5, 0.5, 0.5)
+            ms.translate(0.03125, 0.03125, 0.03125); // half a pixel to center
+            msr.rotateXDegrees(tiltX);
+            msr.rotateZDegrees(tiltZ);
+            ms.translate(-0.03125, -0.03125, -0.03125);
+        }
+
         renderer.renderSolid(joystick, light);
         ms.popPose();
         ms.popPose();
