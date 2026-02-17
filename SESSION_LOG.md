@@ -382,3 +382,29 @@ Fixed 3 bugs reported after in-game testing of the Control Profile system:
 
 ### Deployed
 - **Jar**: `logiclink-0.1.0.jar` → ATM10 mods folder
+
+---
+
+## Session 7c — 2026-02-17 — Auto-Save, Seated Interaction, Button Layout
+
+### Commits
+- `df79728` — fix: auto-save persistence, seated interaction, button layout
+
+### Summary
+Fixed 3 remaining issues from in-game testing:
+
+1. **Auto-save persistence** — Added `autoSave()` method to ControlConfigScreen that sends `SaveControlProfilePayload` to the server immediately on every change (assign device, clear slot, toggle direction, commit speed/power edit, toggle momentary/constant, scroll speed/power). Profile now persists across GUI close/reopen without requiring manual Save button click.
+
+2. **Contraption Remote seated interaction** — Removed `isShiftKeyDown()` checks (shift dismounts from Create seats, making shift+click impossible while seated). Now context-based: seated right-click = activate controller mode, standing right-click = show status in chat. No modifier key needed.
+
+3. **Button layout overhaul** — Motor config button (`I_CONFIG_OPEN`) moved from bottom tab row to header bar (top-right of GUI, `x+width-20, y-1`). Bug report button (`I_DISABLE` icon for warning feel) moved to extra area top-right (`x+width+6, y+2`), well above the main GUI.
+
+### Files Changed
+| File | Change |
+|------|--------|
+| `client/ControlConfigScreen.java` | Added `autoSave()` on every change (10 call sites) |
+| `block/ContraptionRemoteBlock.java` | Removed shift+click, context-based: seated=activate, standing=status |
+| `client/LogicRemoteConfigScreen.java` | Motor config button → header, bug button → top-right extra area with I_DISABLE |
+
+### Deployed
+- **Jar**: `logiclink-0.1.0.jar` → ATM10 mods folder
