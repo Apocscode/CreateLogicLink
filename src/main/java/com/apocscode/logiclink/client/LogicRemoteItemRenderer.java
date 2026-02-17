@@ -386,7 +386,7 @@ public class LogicRemoteItemRenderer extends CustomRenderedItemModelRenderer {
         float maxTilt = 15.0f; // degrees
         int xIdx = isRight ? 2 : 0;
         int yIdx = isRight ? 3 : 1;
-        float tiltX = axisLerps[xIdx].getValue(pt) * maxTilt;  // X input → rotateX (left/right tilt)
+        float tiltX = -axisLerps[xIdx].getValue(pt) * maxTilt; // X input → rotateX (left/right tilt, negated for model coords)
         float tiltZ = -axisLerps[yIdx].getValue(pt) * maxTilt; // Y input → rotateZ (forward/back tilt)
 
         if (tiltX != 0 || tiltZ != 0) {
