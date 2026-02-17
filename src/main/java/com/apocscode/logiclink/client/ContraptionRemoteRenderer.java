@@ -64,7 +64,7 @@ public class ContraptionRemoteRenderer extends SafeBlockEntityRenderer<Contrapti
         msr.translate(0.5, 1.25, 0.5);
         msr.rotateYDegrees(AngleHelper.horizontalAngle(facing) - 90.0f);
         // Offset forward onto the tray and tilt to match tray angle
-        msr.translate(0.28, 0.0, -0.1875);
+        msr.translate(0.125, 0.0, 0.0);
         msr.rotateZDegrees(-22.0f);
 
         LogicRemoteItemRenderer.renderInLectern(
