@@ -163,10 +163,10 @@ public class ContraptionRemoteBlock extends HorizontalDirectionalBlock implement
             return InteractionResult.SUCCESS;
         }
 
-        // Right-click while seated = toggle controller mode
+        // Right-click while seated = activate controller mode
         if (player.isPassenger()) {
             if (level.isClientSide) {
-                toggleControllerClient(pos);
+                activateControllerClient(pos);
             }
             return InteractionResult.SUCCESS;
         }
@@ -193,10 +193,10 @@ public class ContraptionRemoteBlock extends HorizontalDirectionalBlock implement
             return ItemInteractionResult.SUCCESS;
         }
 
-        // Right-click while seated = toggle controller mode
+        // Right-click while seated = activate controller mode
         if (player.isPassenger()) {
             if (level.isClientSide) {
-                toggleControllerClient(pos);
+                activateControllerClient(pos);
             }
             return ItemInteractionResult.SUCCESS;
         }
@@ -207,7 +207,7 @@ public class ContraptionRemoteBlock extends HorizontalDirectionalBlock implement
     // ==================== Controller Toggle ====================
 
     @OnlyIn(Dist.CLIENT)
-    private static void toggleControllerClient(BlockPos pos) {
-        RemoteClientHandler.toggleForBlock(pos);
+    private static void activateControllerClient(BlockPos pos) {
+        RemoteClientHandler.activateForBlock(pos);
     }
 }

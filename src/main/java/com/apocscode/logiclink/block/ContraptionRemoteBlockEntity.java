@@ -96,6 +96,7 @@ public class ContraptionRemoteBlockEntity extends BlockEntity {
                 // Clear render state and sync to clients
                 renderButtonStates = 0;
                 renderAxisStates = 0;
+                renderActive = false;
                 if (level != null && !level.isClientSide) {
                     level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
                 }
@@ -235,6 +236,7 @@ public class ContraptionRemoteBlockEntity extends BlockEntity {
     // Client-synced button/axis state for the renderer
     private short renderButtonStates = 0;
     private int renderAxisStates = 0;
+    private boolean renderActive = false;
     /**
      * Called from SeatInputPayload handler when an activated player sends gamepad input.
      * Decodes button/axis state and applies to all bound targets.
@@ -249,6 +251,7 @@ public class ContraptionRemoteBlockEntity extends BlockEntity {
         // Update render state and sync to clients
         this.renderButtonStates = buttons;
         this.renderAxisStates = axes;
+        this.renderActive = true;
         if (level != null && !level.isClientSide) {
             level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
         }
@@ -411,6 +414,10 @@ public class ContraptionRemoteBlockEntity extends BlockEntity {
         return renderAxisStates;
     }
 
+    public boolean isRenderActive() {
+        return renderActive;
+    }
+
     // ==================== NBT ====================
 
     @Override
@@ -426,6 +433,7 @@ public class ContraptionRemoteBlockEntity extends BlockEntity {
         // Save render state for client sync
         tag.putShort("RenderButtons", renderButtonStates);
         tag.putInt("RenderAxes", renderAxisStates);
+        tag.putBoolean("RenderActive", renderActive);
 
         if (!label.isEmpty()) {
             tag.putString("Label", label);
@@ -458,6 +466,7 @@ public class ContraptionRemoteBlockEntity extends BlockEntity {
         // Load render state from sync
         renderButtonStates = tag.getShort("RenderButtons");
         renderAxisStates = tag.getInt("RenderAxes");
+        renderActive = tag.getBoolean("RenderActive");
 
         label = tag.getString("Label");
 

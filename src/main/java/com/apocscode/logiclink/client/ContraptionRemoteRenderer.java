@@ -48,8 +48,8 @@ public class ContraptionRemoteRenderer extends SafeBlockEntityRenderer<Contrapti
         PartialItemModelRenderer renderer = PartialItemModelRenderer.of(
                 stack, transformType, ms, buffer, overlay);
 
-        // The controller is always "active" visually on the block (shows powered base + buttons)
-        boolean active = true;
+        // Active state controls antenna glow: powered base when active, normal model when idle
+        boolean active = be.isRenderActive();
         boolean renderDepression = true;
 
         // Update block-mode animation targets from the BE's synced input state

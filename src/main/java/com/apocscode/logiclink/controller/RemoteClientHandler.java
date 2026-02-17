@@ -130,33 +130,22 @@ public class RemoteClientHandler {
     }
 
     /**
-     * Toggle controller mode for a Contraption Remote block.
-     * Gamepad input is sent as SeatInputPayload to the block entity.
+     * Activate controller mode for a Contraption Remote block.
+     * Only activates — never toggles off. Deactivation happens
+     * automatically when the player dismounts the seat.
      */
-    public static void toggleForBlock(BlockPos pos) {
+    public static void activateForBlock(BlockPos pos) {
+        if (MODE != Mode.IDLE) return; // Already active
         Minecraft mc = Minecraft.getInstance();
-        if (MODE == Mode.IDLE) {
-            MODE = Mode.ACTIVE;
-            activeBlockPos = pos;
-            cachedAxisConfig = null;
-            if (mc.player != null) {
-                AllSoundEvents.CONTROLLER_CLICK.playAt(mc.player.level(), mc.player.blockPosition(), 1f, .75f, true);
-                mc.player.displayClientMessage(
-                        Component.literal("Controller ").withStyle(ChatFormatting.GOLD)
-                                .append(Component.literal("ACTIVE").withStyle(ChatFormatting.GREEN)),
-                        true);
-            }
-        } else {
-            MODE = Mode.IDLE;
-            cachedAxisConfig = null;
-            if (mc.player != null) {
-                AllSoundEvents.CONTROLLER_CLICK.playAt(mc.player.level(), mc.player.blockPosition(), 1f, .5f, true);
-                mc.player.displayClientMessage(
-                        Component.literal("Controller ").withStyle(ChatFormatting.GOLD)
-                                .append(Component.literal("IDLE").withStyle(ChatFormatting.GRAY)),
-                        true);
-            }
-            onReset();
+        MODE = Mode.ACTIVE;
+        activeBlockPos = pos;
+        cachedAxisConfig = null;
+        if (mc.player != null) {
+            AllSoundEvents.CONTROLLER_CLICK.playAt(mc.player.level(), mc.player.blockPosition(), 1f, .75f, true);
+            mc.player.displayClientMessage(
+                    Component.literal("Controller ").withStyle(ChatFormatting.GOLD)
+                            .append(Component.literal("ACTIVE").withStyle(ChatFormatting.GREEN)),
+                    true);
         }
     }
 
@@ -226,9 +215,16 @@ public class RemoteClientHandler {
 
         // Validate activation source
         if (activeBlockPos != null) {
-            // Block mode: check player is within range
-            if (player.blockPosition().distSqr(activeBlockPos) > 32 * 32) {
+            // Block mode: auto-idle when player dismounts seat or moves too far
+            if (!player.isPassenger() || player.blockPosition().distSqr(activeBlockPos) > 32 * 32) {
                 MODE = Mode.IDLE;
+                if (mc.player != null) {
+                    AllSoundEvents.CONTROLLER_CLICK.playAt(mc.player.level(), mc.player.blockPosition(), 1f, .5f, true);
+                    mc.player.displayClientMessage(
+                            Component.literal("Controller ").withStyle(ChatFormatting.GOLD)
+                                    .append(Component.literal("IDLE").withStyle(ChatFormatting.GRAY)),
+                            true);
+                }
                 onReset();
                 return;
             }
