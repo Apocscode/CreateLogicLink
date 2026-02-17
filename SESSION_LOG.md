@@ -203,5 +203,7 @@ In-game testing showed the controller model was still off-center on the block (e
 - `eb34ac0` — Remove controller toggle from Contraption Remote block right-click
   - `ContraptionRemoteBlock.java`: Right-click no longer activates controller mode. Shift+RC still shows status. Removed `toggleControllerClient()`, `RemoteClientHandler` import, `@OnlyIn` imports.
   - **Jar**: `logiclink-0.1.0.jar` (504,996 bytes) → ATM10 mods folder
+- `96196d8` — Remove active mode toggle from plain right-click on Logic Remote
+  - `LogicRemoteItem.java`: Plain right-click now does nothing (was calling `RemoteClientHandler.toggle()` which showed a WASD overlay panel). Shift+right-click still opens freq config GUI.
 
 *Last updated: 2026-02-16 — Session 6b*

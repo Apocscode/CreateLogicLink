@@ -3,7 +3,6 @@ package com.apocscode.logiclink.client;
 import com.apocscode.logiclink.LogicLink;
 import com.apocscode.logiclink.ModRegistry;
 import com.apocscode.logiclink.client.ponder.LogicLinkPonderPlugin;
-import com.apocscode.logiclink.controller.RemoteClientHandler;
 import com.apocscode.logiclink.entity.RemoteSeatEntity;
 
 import net.createmod.ponder.foundation.PonderIndex;
@@ -12,9 +11,7 @@ import net.neoforged.bus.api.SubscribeEvent;
 import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
-import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
-import net.minecraft.resources.ResourceLocation;
 
 /**
  * Client-side initialization for Logic Link mod.
@@ -47,12 +44,4 @@ public class LogicLinkClientSetup {
         LogicLink.LOGGER.info("Train Monitor + Contraption Remote + Remote Seat renderers registered.");
     }
 
-    @SubscribeEvent
-    public static void registerGuiLayers(RegisterGuiLayersEvent event) {
-        event.registerAboveAll(
-                ResourceLocation.fromNamespaceAndPath(LogicLink.MOD_ID, "remote_overlay"),
-                RemoteClientHandler.OVERLAY
-        );
-        LogicLink.LOGGER.info("Logic Remote overlay registered.");
-    }
 }
