@@ -544,3 +544,26 @@ Rewrote LogicDriveBlockEntity from SplitShaftBlockEntity to GeneratingKineticBlo
 
 ### Deployed
 - Jar: logiclink-0.1.0.jar to ATM10 mods folder
+
+---
+
+## Session 7i -- 2026-02-17 -- Drive Marker Color Swap + ControlProfile 12-Slot Fix
+
+### Commits
+- `53c45d6` -- Swap drive marker colors: blue=input, orange=output
+- `b87d50d` -- Fix ControlProfile: expand motor bindings from 8 to 12
+
+### Summary
+1. **Drive marker color swap** — Changed input marker to blue (light_blue_concrete), output marker to orange (orange_concrete). Updated LogicDriveBlock javadoc.
+2. **ControlProfile 12-slot fix** — Session 7g's ControlProfile changes never actually applied. Fixed: MAX_MOTOR_BINDINGS 8→12, MOTOR_AXIS_LABELS to 12 entries (L Up/Down/Left/Right, R Up/Down/Left/Right, LT/RT/LB/RB), MOTOR_AXIS_KEYS to 12 entries (W/S/A/D, ↑/↓/←/→, Q/E/Z/C), migration maps old bidirectional axes to positive-direction slots. This resolves the mismatch with RemoteClientHandler (already float[12]) and enables the scrollable motor panel in ControlConfigScreen.
+
+### Files Changed
+| File | Change |
+|------|--------|
+| models/block/motor_input_marker.json | orange_concrete → light_blue_concrete |
+| models/block/motor_output_marker.json | light_blue_concrete → orange_concrete |
+| block/LogicDriveBlock.java | Javadoc: blue=input, orange=output |
+| controller/ControlProfile.java | MAX_MOTOR_BINDINGS 8→12, labels/keys/migration updated |
+
+### Deployed
+- Jar: logiclink-0.1.0.jar to ATM10 mods folder
