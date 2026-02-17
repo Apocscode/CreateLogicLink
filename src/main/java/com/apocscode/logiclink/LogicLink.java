@@ -5,6 +5,7 @@ import org.slf4j.Logger;
 import com.apocscode.logiclink.block.LogicLinkBlockItem;
 import com.apocscode.logiclink.block.LogicSensorBlockItem;
 import com.apocscode.logiclink.controller.RemoteServerHandler;
+import com.apocscode.logiclink.network.AuxRedstonePayload;
 import com.apocscode.logiclink.network.HubNetwork;
 import com.apocscode.logiclink.network.LinkNetwork;
 import com.apocscode.logiclink.network.MotorAxisPayload;
@@ -111,6 +112,11 @@ public class LogicLink {
                 MotorAxisPayload.TYPE,
                 MotorAxisPayload.STREAM_CODEC,
                 MotorAxisPayload::handle
+        );
+        registrar.playToServer(
+                AuxRedstonePayload.TYPE,
+                AuxRedstonePayload.STREAM_CODEC,
+                AuxRedstonePayload::handle
         );
         registrar.playToServer(
                 OpenFreqConfigPayload.TYPE,

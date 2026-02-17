@@ -70,24 +70,51 @@ public record MotorAxisPayload(
             int speed = Math.max(1, Math.min(256, payload.configuredSpeed));
 
             if (be instanceof LogicDriveBlockEntity drive) {
-                if (Math.abs(payload.axisValue) > 0.01f) {
-                    // Scale RPM (1-256) down to drive modifier range (0-16)
-                    float modifier = Math.signum(payload.axisValue)
-                            * Math.max(1.0f, speed / 16.0f);
-                    drive.setSpeedModifier(modifier);
-                    drive.setMotorEnabled(true);
+                if (payload.sequential && payload.sequenceDistance > 0) {
+                    // Sequential mode: move a fixed distance then stop.
+                    // Only trigger on axis press (value != 0), not on release.
+                    if (Math.abs(payload.axisValue) > 0.01f) {
+                        drive.stopSequence();
+                        drive.clearSequence();
+                        float degrees = payload.sequenceDistance * 360.0f;
+                        float modifier = Math.signum(payload.axisValue)
+                                * Math.max(1.0f, speed / 16.0f);
+                        drive.addRotateStep(degrees, modifier);
+                        drive.runSequence(false);
+                    }
                 } else {
-                    drive.setSpeedModifier(0);
-                    drive.setMotorEnabled(false);
+                    // Continuous mode: set speed while axis is held
+                    if (Math.abs(payload.axisValue) > 0.01f) {
+                        float modifier = Math.signum(payload.axisValue)
+                                * Math.max(1.0f, speed / 16.0f);
+                        drive.setSpeedModifier(modifier);
+                        drive.setMotorEnabled(true);
+                    } else {
+                        drive.setSpeedModifier(0);
+                        drive.setMotorEnabled(false);
+                    }
                 }
             } else if (be instanceof CreativeLogicMotorBlockEntity motor) {
-                if (Math.abs(payload.axisValue) > 0.01f) {
-                    int motorSpeed = (int) (Math.signum(payload.axisValue) * speed);
-                    motor.setMotorSpeed(motorSpeed);
-                    motor.setEnabled(true);
+                if (payload.sequential && payload.sequenceDistance > 0) {
+                    // Sequential mode: rotate a fixed number of degrees then stop.
+                    if (Math.abs(payload.axisValue) > 0.01f) {
+                        motor.stopSequence();
+                        motor.clearSequence();
+                        float degrees = payload.sequenceDistance * 360.0f;
+                        int motorSpeed = (int) (Math.signum(payload.axisValue) * speed);
+                        motor.addRotateStep(degrees, motorSpeed);
+                        motor.runSequence(false);
+                    }
                 } else {
-                    motor.setMotorSpeed(0);
-                    motor.setEnabled(false);
+                    // Continuous mode
+                    if (Math.abs(payload.axisValue) > 0.01f) {
+                        int motorSpeed = (int) (Math.signum(payload.axisValue) * speed);
+                        motor.setMotorSpeed(motorSpeed);
+                        motor.setEnabled(true);
+                    } else {
+                        motor.setMotorSpeed(0);
+                        motor.setEnabled(false);
+                    }
                 }
             }
         });

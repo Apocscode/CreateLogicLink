@@ -23,6 +23,7 @@ import com.simibubi.create.foundation.gui.menu.AbstractSimiContainerScreen;
 import com.simibubi.create.foundation.gui.widget.IconButton;
 
 import net.minecraft.ChatFormatting;
+import net.minecraft.Util;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.renderer.Rect2i;
 import net.minecraft.network.chat.Component;
@@ -52,6 +53,8 @@ public class LogicRemoteConfigScreen extends AbstractSimiContainerScreen<LogicRe
     private IconButton nextDeviceButton;
     private IconButton firstTabButton;
     private IconButton secondTabButton;
+    private IconButton thirdTabButton;
+    private IconButton bugButton;
     private JoystickIcon lStick;
     private JoystickIcon rStick;
     private DigitIcon[] controllerDigits;
@@ -118,6 +121,17 @@ public class LogicRemoteConfigScreen extends AbstractSimiContainerScreen<LogicRe
             menu.setPage(this.isSecondPage);
         });
         secondTabButton.setToolTip(Component.translatable("logiclink.gui_tab_axis"));
+        thirdTabButton = new IconButton(x + 67, y + background0.height - 27, AllIcons.I_CONFIG_OPEN);
+        thirdTabButton.withCallback(() -> {
+            // Open the full Control Configuration screen
+            minecraft.setScreen(new ControlConfigScreen());
+        });
+        thirdTabButton.setToolTip(Component.literal("Control Config"));
+        bugButton = new IconButton(x + background0.width - 178, y + background0.height - 24, AllIcons.I_PRIORITY_VERY_HIGH);
+        bugButton.withCallback(() -> {
+            Util.getPlatform().openUri("https://github.com/Apocscode/CreateLogicLink/issues");
+        });
+        bugButton.setToolTip(Component.literal("Report a Bug"));
 
         addRenderableWidget(resetButton);
         addRenderableWidget(confirmButton);
@@ -126,6 +140,8 @@ public class LogicRemoteConfigScreen extends AbstractSimiContainerScreen<LogicRe
         addRenderableWidget(nextDeviceButton);
         addRenderableWidget(firstTabButton);
         addRenderableWidget(secondTabButton);
+        addRenderableWidget(thirdTabButton);
+        addRenderableWidget(bugButton);
 
         lStick = new JoystickIcon(x + 16, y + 26, RemoteIcons.I_LEFT_JOYSTICK);
         rStick = new JoystickIcon(x + 16, y + 89, RemoteIcons.I_RIGHT_JOYSTICK);

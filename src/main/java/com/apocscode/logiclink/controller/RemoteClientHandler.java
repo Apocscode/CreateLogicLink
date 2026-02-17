@@ -8,9 +8,12 @@ import org.lwjgl.glfw.GLFW;
 import com.apocscode.logiclink.LogicLink;
 import com.apocscode.logiclink.ModRegistry;
 import com.apocscode.logiclink.client.MotorConfigScreen;
+import com.apocscode.logiclink.controller.ControlProfile;
+import com.apocscode.logiclink.controller.ControlProfile.MotorBinding;
 import com.apocscode.logiclink.input.ControllerOutput;
 import com.apocscode.logiclink.input.GamepadInputs;
 import com.apocscode.logiclink.network.MotorAxisPayload;
+import com.apocscode.logiclink.network.AuxRedstonePayload;
 import com.apocscode.logiclink.network.RemoteAxisPayload;
 import com.apocscode.logiclink.network.RemoteBindPayload;
 import com.apocscode.logiclink.network.RemoteButtonPayload;
@@ -56,14 +59,17 @@ public class RemoteClientHandler {
     private static int buttonPacketCooldown = 0;
     private static int axisPacketCooldown = 0;
     private static int motorAxisPacketCooldown = 0;
+    private static int auxPacketCooldown = 0;
+    private static byte auxStates = 0;
+    private static byte prevAuxStates = 0;
     private static boolean useLock = false;
 
-    // WASD key state for motor axis control
-    private static boolean keyW = false;
-    private static boolean keyS = false;
-    private static boolean keyA = false;
-    private static boolean keyD = false;
-    /** Cached axis config from the held item. */
+    // Motor axis key values for 8 axes (keyboard-driven, -1/0/+1)
+    private static final float[] motorKeyValues = new float[8];
+    private static final float[] prevMotorKeyValues = new float[8];
+    /** Cached control profile from the held item. */
+    private static ControlProfile cachedProfile = null;
+    /** Legacy compat: AxisSlot array derived from cachedProfile. */
     private static MotorConfigScreen.AxisSlot[] cachedAxisConfig = null;
 
     /** Block position when activated from a Contraption Remote block (null = item mode). */
@@ -103,12 +109,13 @@ public class RemoteClientHandler {
         if (MODE == Mode.IDLE) {
             MODE = Mode.ACTIVE;
             activeBlockPos = null; // Item mode
-            // Cache axis config from held item
+            // Cache control profile from held item
             if (mc.player != null) {
                 ItemStack held = mc.player.getMainHandItem();
                 if (!(held.getItem() instanceof com.apocscode.logiclink.block.LogicRemoteItem))
                     held = mc.player.getOffhandItem();
-                cachedAxisConfig = MotorConfigScreen.getAxisConfigFromItem(held);
+                cachedProfile = ControlProfile.fromItem(held);
+                cachedAxisConfig = cachedProfile.toAxisSlots();
                 AllSoundEvents.CONTROLLER_CLICK.playAt(mc.player.level(), mc.player.blockPosition(), 1f, .75f, true);
                 mc.player.displayClientMessage(
                         Component.literal("Controller ").withStyle(ChatFormatting.GOLD)
@@ -118,6 +125,7 @@ public class RemoteClientHandler {
         } else {
             MODE = Mode.IDLE;
             cachedAxisConfig = null;
+            cachedProfile = null;
             if (mc.player != null) {
                 AllSoundEvents.CONTROLLER_CLICK.playAt(mc.player.level(), mc.player.blockPosition(), 1f, .5f, true);
                 mc.player.displayClientMessage(
@@ -158,10 +166,11 @@ public class RemoteClientHandler {
         buttonPacketCooldown = 0;
         axisPacketCooldown = 0;
         motorAxisPacketCooldown = 0;
-        keyW = false;
-        keyS = false;
-        keyA = false;
-        keyD = false;
+        auxPacketCooldown = 0;
+        auxStates = 0;
+        prevAuxStates = 0;
+        java.util.Arrays.fill(motorKeyValues, 0f);
+        java.util.Arrays.fill(prevMotorKeyValues, 0f);
 
         // Reset renderer button animations
         com.apocscode.logiclink.client.LogicRemoteItemRenderer.resetButtons();
@@ -182,7 +191,8 @@ public class RemoteClientHandler {
 
         // Send zero to all configured motor axes so they stop
         if (cachedAxisConfig != null) {
-            for (MotorConfigScreen.AxisSlot slot : cachedAxisConfig) {
+            for (int i = 0; i < cachedAxisConfig.length; i++) {
+                MotorConfigScreen.AxisSlot slot = cachedAxisConfig[i];
                 if (slot.hasTarget()) {
                     PacketDistributor.sendToServer(new MotorAxisPayload(
                             slot.targetPos, slot.targetType, 0f, slot.speed, slot.sequential, slot.distance));
@@ -327,25 +337,32 @@ public class RemoteClientHandler {
                 }
                 axisStates = axis;
 
-                // ===== WASD Motor Axis Control =====
+                // ===== Motor Axis Control (8 axes: Keyboard + Gamepad) =====
                 if (motorAxisPacketCooldown > 0) motorAxisPacketCooldown--;
                 if (cachedAxisConfig != null) {
                     long window = mc.getWindow().getWindow();
-                    boolean newW = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_W) == GLFW.GLFW_PRESS;
-                    boolean newS = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_S) == GLFW.GLFW_PRESS;
-                    boolean newA = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_A) == GLFW.GLFW_PRESS;
-                    boolean newD = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_D) == GLFW.GLFW_PRESS;
 
-                    boolean wasdChanged = (newW != keyW) || (newS != keyS) || (newA != keyA) || (newD != keyD);
-                    keyW = newW; keyS = newS; keyA = newA; keyD = newD;
+                    // Sample keyboard for 8 motor axes
+                    motorKeyValues[0] = computeKeyAxis(window, GLFW.GLFW_KEY_D, GLFW.GLFW_KEY_A);       // Left X
+                    motorKeyValues[1] = computeKeyAxis(window, GLFW.GLFW_KEY_W, GLFW.GLFW_KEY_S);       // Left Y
+                    motorKeyValues[2] = computeKeyAxis(window, GLFW.GLFW_KEY_RIGHT, GLFW.GLFW_KEY_LEFT); // Right X
+                    motorKeyValues[3] = computeKeyAxis(window, GLFW.GLFW_KEY_UP, GLFW.GLFW_KEY_DOWN);   // Right Y
+                    motorKeyValues[4] = keyValue(window, GLFW.GLFW_KEY_Q);    // LT
+                    motorKeyValues[5] = keyValue(window, GLFW.GLFW_KEY_E);    // RT
+                    motorKeyValues[6] = keyValue(window, GLFW.GLFW_KEY_Z);    // LB
+                    motorKeyValues[7] = keyValue(window, GLFW.GLFW_KEY_C);    // RB
 
-                    if (wasdChanged || motorAxisPacketCooldown == 0) {
-                        boolean[] pressed = {keyW, keyS, keyA, keyD};
-                        float[] baseDir = {1.0f, -1.0f, 1.0f, -1.0f}; // W=fwd, S=rev, A=right, D=left
-                        for (int i = 0; i < MotorConfigScreen.MAX_AXIS_SLOTS; i++) {
+                    // Detect keyboard changes
+                    boolean keysChanged = false;
+                    for (int i = 0; i < 8; i++) {
+                        if (motorKeyValues[i] != prevMotorKeyValues[i]) keysChanged = true;
+                    }
+
+                    if (keysChanged || motorAxisPacketCooldown == 0) {
+                        for (int i = 0; i < cachedAxisConfig.length; i++) {
                             MotorConfigScreen.AxisSlot slot = cachedAxisConfig[i];
-                            if (slot.hasTarget() && (wasdChanged || pressed[i])) {
-                                float dir = pressed[i] ? baseDir[i] : 0.0f;
+                            if (slot.hasTarget() && (keysChanged || motorKeyValues[i] != 0)) {
+                                float dir = motorKeyValues[i];
                                 // Apply reversed flag
                                 if (slot.reversed && dir != 0) dir = -dir;
                                 PacketDistributor.sendToServer(new MotorAxisPayload(
@@ -353,10 +370,31 @@ public class RemoteClientHandler {
                                         dir, slot.speed, slot.sequential, slot.distance));
                             }
                         }
-                        if (wasdChanged) {
+                        System.arraycopy(motorKeyValues, 0, prevMotorKeyValues, 0, 8);
+                        if (keysChanged) {
                             motorAxisPacketCooldown = PACKET_RATE;
                         }
                     }
+                }
+
+                // ===== Aux Redstone Channels (keys 1-8) =====
+                if (auxPacketCooldown > 0) auxPacketCooldown--;
+                if (cachedProfile != null) {
+                    long auxWindow = mc.getWindow().getWindow();
+                    byte newAux = 0;
+                    // Number keys 1-8 map to aux channels 0-7
+                    for (int i = 0; i < ControlProfile.MAX_AUX_BINDINGS; i++) {
+                        int keyCode = GLFW.GLFW_KEY_1 + i; // GLFW_KEY_1 through GLFW_KEY_8
+                        if (GLFW.glfwGetKey(auxWindow, keyCode) == GLFW.GLFW_PRESS) {
+                            newAux |= (byte) (1 << i);
+                        }
+                    }
+                    if (newAux != prevAuxStates || (auxPacketCooldown == 0 && newAux != 0)) {
+                        PacketDistributor.sendToServer(new AuxRedstonePayload(newAux));
+                        prevAuxStates = newAux;
+                        if (newAux != prevAuxStates) auxPacketCooldown = PACKET_RATE;
+                    }
+                    auxStates = newAux;
                 }
             }
         }
@@ -444,8 +482,8 @@ public class RemoteClientHandler {
         }
 
         if (MODE == Mode.ACTIVE) {
-            int panelW = 140;
-            int panelH = 90;
+            int panelW = 160;
+            int panelH = 110;
             int px = (screenW - panelW) / 2;
             int py = screenH - panelH - 12;
 
@@ -457,24 +495,33 @@ public class RemoteClientHandler {
                     Component.literal(title).withStyle(ChatFormatting.AQUA),
                     px + panelW / 2, py + 3, 0xFFFFFFFF);
 
+            // Derive WASD display states from motorKeyValues
+            boolean keyW = motorKeyValues[1] > 0;
+            boolean keyS = motorKeyValues[1] < 0;
+            boolean keyA = motorKeyValues[0] < 0;
+            boolean keyD = motorKeyValues[0] > 0;
+
             int centerX = px + panelW / 2;
             int keyY = py + 18;
             int keySize = 18;
             int gap = 2;
 
-            renderKey(graphics, mc, centerX - keySize / 2, keyY, keySize, keySize, "W", keyW, 0);
-            renderKey(graphics, mc, centerX - keySize - gap - keySize / 2, keyY + keySize + gap, keySize, keySize, "A", keyA, 2);
+            renderKey(graphics, mc, centerX - keySize / 2, keyY, keySize, keySize, "W", keyW, 1);
+            renderKey(graphics, mc, centerX - keySize - gap - keySize / 2, keyY + keySize + gap, keySize, keySize, "A", keyA, 0);
             renderKey(graphics, mc, centerX - keySize / 2, keyY + keySize + gap, keySize, keySize, "S", keyS, 1);
-            renderKey(graphics, mc, centerX + gap + keySize / 2, keyY + keySize + gap, keySize, keySize, "D", keyD, 3);
+            renderKey(graphics, mc, centerX + gap + keySize / 2, keyY + keySize + gap, keySize, keySize, "D", keyD, 0);
 
             if (cachedAxisConfig != null) {
                 int labelY = keyY + keySize * 2 + gap + 6;
-                for (int i = 0; i < MotorConfigScreen.MAX_AXIS_SLOTS; i++) {
+                int maxSlots = Math.min(cachedAxisConfig.length, ControlProfile.MAX_MOTOR_BINDINGS);
+                for (int i = 0; i < maxSlots; i++) {
                     MotorConfigScreen.AxisSlot slot = cachedAxisConfig[i];
                     if (slot.hasTarget()) {
                         String icon = "drive".equals(slot.targetType) ? "D" : "M";
                         String dir = slot.reversed ? "R" : "F";
-                        String info = "[" + MotorConfigScreen.AXIS_KEYS[i] + "] "
+                        String keyLabel = i < ControlProfile.MOTOR_AXIS_KEYS.length
+                                ? ControlProfile.MOTOR_AXIS_KEYS[i] : "?";
+                        String info = "[" + keyLabel + "] "
                                 + icon + " " + dir + " " + slot.speed + "rpm";
                         int labelX = px + 4;
                         int labelCol = slot.reversed ? 0xFFCC8844 : 0xFF88CCFF;
@@ -501,6 +548,25 @@ public class RemoteClientHandler {
             int dotColor = pressed ? 0xFF22FF55 : 0xFF888888;
             g.fill(x + w - 4, y + 1, x + w - 1, y + 4, dotColor);
         }
+    }
+
+    /**
+     * Compute a bidirectional axis value from two keys (positive and negative).
+     * Returns +1.0f if positive key is pressed, -1.0f if negative, 0.0f if neither/both.
+     */
+    private static float computeKeyAxis(long window, int posKey, int negKey) {
+        boolean pos = GLFW.glfwGetKey(window, posKey) == GLFW.GLFW_PRESS;
+        boolean neg = GLFW.glfwGetKey(window, negKey) == GLFW.GLFW_PRESS;
+        if (pos && !neg) return 1.0f;
+        if (neg && !pos) return -1.0f;
+        return 0.0f;
+    }
+
+    /**
+     * Returns 1.0f if the key is pressed, 0.0f otherwise.
+     */
+    private static float keyValue(long window, int key) {
+        return GLFW.glfwGetKey(window, key) == GLFW.GLFW_PRESS ? 1.0f : 0.0f;
     }
 
     public enum Mode {
