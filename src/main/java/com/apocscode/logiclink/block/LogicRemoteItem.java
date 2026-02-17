@@ -173,8 +173,11 @@ public class LogicRemoteItem extends Item implements MenuProvider {
             return InteractionResultHolder.success(heldItem);
         }
 
-        // Plain right-click = do nothing (no toggle, no GUI)
-        return InteractionResultHolder.pass(heldItem);
+        // Plain right-click = toggle active controller mode (like CTC)
+        if (world.isClientSide) {
+            toggleActive();
+        }
+        return InteractionResultHolder.success(heldItem);
     }
 
     @OnlyIn(Dist.CLIENT)
