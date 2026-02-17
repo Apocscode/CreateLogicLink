@@ -13,8 +13,12 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
 import com.apocscode.logiclink.LogicLink;
@@ -101,6 +105,21 @@ public class ControlConfigScreen extends Screen {
     /** Aux slot with active power field for keyboard input (-1 = none). */
     private int editingPowerSlot = -1;
     private String powerEditBuffer = "";
+
+    // ==================== Frequency Picker ====================
+    /** Aux slot index for frequency picker (-1 = closed). */
+    private int freqPickerAuxSlot = -1;
+    /** Which frequency slot: 1 or 2. */
+    private int freqPickerSlotNum = 1;
+    /** Current search text in frequency picker. */
+    private String freqPickerSearch = "";
+    /** Filtered item results for the picker. */
+    private final List<Item> freqPickerResults = new ArrayList<>();
+    /** Scroll offset in the picker result list. */
+    private int freqPickerScroll = 0;
+    private static final int FREQ_PICKER_W = 170;
+    private static final int FREQ_PICKER_H = 190;
+    private static final int FREQ_PICKER_ROWS = 8;
 
     // ==================== Tab State ====================
     /** 0 = Motor bindings, 1 = Aux bindings (for right panel) */
@@ -229,6 +248,82 @@ public class ControlConfigScreen extends Screen {
             g.drawCenteredString(font, "Click a device to assign to [" + axisLabel + "]",
                     guiLeft + GUI_WIDTH / 2, guiTop + GUI_HEIGHT - 10, YELLOW);
         }
+
+        // Frequency picker popup overlay
+        if (freqPickerAuxSlot >= 0) {
+            renderFreqPicker(g, mouseX, mouseY);
+        }
+    }
+
+    private void renderFreqPicker(GuiGraphics g, int mouseX, int mouseY) {
+        int px = (this.width - FREQ_PICKER_W) / 2;
+        int py = (this.height - FREQ_PICKER_H) / 2;
+
+        // Dim background
+        g.fill(0, 0, this.width, this.height, 0x88000000);
+
+        // Popup border + background
+        g.fill(px - 2, py - 2, px + FREQ_PICKER_W + 2, py + FREQ_PICKER_H + 2, BORDER_DARK);
+        g.fill(px - 1, py - 1, px + FREQ_PICKER_W + 1, py + FREQ_PICKER_H + 1, BORDER_LIGHT);
+        g.fill(px, py, px + FREQ_PICKER_W, py + FREQ_PICKER_H, BG_OUTER);
+
+        // Title
+        String title = "Freq Slot " + freqPickerSlotNum + " — Aux [" +
+                ControlProfile.AUX_KEYS[freqPickerAuxSlot] + "]";
+        g.fill(px, py, px + FREQ_PICKER_W, py + 14, BORDER_DARK);
+        g.drawCenteredString(font, title, px + FREQ_PICKER_W / 2, py + 3, TITLE_COLOR);
+
+        // Search field
+        int sfX = px + 4;
+        int sfY = py + 18;
+        int sfW = FREQ_PICKER_W - 8;
+        g.fill(sfX, sfY, sfX + sfW, sfY + 12, FIELD_BG);
+        g.fill(sfX, sfY, sfX + sfW, sfY + 1, FIELD_BORDER);
+        g.fill(sfX, sfY + 11, sfX + sfW, sfY + 12, FIELD_BORDER);
+        g.fill(sfX, sfY, sfX + 1, sfY + 12, FIELD_BORDER);
+        g.fill(sfX + sfW - 1, sfY, sfX + sfW, sfY + 12, FIELD_BORDER);
+        String searchDisplay = freqPickerSearch.isEmpty() ? "\u00A77Search items..." : freqPickerSearch + "_";
+        g.drawString(font, searchDisplay, sfX + 3, sfY + 2, WHITE, false);
+
+        // Results list
+        int listY = sfY + 16;
+        int rowH = 18;
+        int maxShow = Math.min(freqPickerResults.size() - freqPickerScroll, FREQ_PICKER_ROWS);
+        for (int i = 0; i < maxShow; i++) {
+            int idx = i + freqPickerScroll;
+            if (idx >= freqPickerResults.size()) break;
+            Item item = freqPickerResults.get(idx);
+            int ry = listY + i * rowH;
+            boolean hover = isInside(mouseX, mouseY, px + 2, ry, FREQ_PICKER_W - 4, rowH);
+            g.fill(px + 2, ry, px + FREQ_PICKER_W - 2, ry + rowH - 1, hover ? DEVICE_HOVER : DEVICE_BG);
+
+            // Item icon (16x16)
+            g.renderItem(new ItemStack(item), px + 4, ry + 1);
+
+            // Item name (truncated to fit)
+            String itemName = item.getDescription().getString();
+            if (font.width(itemName) > FREQ_PICKER_W - 28) {
+                while (font.width(itemName + "..") > FREQ_PICKER_W - 28 && itemName.length() > 1) {
+                    itemName = itemName.substring(0, itemName.length() - 1);
+                }
+                itemName += "..";
+            }
+            g.drawString(font, itemName, px + 22, ry + 5, WHITE, false);
+        }
+
+        // Scroll indicators
+        if (freqPickerScroll > 0) {
+            g.drawCenteredString(font, "\u25B2", px + FREQ_PICKER_W / 2, listY - 6, TEXT_DIM);
+        }
+        if (freqPickerScroll + FREQ_PICKER_ROWS < freqPickerResults.size()) {
+            g.drawCenteredString(font, "\u25BC", px + FREQ_PICKER_W / 2, listY + FREQ_PICKER_ROWS * rowH, TEXT_DIM);
+        }
+
+        // Result count
+        g.drawString(font, freqPickerResults.size() + " items", px + 4, py + FREQ_PICKER_H - 12, TEXT_DIM, false);
+
+        // Close hint
+        g.drawString(font, "ESC to close", px + FREQ_PICKER_W - 60, py + FREQ_PICKER_H - 12, TEXT_DIM, false);
     }
 
     private void renderDevicePanel(GuiGraphics g, int mouseX, int mouseY) {
@@ -458,11 +553,43 @@ public class ControlConfigScreen extends Screen {
         g.fill(modeX, pwrY, modeX + 18, pwrY + 10, modeBg);
         g.drawCenteredString(font, slot.momentary ? "MOM" : "TOG", modeX + 9, pwrY + 1, WHITE);
 
-        // Frequency status
+        // Frequency item slots (bottom row)
+        int freqY = y + 14;
+        int freqBoxSize = 12;
+        // Slot 1
+        int f1x = x + 4;
+        boolean f1hover = isInside(mouseX, mouseY, f1x, freqY, freqBoxSize, freqBoxSize);
+        g.fill(f1x, freqY, f1x + freqBoxSize, freqY + freqBoxSize, f1hover ? FIELD_BORDER : FIELD_BG);
+        if (!slot.freqId1.isEmpty()) {
+            Item item1 = BuiltInRegistries.ITEM.get(ResourceLocation.parse(slot.freqId1));
+            if (item1 != Items.AIR) {
+                g.pose().pushPose();
+                g.pose().translate(f1x - 2, freqY - 2, 0);
+                g.pose().scale(0.75f, 0.75f, 1.0f);
+                g.renderItem(new ItemStack(item1), 0, 0);
+                g.pose().popPose();
+            }
+        }
+        // Slot 2
+        int f2x = f1x + freqBoxSize + 2;
+        boolean f2hover = isInside(mouseX, mouseY, f2x, freqY, freqBoxSize, freqBoxSize);
+        g.fill(f2x, freqY, f2x + freqBoxSize, freqY + freqBoxSize, f2hover ? FIELD_BORDER : FIELD_BG);
+        if (!slot.freqId2.isEmpty()) {
+            Item item2 = BuiltInRegistries.ITEM.get(ResourceLocation.parse(slot.freqId2));
+            if (item2 != Items.AIR) {
+                g.pose().pushPose();
+                g.pose().translate(f2x - 2, freqY - 2, 0);
+                g.pose().scale(0.75f, 0.75f, 1.0f);
+                g.renderItem(new ItemStack(item2), 0, 0);
+                g.pose().popPose();
+            }
+        }
+        // Clear freq button (only when at least one is set)
         if (slot.hasFrequency()) {
-            g.drawString(font, "Freq set", x + 4, y + 13, GREEN, false);
-        } else {
-            g.drawString(font, "No freq (bind link)", x + 4, y + 13, TEXT_DIM, false);
+            int clrX = f2x + freqBoxSize + 2;
+            boolean clrHover = isInside(mouseX, mouseY, clrX, freqY + 1, 9, 9);
+            g.fill(clrX, freqY + 1, clrX + 9, freqY + 10, clrHover ? RED : BTN_IDLE);
+            g.drawCenteredString(font, "x", clrX + 5, freqY + 2, WHITE);
         }
     }
 
@@ -480,6 +607,43 @@ public class ControlConfigScreen extends Screen {
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         if (button != 0) return super.mouseClicked(mouseX, mouseY, button);
         int mX = (int) mouseX, mY = (int) mouseY;
+
+        // Frequency picker popup takes priority
+        if (freqPickerAuxSlot >= 0) {
+            int px = (this.width - FREQ_PICKER_W) / 2;
+            int py = (this.height - FREQ_PICKER_H) / 2;
+
+            // Click inside popup?
+            if (isInside(mX, mY, px, py, FREQ_PICKER_W, FREQ_PICKER_H)) {
+                // Click on result item
+                int sfY = py + 18;
+                int listY = sfY + 16;
+                int rowH = 18;
+                int maxShow = Math.min(freqPickerResults.size() - freqPickerScroll, FREQ_PICKER_ROWS);
+                for (int i = 0; i < maxShow; i++) {
+                    int idx = i + freqPickerScroll;
+                    int ry = listY + i * rowH;
+                    if (isInside(mX, mY, px + 2, ry, FREQ_PICKER_W - 4, rowH)) {
+                        Item selected = freqPickerResults.get(idx);
+                        ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(selected);
+                        AuxBinding ab = profile.getAuxBinding(freqPickerAuxSlot);
+                        if (freqPickerSlotNum == 1) {
+                            ab.freqId1 = itemId.toString();
+                        } else {
+                            ab.freqId2 = itemId.toString();
+                        }
+                        freqPickerAuxSlot = -1;
+                        autoSave();
+                        return true;
+                    }
+                }
+                return true; // consumed click inside popup
+            } else {
+                // Click outside popup = close
+                freqPickerAuxSlot = -1;
+                return true;
+            }
+        }
 
         // Commit any active edit
         if (editingSpeedSlot >= 0) commitSpeedEdit();
@@ -644,6 +808,32 @@ public class ControlConfigScreen extends Screen {
                 autoSave();
                 return true;
             }
+
+            // Frequency slot 1 click
+            int freqY = sy + 14;
+            int f1x = slotX + 4;
+            if (isInside(mX, mY, f1x, freqY, 12, 12)) {
+                openFreqPicker(i, 1);
+                return true;
+            }
+
+            // Frequency slot 2 click
+            int f2x = f1x + 14;
+            if (isInside(mX, mY, f2x, freqY, 12, 12)) {
+                openFreqPicker(i, 2);
+                return true;
+            }
+
+            // Frequency clear button
+            if (ab.hasFrequency()) {
+                int clrX = f2x + 14;
+                if (isInside(mX, mY, clrX, freqY + 1, 9, 9)) {
+                    ab.freqId1 = "";
+                    ab.freqId2 = "";
+                    autoSave();
+                    return true;
+                }
+            }
         }
 
         return super.mouseClicked(mouseX, mouseY, button);
@@ -652,6 +842,17 @@ public class ControlConfigScreen extends Screen {
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
         int mX = (int) mouseX, mY = (int) mouseY;
+
+        // Frequency picker scroll
+        if (freqPickerAuxSlot >= 0) {
+            int maxScroll = Math.max(0, freqPickerResults.size() - FREQ_PICKER_ROWS);
+            if (scrollY > 0 && freqPickerScroll > 0) {
+                freqPickerScroll--;
+            } else if (scrollY < 0 && freqPickerScroll < maxScroll) {
+                freqPickerScroll++;
+            }
+            return true;
+        }
 
         // Scroll device list
         int panelX = guiLeft + 4;
@@ -748,6 +949,22 @@ public class ControlConfigScreen extends Screen {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        // Frequency picker search input
+        if (freqPickerAuxSlot >= 0) {
+            if (keyCode == 256) { // Escape
+                freqPickerAuxSlot = -1;
+                return true;
+            }
+            if (keyCode == 259) { // Backspace
+                if (!freqPickerSearch.isEmpty()) {
+                    freqPickerSearch = freqPickerSearch.substring(0, freqPickerSearch.length() - 1);
+                    updateFreqPickerResults();
+                }
+                return true;
+            }
+            return true; // consume all other keys while picker is open
+        }
+
         // Distance edit mode
         if (editingDistanceSlot >= 0) {
             if (keyCode == 259) { // Backspace
@@ -958,6 +1175,43 @@ public class ControlConfigScreen extends Screen {
 
     private boolean isInside(int mx, int my, int x, int y, int w, int h) {
         return mx >= x && mx < x + w && my >= y && my < y + h;
+    }
+
+    // ==================== Frequency Picker Helpers ====================
+
+    private void openFreqPicker(int auxSlot, int slotNum) {
+        freqPickerAuxSlot = auxSlot;
+        freqPickerSlotNum = slotNum;
+        freqPickerSearch = "";
+        freqPickerScroll = 0;
+        updateFreqPickerResults();
+    }
+
+    private void updateFreqPickerResults() {
+        freqPickerResults.clear();
+        freqPickerScroll = 0;
+        String query = freqPickerSearch.toLowerCase();
+        for (Item item : BuiltInRegistries.ITEM) {
+            if (item == Items.AIR) continue;
+            String name = item.getDescription().getString().toLowerCase();
+            String id = BuiltInRegistries.ITEM.getKey(item).toString().toLowerCase();
+            if (query.isEmpty() || name.contains(query) || id.contains(query)) {
+                freqPickerResults.add(item);
+            }
+            if (freqPickerResults.size() >= 500) break; // cap results
+        }
+    }
+
+    @Override
+    public boolean charTyped(char ch, int modifiers) {
+        if (freqPickerAuxSlot >= 0) {
+            if (ch >= ' ' && freqPickerSearch.length() < 30) {
+                freqPickerSearch += ch;
+                updateFreqPickerResults();
+            }
+            return true;
+        }
+        return super.charTyped(ch, modifiers);
     }
 
     // ==================== Data ====================
