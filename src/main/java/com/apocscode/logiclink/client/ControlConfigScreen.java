@@ -94,6 +94,10 @@ public class ControlConfigScreen extends Screen {
     private int editingSpeedSlot = -1;
     private String speedEditBuffer = "";
 
+    /** Motor slot with active distance field for keyboard input (-1 = none). */
+    private int editingDistanceSlot = -1;
+    private String distanceEditBuffer = "";
+
     /** Aux slot with active power field for keyboard input (-1 = none). */
     private int editingPowerSlot = -1;
     private String powerEditBuffer = "";
@@ -363,9 +367,24 @@ public class ControlConfigScreen extends Screen {
             String speedStr = (editingSpeedSlot == index) ? speedEditBuffer + "_" : slot.speed + " RPM";
             g.drawString(font, speedStr, speedX + 2, dirY + 1, WHITE, false);
 
-            // Sequential indicator
+            // Sequential/Continuous toggle (bottom row, left side)
+            int seqBtnX = x + 4;
+            int seqBtnY = y + SLOT_H - 11;
+            int seqBtnW = 14;
+            boolean seqHover = isInside(mouseX, mouseY, seqBtnX, seqBtnY, seqBtnW, 10);
+            int seqBg = slot.sequential ? (seqHover ? YELLOW : 0xFFB89A4E) : (seqHover ? BTN_HOVER : BTN_IDLE);
+            g.fill(seqBtnX, seqBtnY, seqBtnX + seqBtnW, seqBtnY + 10, seqBg);
+            g.drawCenteredString(font, slot.sequential ? "S" : "C", seqBtnX + seqBtnW / 2, seqBtnY + 1, WHITE);
+
+            // Distance field (only shown when sequential)
             if (slot.sequential) {
-                g.drawString(font, "SEQ " + slot.distance + "m", x + 4, y + SLOT_H - 8, YELLOW, false);
+                int distX = seqBtnX + seqBtnW + 2;
+                int distW = 32;
+                boolean distHover = isInside(mouseX, mouseY, distX, seqBtnY, distW, 10);
+                int distBg = (editingDistanceSlot == index) ? SLOT_SELECTED : (distHover ? FIELD_BORDER : FIELD_BG);
+                g.fill(distX, seqBtnY, distX + distW, seqBtnY + 10, distBg);
+                String distStr = (editingDistanceSlot == index) ? distanceEditBuffer + "_" : slot.distance + "m";
+                g.drawString(font, distStr, distX + 2, seqBtnY + 1, YELLOW, false);
             }
 
             // Clear (X) button
@@ -464,6 +483,7 @@ public class ControlConfigScreen extends Screen {
 
         // Commit any active edit
         if (editingSpeedSlot >= 0) commitSpeedEdit();
+        if (editingDistanceSlot >= 0) commitDistanceEdit();
         if (editingPowerSlot >= 0) commitPowerEdit();
 
         // Back button
@@ -545,6 +565,25 @@ public class ControlConfigScreen extends Screen {
                     editingSpeedSlot = i;
                     speedEditBuffer = String.valueOf(mb.speed);
                     return true;
+                }
+
+                // Sequential/Continuous toggle
+                int seqBtnX = slotX + 4;
+                int seqBtnY = sy + SLOT_H - 11;
+                if (isInside(mX, mY, seqBtnX, seqBtnY, 14, 10)) {
+                    mb.sequential = !mb.sequential;
+                    autoSave();
+                    return true;
+                }
+
+                // Distance field click (only when sequential)
+                if (mb.sequential) {
+                    int distX = seqBtnX + 16;
+                    if (isInside(mX, mY, distX, seqBtnY, 32, 10)) {
+                        editingDistanceSlot = i;
+                        distanceEditBuffer = String.valueOf(mb.distance);
+                        return true;
+                    }
                 }
 
                 // Clear button
@@ -657,6 +696,20 @@ public class ControlConfigScreen extends Screen {
                     speedScrolled = true;
                     break;
                 }
+
+                // Distance scroll (when sequential)
+                if (mb.sequential) {
+                    int distX = motorPanelX + 2 + 4 + 16;
+                    int distY = sy + SLOT_H - 11;
+                    if (isInside(mX, mY, distX, distY, 32, 10)) {
+                        int delta = (int) Math.signum(scrollY);
+                        if (hasShiftDown()) delta *= 10;
+                        mb.distance = Math.max(1, Math.min(64, mb.distance + delta));
+                        autoSave();
+                        speedScrolled = true;
+                        break;
+                    }
+                }
             }
             if (speedScrolled) return true;
 
@@ -695,6 +748,30 @@ public class ControlConfigScreen extends Screen {
 
     @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        // Distance edit mode
+        if (editingDistanceSlot >= 0) {
+            if (keyCode == 259) { // Backspace
+                if (!distanceEditBuffer.isEmpty())
+                    distanceEditBuffer = distanceEditBuffer.substring(0, distanceEditBuffer.length() - 1);
+                return true;
+            }
+            if (keyCode == 257 || keyCode == 335) { // Enter
+                commitDistanceEdit();
+                return true;
+            }
+            if (keyCode == 256) { // Escape
+                editingDistanceSlot = -1;
+                distanceEditBuffer = "";
+                return true;
+            }
+            char c = keyToChar(keyCode);
+            if (c >= '0' && c <= '9' && distanceEditBuffer.length() < 2) {
+                distanceEditBuffer += c;
+                return true;
+            }
+            return true;
+        }
+
         // Speed edit mode
         if (editingSpeedSlot >= 0) {
             if (keyCode == 259) { // Backspace
@@ -761,6 +838,18 @@ public class ControlConfigScreen extends Screen {
         }
         editingSpeedSlot = -1;
         speedEditBuffer = "";
+        autoSave();
+    }
+
+    private void commitDistanceEdit() {
+        if (editingDistanceSlot >= 0 && editingDistanceSlot < ControlProfile.MAX_MOTOR_BINDINGS) {
+            try {
+                int val = Integer.parseInt(distanceEditBuffer);
+                profile.getMotorBinding(editingDistanceSlot).distance = Math.max(1, Math.min(64, val));
+            } catch (NumberFormatException ignored) {}
+        }
+        editingDistanceSlot = -1;
+        distanceEditBuffer = "";
         autoSave();
     }
 
@@ -856,6 +945,7 @@ public class ControlConfigScreen extends Screen {
     @Override
     public void onClose() {
         if (editingSpeedSlot >= 0) commitSpeedEdit();
+        if (editingDistanceSlot >= 0) commitDistanceEdit();
         if (editingPowerSlot >= 0) commitPowerEdit();
         saveProfile();
         super.onClose();
