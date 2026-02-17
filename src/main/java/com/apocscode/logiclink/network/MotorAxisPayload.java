@@ -70,23 +70,27 @@ public record MotorAxisPayload(
             int speed = Math.max(1, Math.min(256, payload.configuredSpeed));
 
             if (be instanceof LogicDriveBlockEntity drive) {
+                float inputSpeed = drive.getInputSpeed();
                 if (payload.sequential && payload.sequenceDistance > 0) {
                     // Sequential mode: move a fixed distance then stop.
                     // Require >50% deflection to trigger (prevents accidental analog triggers).
-                    if (Math.abs(payload.axisValue) > 0.5f) {
+                    if (Math.abs(payload.axisValue) > 0.5f && Math.abs(inputSpeed) > 0.01f) {
                         drive.stopSequence();
                         drive.clearSequence();
                         float degrees = payload.sequenceDistance * 360.0f;
-                        float modifier = Math.signum(payload.axisValue)
-                                * Math.max(1.0f, speed / 16.0f);
+                        // Compute modifier so output = configured speed, direction from axis sign
+                        float modifier = Math.signum(payload.axisValue) * speed / Math.abs(inputSpeed);
+                        modifier = Math.max(-16f, Math.min(16f, modifier));
                         drive.addRotateStep(degrees, modifier);
                         drive.runSequence(false);
                     }
                 } else {
-                    // Continuous mode: proportional speed from analog input
-                    if (Math.abs(payload.axisValue) > 0.01f) {
-                        float modifier = payload.axisValue
-                                * Math.max(1.0f, speed / 16.0f);
+                    // Continuous mode: configured speed directly controls output RPM.
+                    // Modifier = desiredSpeed / inputSpeed so output = inputSpeed * modifier = desiredSpeed.
+                    if (Math.abs(payload.axisValue) > 0.01f && Math.abs(inputSpeed) > 0.01f) {
+                        float desiredSpeed = payload.axisValue * speed;
+                        float modifier = desiredSpeed / inputSpeed;
+                        modifier = Math.max(-16f, Math.min(16f, modifier));
                         drive.setSpeedModifier(modifier);
                         drive.setMotorEnabled(true);
                     } else {

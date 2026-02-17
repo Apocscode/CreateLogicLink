@@ -380,20 +380,21 @@ public class LogicRemoteItemRenderer extends CustomRenderedItemModelRenderer {
 
         // Joystick tilt based on axis input
         // Left stick: axes 0 (X) and 1 (Y). Right stick: axes 2 (X) and 3 (Y).
-        // GLFW Y-axis: negative = up/forward, positive = down/backward
-        // Model space: +rotateX = tilt toward player, -rotateX = tilt away
+        // Model coordinates: X runs top→bottom on controller face, Z runs right→left.
+        //   rotateX (around X/up-down axis) → tilts stick left/right
+        //   rotateZ (around Z/left-right axis) → tilts stick forward/back
         float maxTilt = 15.0f; // degrees
         int xIdx = isRight ? 2 : 0;
         int yIdx = isRight ? 3 : 1;
-        float tiltX = -axisLerps[yIdx].getValue(pt) * maxTilt; // Y axis tilts around X (forward/back)
-        float tiltZ = axisLerps[xIdx].getValue(pt) * maxTilt; // X axis tilts around Z (left/right)
+        float tiltX = axisLerps[xIdx].getValue(pt) * maxTilt;  // X input → rotateX (left/right tilt)
+        float tiltZ = -axisLerps[yIdx].getValue(pt) * maxTilt; // Y input → rotateZ (forward/back tilt)
 
         if (tiltX != 0 || tiltZ != 0) {
             var msr = TransformStack.of(ms);
             // Pivot around the joystick base (center of the 1x1 nub at model space 0.5, 0.5, 0.5)
             ms.translate(0.03125, 0.03125, 0.03125); // half a pixel to center
-            msr.rotateXDegrees(tiltX);
             msr.rotateZDegrees(tiltZ);
+            msr.rotateXDegrees(tiltX);
             ms.translate(-0.03125, -0.03125, -0.03125);
         }
 
