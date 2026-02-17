@@ -56,8 +56,6 @@ public record AuxRedstonePayload(
         context.enqueueWork(() -> {
             if (!(context.player() instanceof ServerPlayer sp)) return;
 
-            LogicLink.LOGGER.info("[AuxRedstone] Received aux packet: states=0b{}", Integer.toBinaryString(payload.auxStates & 0xFF));
-
             // Get ControlProfile from held item
             ItemStack held = sp.getMainHandItem();
             if (!(held.getItem() instanceof LogicRemoteItem)) {
@@ -73,17 +71,15 @@ public record AuxRedstonePayload(
                             net.minecraft.world.item.component.CustomData.EMPTY).copyTag().getCompound("ControlProfile"));
             BlockPos playerPos = sp.blockPosition();
 
-            // Build frequency lists and values for RemoteServerHandler
+            // Build frequency lists and power values for RemoteServerHandler
             ArrayList<Couple<Frequency>> freqList = new ArrayList<>();
-            ArrayList<Boolean> valueList = new ArrayList<>();
+            ArrayList<Byte> powerList = new ArrayList<>();
 
             for (int i = 0; i < ControlProfile.MAX_AUX_BINDINGS; i++) {
                 AuxBinding aux = profile.getAuxBinding(i);
                 if (!aux.hasFrequency()) continue;
 
                 boolean active = (payload.auxStates & (1 << i)) != 0;
-                LogicLink.LOGGER.info("[AuxRedstone] Channel {} freq={}/{} active={} power={}",
-                        i, aux.freqId1, aux.freqId2, active, aux.power);
 
                 // Convert frequency IDs to Create Frequency objects
                 try {
@@ -97,18 +93,17 @@ public record AuxRedstonePayload(
                             Frequency.of(freq2Stack));
 
                     freqList.add(freqPair);
-                    valueList.add(active);
+                    // Use configured power level when active, 0 when inactive
+                    powerList.add(active ? (byte) aux.power : (byte) 0);
                 } catch (Exception e) {
                     LogicLink.LOGGER.warn("Invalid aux frequency for channel {}: {}/{}", i, aux.freqId1, aux.freqId2);
                 }
             }
 
             if (!freqList.isEmpty()) {
-                LogicLink.LOGGER.info("[AuxRedstone] Sending {} freq pairs to RemoteServerHandler", freqList.size());
-                RemoteServerHandler.receivePressed(
-                        sp.level(), playerPos, sp.getUUID(), freqList, valueList);
-            } else {
-                LogicLink.LOGGER.warn("[AuxRedstone] No valid frequency pairs found in profile!");
+                // Use receiveAxis for variable power level support (1-15)
+                RemoteServerHandler.receiveAxis(
+                        sp.level(), playerPos, sp.getUUID(), freqList, powerList);
             }
         });
     }

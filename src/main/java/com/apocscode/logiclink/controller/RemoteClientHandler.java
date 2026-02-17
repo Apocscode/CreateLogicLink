@@ -62,6 +62,10 @@ public class RemoteClientHandler {
     private static int auxPacketCooldown = 0;
     private static byte auxStates = 0;
     private static byte prevAuxStates = 0;
+    /** Tracks which aux channels are toggled on (for non-momentary channels). */
+    private static byte toggledAuxStates = 0;
+    /** Raw key state from previous tick, used to detect key-down edges for toggle. */
+    private static byte prevRawAux = 0;
     private static boolean useLock = false;
 
     // Motor direction values for 12 slots (unidirectional, 0 to 1)
@@ -177,6 +181,8 @@ public class RemoteClientHandler {
         auxPacketCooldown = 0;
         auxStates = 0;
         prevAuxStates = 0;
+        toggledAuxStates = 0;
+        prevRawAux = 0;
         java.util.Arrays.fill(motorKeyValues, 0f);
         java.util.Arrays.fill(prevMotorKeyValues, 0f);
 
@@ -435,16 +441,16 @@ public class RemoteClientHandler {
                 }
             }
 
-            // ===== Aux Redstone Channels (keys 1-8 + gamepad D-pad/buttons) =====
+            // ===== Aux Redstone Channels (Numpad 1-8 + gamepad D-pad/buttons) =====
             if (auxPacketCooldown > 0) auxPacketCooldown--;
             if (cachedProfile != null) {
                 long auxWindow = mc.getWindow().getWindow();
-                byte newAux = 0;
+                byte rawPressed = 0;
                 // Numpad 1-8 map to aux channels 0-7
                 for (int i = 0; i < ControlProfile.MAX_AUX_BINDINGS; i++) {
                     int keyCode = GLFW.GLFW_KEY_KP_1 + i; // GLFW_KEY_KP_1 through GLFW_KEY_KP_8
                     if (GLFW.glfwGetKey(auxWindow, keyCode) == GLFW.GLFW_PRESS) {
-                        newAux |= (byte) (1 << i);
+                        rawPressed |= (byte) (1 << i);
                     }
                 }
                 // Gamepad: D-pad and face buttons map to aux channels
@@ -454,14 +460,33 @@ public class RemoteClientHandler {
                     int[] gpButtonMap = {11, 13, 14, 12, 0, 1, 2, 3};
                     for (int i = 0; i < gpButtonMap.length; i++) {
                         if (GamepadInputs.GetButton(gpButtonMap[i])) {
-                            newAux |= (byte) (1 << i);
+                            rawPressed |= (byte) (1 << i);
                         }
                     }
                 }
+
+                // Process toggle vs momentary per channel
+                byte newAux = 0;
+                for (int i = 0; i < ControlProfile.MAX_AUX_BINDINGS; i++) {
+                    int bit = 1 << i;
+                    boolean pressed = (rawPressed & bit) != 0;
+                    boolean wasPressed = (prevRawAux & bit) != 0;
+                    ControlProfile.AuxBinding aux = cachedProfile.getAuxBinding(i);
+
+                    if (aux.momentary) {
+                        // Momentary: on while held
+                        if (pressed) newAux |= (byte) bit;
+                    } else {
+                        // Toggle: flip on key-down edge
+                        if (pressed && !wasPressed) {
+                            toggledAuxStates ^= (byte) bit;
+                        }
+                        if ((toggledAuxStates & bit) != 0) newAux |= (byte) bit;
+                    }
+                }
+                prevRawAux = rawPressed;
+
                 if (newAux != prevAuxStates || (auxPacketCooldown == 0 && newAux != 0)) {
-                    LogicLink.LOGGER.info("[AuxClient] Sending aux states: 0b{}, has freq ch0={}",
-                            Integer.toBinaryString(newAux & 0xFF),
-                            cachedProfile.getAuxBinding(0).hasFrequency());
                     PacketDistributor.sendToServer(new AuxRedstonePayload(newAux));
                     prevAuxStates = newAux;
                     auxPacketCooldown = PACKET_RATE;
