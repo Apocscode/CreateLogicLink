@@ -659,3 +659,21 @@ Repositioned the Sequential/Continuous toggle button and distance field from the
 
 ### Deployed
 - Jar: logiclink-0.1.0.jar to ATM10 mods folder
+
+---
+
+## Session 7o -- 2026-02-17 -- Yellow x,y,z Position Text in Device List
+
+### Commits
+- `ddf14d1` -- Change device x,y,z position text color to yellow
+
+### Summary
+Changed the x,y,z coordinate text color in the device picker list from TEXT_DIM (hard to read) to YELLOW for better readability.
+
+### Files Changed
+| File | Change |
+|------|--------|
+| client/ControlConfigScreen.java | Changed posStr drawString color from TEXT_DIM to YELLOW |
+
+### Deployed
+- Jar: logiclink-0.1.0.jar to ATM10 mods folder
