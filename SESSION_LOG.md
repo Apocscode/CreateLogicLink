@@ -623,3 +623,21 @@ Left/right joystick animation was still reversed after session 7k (A tilted righ
 
 ### Deployed
 - Jar: logiclink-0.1.0.jar to ATM10 mods folder
+
+---
+
+## Session 7m -- 2026-02-17 -- Sequential/Continuous Toggle + Distance Field in Motor Config GUI
+
+### Commits
+- `5dc0715` -- Add Sequential/Continuous toggle + distance field to motor config GUI
+
+### Summary
+Added interactive UI controls for sequential movement mode in the ControlConfigScreen motor slot rows. Each assigned motor row now shows a **[C]/[S] toggle button** on the bottom-left that switches between Continuous (hold key = proportional speed) and Sequential (tap key = rotate a fixed distance then stop). When Sequential is active, a **distance field** (1-64m) appears next to the toggle, editable by clicking (keyboard input) or scroll wheel (hold Shift for ±10). The backend already supported sequential mode via `MotorBinding.sequential`/`distance` and `MotorAxisPayload` — this commit exposes it in the GUI.
+
+### Files Changed
+| File | Change |
+|------|--------|
+| client/ControlConfigScreen.java | Added [C]/[S] toggle, distance field render/click/scroll/keyboard edit, commitDistanceEdit() |
+
+### Deployed
+- Jar: logiclink-0.1.0.jar to ATM10 mods folder
