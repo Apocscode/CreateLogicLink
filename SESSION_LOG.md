@@ -861,3 +861,18 @@ Fixed two issues with the Contraption Remote block, then added complete document
 ### Additional Changes
 7. **Patchouli Logic Drive**: Added orange/light-blue side information to the spotlight page description.
 8. **README.md Acknowledgments**: Added acknowledgment section crediting [getItemFromBlock](https://github.com/getItemFromBlock) and [Create: Tweaked Controllers](https://github.com/getItemFromBlock/Create-Tweaked-Controllers) as the source for the Logic Remote and Contraption Remote gamepad input, frequency-based redstone binding, and lectern-mounted controller mechanics.
+
+### Additional Commits (cont.)
+- `3a9f6d3` — Update SESSION_LOG with CTC credit and drive color entries
+- `a586e53` — Rename block from Logic Link to Logic Link Hub across all code, lang, docs, Patchouli, and Ponder
+
+### Additional Changes (cont.)
+9. **Block rename: "Logic Link" → "Logic Link Hub"**: Comprehensive rename of the block's display name across 12 files:
+   - **en_us.json**: Block name `"Logic Link"` → `"Logic Link Hub"`, tooltip, 6 Ponder strings
+   - **ControlConfigScreen.java / MotorConfigScreen.java**: GUI text `"Logic Hub to"` → `"Logic Link Hub"`
+   - **LogicRemoteItem.java**: Javadoc comments, tooltip text
+   - **LogicLinkPeripheral.java**: 5 LuaException messages `"Logic Link is not connected"` → `"Logic Link Hub is not connected"`
+   - **LogicLinkSceneAnimations.java**: 4 Ponder scene text strings
+   - **Patchouli**: logic_link.json (name, title, text), overview.json (blocks list, quick start, peripheral names), wireless_hub.json, logic_remote.json
+   - **README.md**: 9 block references (features, getting started, crafting, highlighting, remote usage)
+   - **MOD_DOCUMENTATION.md**: 22 block references (blocks section, sensor linking, highlighting, Lua API, phases, crafting, Ponder tags, peripheral summary)
