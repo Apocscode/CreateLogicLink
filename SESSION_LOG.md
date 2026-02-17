@@ -783,3 +783,24 @@ Added full ControlConfigScreen (motor bindings, aux redstone, frequency picker) 
 
 ### Deployed
 - Jar: logiclink-0.1.0.jar to ATM10 mods folder
+
+---
+
+## Session 7u — Fix Contraption Remote IDLE on Moving Contraptions
+**Date:** 2026-02-17
+
+### Commits
+- `6dc6f28` — Fix Contraption Remote going IDLE on moving contraptions
+- `71bc39a` — Remove temp decompile files
+
+### Summary
+Fixed the Contraption Remote block going IDLE immediately after a contraption starts moving. Root cause: the client-side tick validation in RemoteClientHandler checked `player.blockPosition().distSqr(activeBlockPos) > 32*32` — when the block is assembled onto a contraption, it's removed from the world and the original world-space position becomes invalid as the contraption moves. The distance check then triggers IDLE. Fix: removed the distance check for block mode; the existing `!player.isPassenger()` check is sufficient since the player must stay seated to control. Also made SeatInputPayload handler resilient to missing block entities (expected when block is on a contraption). Motor and aux control work independently via MotorAxisPayload/AuxRedstonePayload packets that target in-world motors/drives directly.
+
+### Files Changed
+| File | Change |
+|------|--------|
+| controller/RemoteClientHandler.java | Removed distance check from block mode tick validation; kept only `!player.isPassenger()` check |
+| network/SeatInputPayload.java | Made handler resilient to missing block entity (silently ignores when block is on contraption); moved distance check after entity lookup |
+
+### Deployed
+- Jar: logiclink-0.1.0.jar to ATM10 mods folder
