@@ -82,6 +82,9 @@ public class RemoteClientHandler {
 
     /** Block position when activated from a Contraption Remote block (null = item mode). */
     private static BlockPos activeBlockPos = null;
+    /** Grace ticks before going IDLE in block mode (handles contraption assembly transition). */
+    private static int blockModeGraceTicks = 0;
+    private static final int BLOCK_MODE_GRACE_PERIOD = 10; // 0.5 seconds
 
     // Shared output instance for encoding
     private static final ControllerOutput output = new ControllerOutput();
@@ -155,6 +158,10 @@ public class RemoteClientHandler {
         Minecraft mc = Minecraft.getInstance();
         MODE = Mode.ACTIVE;
         activeBlockPos = pos;
+        blockModeGraceTicks = BLOCK_MODE_GRACE_PERIOD;
+        LogicLink.LOGGER.info("[RemoteClientHandler] activateForBlock pos={}, isPassenger={}, vehicle={}",
+                pos, mc.player != null ? mc.player.isPassenger() : "null",
+                mc.player != null ? mc.player.getVehicle() : "null");
         // Load ControlProfile from the block entity for motor/aux bindings
         if (mc.player != null && mc.level != null) {
             BlockEntity be = mc.level.getBlockEntity(pos);
@@ -186,6 +193,7 @@ public class RemoteClientHandler {
         prevAuxStates = 0;
         toggledAuxStates = 0;
         prevRawAux = 0;
+        blockModeGraceTicks = 0;
         java.util.Arrays.fill(motorKeyValues, 0f);
         java.util.Arrays.fill(prevMotorKeyValues, 0f);
 
@@ -243,20 +251,28 @@ public class RemoteClientHandler {
         // Validate activation source
         if (activeBlockPos != null) {
             // Block mode: auto-idle when player dismounts seat
-            // Note: no distance check — the block may be on a moving contraption,
-            // so the original world-space position becomes invalid. The seated
-            // check is sufficient since the player must stay seated to control.
+            // Uses a grace period to handle the brief transition when Create
+            // assembles a contraption (seat entity is removed and re-created).
             if (!player.isPassenger()) {
-                MODE = Mode.IDLE;
-                if (mc.player != null) {
-                    AllSoundEvents.CONTROLLER_CLICK.playAt(mc.player.level(), mc.player.blockPosition(), 1f, .5f, true);
-                    mc.player.displayClientMessage(
-                            Component.literal("Controller ").withStyle(ChatFormatting.GOLD)
-                                    .append(Component.literal("IDLE").withStyle(ChatFormatting.GRAY)),
-                            true);
+                blockModeGraceTicks--;
+                LogicLink.LOGGER.debug("[RemoteClientHandler] Block mode: player not passenger, grace={}, vehicle={}",
+                        blockModeGraceTicks, player.getVehicle());
+                if (blockModeGraceTicks <= 0) {
+                    LogicLink.LOGGER.info("[RemoteClientHandler] Block mode: grace expired, going IDLE");
+                    MODE = Mode.IDLE;
+                    if (mc.player != null) {
+                        AllSoundEvents.CONTROLLER_CLICK.playAt(mc.player.level(), mc.player.blockPosition(), 1f, .5f, true);
+                        mc.player.displayClientMessage(
+                                Component.literal("Controller ").withStyle(ChatFormatting.GOLD)
+                                        .append(Component.literal("IDLE").withStyle(ChatFormatting.GRAY)),
+                                true);
+                    }
+                    onReset();
+                    return;
                 }
-                onReset();
-                return;
+            } else {
+                // Player is a passenger — reset grace timer
+                blockModeGraceTicks = BLOCK_MODE_GRACE_PERIOD;
             }
         } else {
             // Item mode: need held LogicRemoteItem
