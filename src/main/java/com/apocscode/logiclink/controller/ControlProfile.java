@@ -12,13 +12,12 @@ import net.minecraft.world.item.component.CustomData;
  * Data class representing a controller's motor and auxiliary redstone bindings.
  * Stored in item NBT under "ControlProfile".
  * <p>
- * Replaces the old 4-slot AxisConfig system with 8 motor + 8 aux bindings.
+ * Replaces the old 4-slot AxisConfig system with 12 motor + 8 aux bindings.
  * <p>
- * Motor bindings map gamepad axes to hub-connected motors/drives:
- *   Slot 0-1: Left stick X/Y
- *   Slot 2-3: Right stick X/Y
- *   Slot 4-5: LT/RT triggers
- *   Slot 6-7: LB/RB bumpers
+ * Motor bindings map gamepad directions to hub-connected motors/drives:
+ *   Slot 0-3: Left stick (Up/Down/Left/Right)
+ *   Slot 4-7: Right stick (Up/Down/Left/Right)
+ *   Slot 8-11: LT/RT/LB/RB
  * <p>
  * Aux bindings map gamepad buttons to redstone link channels:
  *   Slot 0-3: D-pad (Up/Down/Left/Right)
@@ -27,24 +26,27 @@ import net.minecraft.world.item.component.CustomData;
  */
 public class ControlProfile {
 
-    public static final int MAX_MOTOR_BINDINGS = 8;
+    public static final int MAX_MOTOR_BINDINGS = 12;
     public static final int MAX_AUX_BINDINGS = 8;
 
-    /** Motor/Drive bindings: hub device → gamepad axis mapping. */
+    /** Motor/Drive bindings: hub device → gamepad direction mapping. */
     private final MotorBinding[] motorBindings = new MotorBinding[MAX_MOTOR_BINDINGS];
 
     /** Auxiliary redstone link bindings: gamepad buttons → redstone signals. */
     private final AuxBinding[] auxBindings = new AuxBinding[MAX_AUX_BINDINGS];
 
-    /** Gamepad axis labels for the 8 motor binding slots. */
+    /** Gamepad direction labels for the 12 motor binding slots. */
     public static final String[] MOTOR_AXIS_LABELS = {
-        "Left X", "Left Y", "Right X", "Right Y",
+        "L Up", "L Down", "L Left", "L Right",
+        "R Up", "R Down", "R Left", "R Right",
         "LT", "RT", "LB", "RB"
     };
 
-    /** Keyboard key labels for the 8 motor axes. */
+    /** Keyboard key labels for the 12 motor directions. */
     public static final String[] MOTOR_AXIS_KEYS = {
-        "A", "W", "\u2192", "\u2191", "Q", "E", "Z", "C"
+        "W", "S", "A", "D",
+        "\u2191", "\u2193", "\u2190", "\u2192",
+        "Q", "E", "Z", "C"
     };
 
     /** Gamepad button labels for the 8 aux binding slots. */
@@ -152,18 +154,24 @@ public class ControlProfile {
     }
 
     /**
-     * Migrate old 4-slot AxisConfig to new 8-slot ControlProfile.
-     * Old slots: W=0, S=1, A=2, D=3 → New: LeftX=0, LeftY=1, RightX=2, RightY=3.
+     * Migrate old 4-slot AxisConfig to new 12-slot ControlProfile.
+     * Old bidirectional slots: LeftX=0, LeftY=1, RightX=2, RightY=3
+     * New unidirectional: L Up=0, L Down=1, L Left=2, L Right=3, R Up=4, etc.
+     * Maps old bidirectional axes to new positive-direction slots.
      */
     private static ControlProfile migrateFromAxisConfig(CompoundTag tag) {
         ControlProfile profile = new ControlProfile();
         if (!tag.contains("AxisConfig")) return profile;
 
         ListTag axisList = tag.getList("AxisConfig", Tag.TAG_COMPOUND);
+        // Old: 0=LeftX, 1=LeftY, 2=RightX, 3=RightY
+        // New: 0=LUp, 1=LDown, 2=LLeft, 3=LRight, 4=RUp, 5=RDown, 6=RLeft, 7=RRight
+        int[] oldToNew = {3, 0, 7, 4}; // LeftX→LRight, LeftY→LUp, RightX→RRight, RightY→RUp
         for (int i = 0; i < Math.min(axisList.size(), 4); i++) {
             CompoundTag slot = axisList.getCompound(i);
             if (slot.contains("X")) {
-                MotorBinding mb = profile.motorBindings[i];
+                int newIdx = oldToNew[i];
+                MotorBinding mb = profile.motorBindings[newIdx];
                 mb.targetPos = new BlockPos(slot.getInt("X"), slot.getInt("Y"), slot.getInt("Z"));
                 mb.targetType = slot.getString("Type");
                 mb.reversed = slot.getBoolean("Reversed");
