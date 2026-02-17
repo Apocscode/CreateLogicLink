@@ -78,7 +78,7 @@ public record SaveControlProfilePayload(
 
             // Also write legacy AxisConfig for RemoteClientHandler compatibility
             net.minecraft.nbt.ListTag axisList = new net.minecraft.nbt.ListTag();
-            for (int i = 0; i < Math.min(ControlProfile.MAX_MOTOR_BINDINGS, 8); i++) {
+            for (int i = 0; i < ControlProfile.MAX_MOTOR_BINDINGS; i++) {
                 CompoundTag slot = new CompoundTag();
                 ControlProfile.MotorBinding mb = profile.getMotorBinding(i);
                 if (mb.hasTarget()) {

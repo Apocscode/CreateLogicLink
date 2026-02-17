@@ -380,11 +380,13 @@ public class LogicRemoteItemRenderer extends CustomRenderedItemModelRenderer {
 
         // Joystick tilt based on axis input
         // Left stick: axes 0 (X) and 1 (Y). Right stick: axes 2 (X) and 3 (Y).
+        // GLFW Y-axis: negative = up/forward, positive = down/backward
+        // Model space: +rotateX = tilt toward player, -rotateX = tilt away
         float maxTilt = 15.0f; // degrees
         int xIdx = isRight ? 2 : 0;
         int yIdx = isRight ? 3 : 1;
-        float tiltX = axisLerps[yIdx].getValue(pt) * maxTilt; // Y axis tilts around X (forward/back)
-        float tiltZ = -axisLerps[xIdx].getValue(pt) * maxTilt; // X axis tilts around Z (left/right)
+        float tiltX = -axisLerps[yIdx].getValue(pt) * maxTilt; // Y axis tilts around X (forward/back)
+        float tiltZ = axisLerps[xIdx].getValue(pt) * maxTilt; // X axis tilts around Z (left/right)
 
         if (tiltX != 0 || tiltZ != 0) {
             var msr = TransformStack.of(ms);

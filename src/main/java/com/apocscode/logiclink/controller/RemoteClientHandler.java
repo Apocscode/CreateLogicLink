@@ -412,7 +412,14 @@ public class RemoteClientHandler {
                 if (keysChanged || motorAxisPacketCooldown == 0) {
                     for (int i = 0; i < cachedAxisConfig.length; i++) {
                         MotorConfigScreen.AxisSlot slot = cachedAxisConfig[i];
-                        if (slot.hasTarget() && (keysChanged || motorKeyValues[i] != 0)) {
+                        // Only send packet if:
+                        // 1. Key is currently active (non-zero), OR
+                        // 2. This specific slot's key just changed (e.g., released from active to zero)
+                        // This prevents zero-value packets from other direction slots
+                        // overriding the active slot when they share the same target motor.
+                        boolean slotChanged = motorKeyValues[i] != prevMotorKeyValues[i];
+                        boolean slotActive = motorKeyValues[i] != 0;
+                        if (slot.hasTarget() && (slotChanged || slotActive || motorAxisPacketCooldown == 0 && slotActive)) {
                             float dir = motorKeyValues[i];
                             // Apply reversed flag
                             if (slot.reversed && dir != 0) dir = -dir;
