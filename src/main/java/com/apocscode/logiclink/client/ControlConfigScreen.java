@@ -17,6 +17,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
+import com.apocscode.logiclink.LogicLink;
 import com.apocscode.logiclink.network.SaveControlProfilePayload;
 import net.neoforged.neoforge.network.PacketDistributor;
 
@@ -115,6 +116,21 @@ public class ControlConfigScreen extends Screen {
         if (mc.player != null) {
             ItemStack stack = getRemoteItem(mc);
             profile = ControlProfile.fromItem(stack);
+            // Debug: log what we loaded
+            int motorCount = 0;
+            for (int i = 0; i < ControlProfile.MAX_MOTOR_BINDINGS; i++) {
+                if (profile.getMotorBinding(i).hasTarget()) motorCount++;
+            }
+            LogicLink.LOGGER.info("[ControlConfigScreen] init() loaded profile from {}: {} motors bound, item={}",
+                    stack.getItem().getClass().getSimpleName(), motorCount,
+                    stack.has(net.minecraft.core.component.DataComponents.CUSTOM_DATA) ? "has CustomData" : "NO CustomData");
+            if (stack.has(net.minecraft.core.component.DataComponents.CUSTOM_DATA)) {
+                net.minecraft.nbt.CompoundTag dbgTag = stack.getOrDefault(
+                        net.minecraft.core.component.DataComponents.CUSTOM_DATA,
+                        net.minecraft.world.item.component.CustomData.EMPTY).copyTag();
+                LogicLink.LOGGER.info("[ControlConfigScreen] CustomData keys: {}, hasControlProfile={}, hasAxisConfig={}",
+                        dbgTag.getAllKeys(), dbgTag.contains("ControlProfile"), dbgTag.contains("AxisConfig"));
+            }
         } else {
             profile = new ControlProfile();
         }
@@ -769,13 +785,23 @@ public class ControlConfigScreen extends Screen {
      * This ensures persistence even if the screen is closed unexpectedly.
      */
     private void autoSave() {
-        PacketDistributor.sendToServer(new SaveControlProfilePayload(profile.save()));
+        net.minecraft.nbt.CompoundTag savedTag = profile.save();
+        int motorCount = 0;
+        for (int i = 0; i < ControlProfile.MAX_MOTOR_BINDINGS; i++) {
+            if (profile.getMotorBinding(i).hasTarget()) motorCount++;
+        }
+        LogicLink.LOGGER.info("[ControlConfigScreen] autoSave() sending {} motors to server, tag keys={}",
+                motorCount, savedTag.getAllKeys());
+        PacketDistributor.sendToServer(new SaveControlProfilePayload(savedTag));
         // Also update client-side item for immediate feedback
         Minecraft mc = Minecraft.getInstance();
         if (mc.player != null) {
             ItemStack stack = getRemoteItem(mc);
             if (!stack.isEmpty()) {
                 ControlProfile.saveToItem(stack, profile);
+                LogicLink.LOGGER.info("[ControlConfigScreen] autoSave() updated client-side item");
+            } else {
+                LogicLink.LOGGER.warn("[ControlConfigScreen] autoSave() could not find held item!");
             }
         }
     }

@@ -125,7 +125,9 @@ public class LogicRemoteMenu extends GhostItemMenu<ItemStack> {
 
     @Override
     protected void saveData(ItemStack contentHolder) {
-        CompoundTag tag = new CompoundTag();
+        // IMPORTANT: Preserve existing CustomData (ControlProfile, AxisConfig, Hub info, etc.)
+        // Only update the "Items" key for ghost slot frequencies
+        CompoundTag tag = contentHolder.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
         tag.put("Items", ghostInventory.serializeNBT(playerInventory.player.registryAccess()));
         contentHolder.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
     }

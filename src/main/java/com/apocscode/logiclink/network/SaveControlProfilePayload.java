@@ -54,11 +54,23 @@ public record SaveControlProfilePayload(
             ItemStack held = sp.getMainHandItem();
             if (!(held.getItem() instanceof LogicRemoteItem)) {
                 held = sp.getOffhandItem();
-                if (!(held.getItem() instanceof LogicRemoteItem)) return;
+                if (!(held.getItem() instanceof LogicRemoteItem)) {
+                    LogicLink.LOGGER.warn("[SaveControlProfile] Player {} not holding LogicRemote! main={}, off={}",
+                            sp.getName().getString(),
+                            sp.getMainHandItem().getItem().getClass().getSimpleName(),
+                            sp.getOffhandItem().getItem().getClass().getSimpleName());
+                    return;
+                }
             }
 
             // Load the profile from the received NBT
             ControlProfile profile = ControlProfile.load(payload.profileTag);
+            int motorCount = 0;
+            for (int i = 0; i < ControlProfile.MAX_MOTOR_BINDINGS; i++) {
+                if (profile.getMotorBinding(i).hasTarget()) motorCount++;
+            }
+            LogicLink.LOGGER.info("[SaveControlProfile] Received profile from {}: {} motors bound, saving to item",
+                    sp.getName().getString(), motorCount);
 
             // Save the ControlProfile to the item
             CompoundTag itemTag = held.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
