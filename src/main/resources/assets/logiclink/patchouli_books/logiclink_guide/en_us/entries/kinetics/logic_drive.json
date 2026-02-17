@@ -9,7 +9,7 @@
             "item": "logiclink:logic_drive",
             "link_recipe": true,
             "title": "Logic Drive",
-            "text": "A Lua-controlled $(thing)rotation modifier$() — acts as a programmable clutch and gearbox. Enable/disable rotation pass-through, reverse direction, and multiply speed from -16x to 16x.$(br2)Peripheral type: $(thing)\"logic_drive\"$()"
+            "text": "A Lua-controlled $(thing)rotation modifier$() — acts as a programmable clutch and gearbox. Enable/disable rotation pass-through, reverse direction, and multiply speed from -16x to 16x.$(br2)The $(6)orange-marked$() side is the $(thing)drive input$() — connect your power source here. The $(3)light-blue$() side is the $(thing)CC-controlled output$().$(br2)Peripheral type: $(thing)\"logic_drive\"$()"
         },
         {
             "type": "patchouli:crafting",
