@@ -1,6 +1,6 @@
 {
     "textures": {
-        "marker": "minecraft:block/orange_concrete"
+        "marker": "minecraft:block/light_blue_concrete"
     },
     "elements": [
         {

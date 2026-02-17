@@ -36,7 +36,7 @@ import net.minecraft.world.phys.shapes.VoxelShape;
  * <p>
  * The block has a {@link #FACING} property indicating the <b>output</b>
  * direction. The opposite face is the <b>input</b> (sensor) side.
- * Orange stripe = input, light blue stripe = CC-controlled output.
+ * Blue stripe = input (sensor), orange stripe = CC-controlled output.
  * </p>
  * <h3>Capabilities:</h3>
  * <ul>
