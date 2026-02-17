@@ -199,4 +199,9 @@ In-game testing showed the controller model was still off-center on the block (e
 ### Deployed
 - **Jar**: `logiclink-0.1.0.jar` (505,172 bytes) → ATM10 mods folder
 
+### Additional Commits
+- `eb34ac0` — Remove controller toggle from Contraption Remote block right-click
+  - `ContraptionRemoteBlock.java`: Right-click no longer activates controller mode. Shift+RC still shows status. Removed `toggleControllerClient()`, `RemoteClientHandler` import, `@OnlyIn` imports.
+  - **Jar**: `logiclink-0.1.0.jar` (504,996 bytes) → ATM10 mods folder
+
 *Last updated: 2026-02-16 — Session 6b*
