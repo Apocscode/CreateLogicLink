@@ -355,3 +355,30 @@ Complete motor/drive control and redstone aux system replacing the legacy 4-slot
 
 ### Deployed
 - **Jar**: `logiclink-0.1.0.jar` → ATM10 mods folder
+
+---
+
+## Session 7b — 2026-02-16 — Bug Fixes: Persistence, Save Feedback, Button Overlap
+
+### Commits
+- `7991fc7` — fix: ControlProfile persistence, save feedback, button overlap
+
+### Summary
+Fixed 3 bugs reported after in-game testing of the Control Profile system:
+
+1. **ControlProfile not persisting** — Root cause: ControlConfigScreen is a plain `Screen`, not a container menu, so `saveToItem()` only modified the client-side ItemStack which was never synced to the server. Created `SaveControlProfilePayload` (client→server packet) that sends the profile NBT to the server, which applies it to the held item + writes legacy AxisConfig. `saveProfile()` now calls `PacketDistributor.sendToServer()`.
+
+2. **Save button no feedback** — Added visual flash (1.5s bright green + "✔ Saved" label), experience orb pickup sound, and actionbar message. `saveFlashTicks` counter decremented in render loop.
+
+3. **Button overlap on main GUI** — Tab buttons (firstTab, secondTab, thirdTab) and action buttons (nextDevice at x+78, etc.) overlapped because thirdTab at x+67 (18px wide → x+85) crossed into nextDevice territory, and bugButton at x+49 overlapped secondTab at x+42. Fix: tightened tab spacing to 20px (tab2→x+37, tab3→x+57), moved bugButton to extra area outside the main GUI background (x+width+6).
+
+### Files Changed
+| File | Change |
+|------|--------|
+| `network/SaveControlProfilePayload.java` | **NEW** — Client→server packet to persist ControlProfile NBT to held item |
+| `client/ControlConfigScreen.java` | saveProfile() sends packet to server; save flash feedback with sound |
+| `client/LogicRemoteConfigScreen.java` | Fixed tab button spacing (20px), moved bugButton to extra area |
+| `LogicLink.java` | Registered SaveControlProfilePayload |
+
+### Deployed
+- **Jar**: `logiclink-0.1.0.jar` → ATM10 mods folder
