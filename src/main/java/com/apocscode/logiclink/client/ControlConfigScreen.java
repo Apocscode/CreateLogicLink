@@ -77,6 +77,10 @@ public class ControlConfigScreen extends Screen {
     private int deviceScrollOffset = 0;
     private static final int DEVICE_ROWS_VISIBLE = 12;
 
+    // ==================== Motor Panel Scroll ====================
+    private int motorScrollOffset = 0;
+    private static final int MOTOR_ROWS_VISIBLE = 8;
+
     private String linkedHubLabel = "";
     private BlockPos linkedHubPos = null;
 
@@ -299,9 +303,20 @@ public class ControlConfigScreen extends Screen {
         g.fill(panelX, panelY, panelX + MOTOR_PANEL_W, panelY + 12, BORDER_DARK);
         g.drawString(font, "Motor / Drive Axes", panelX + 3, panelY + 2, LABEL_COLOR, false);
 
-        for (int i = 0; i < ControlProfile.MAX_MOTOR_BINDINGS; i++) {
+        int totalSlots = ControlProfile.MAX_MOTOR_BINDINGS;
+        int maxShow = Math.min(totalSlots - motorScrollOffset, MOTOR_ROWS_VISIBLE);
+        for (int i = 0; i < maxShow; i++) {
+            int slotIndex = i + motorScrollOffset;
             int sy = panelY + 14 + i * (SLOT_H + 2);
-            renderMotorSlot(g, mouseX, mouseY, panelX + 2, sy, MOTOR_PANEL_W - 4, i);
+            renderMotorSlot(g, mouseX, mouseY, panelX + 2, sy, MOTOR_PANEL_W - 4, slotIndex);
+        }
+
+        // Scroll indicators
+        if (motorScrollOffset > 0) {
+            g.drawCenteredString(font, "\u25B2", panelX + MOTOR_PANEL_W / 2, panelY + 12, YELLOW);
+        }
+        if (motorScrollOffset + maxShow < totalSlots) {
+            g.drawCenteredString(font, "\u25BC", panelX + MOTOR_PANEL_W / 2, panelY + panelH - 10, YELLOW);
         }
     }
 
@@ -309,7 +324,7 @@ public class ControlConfigScreen extends Screen {
         MotorBinding slot = profile.getMotorBinding(index);
 
         // Determine colors based on state
-        int[] keyColors = {CYAN, GREEN, CYAN, GREEN, YELLOW, YELLOW, RED, RED};
+        int[] keyColors = {CYAN, GREEN, CYAN, GREEN, YELLOW, YELLOW, YELLOW, YELLOW, RED, RED, RED, RED};
         int keyColor = index < keyColors.length ? keyColors[index] : WHITE;
         int bg = (assigningMotorSlot == index) ? SLOT_SELECTED : (slot.hasTarget() ? SLOT_ASSIGNED : SLOT_BG);
         g.fill(x, y, x + w, y + SLOT_H, bg);
@@ -503,11 +518,13 @@ public class ControlConfigScreen extends Screen {
             }
         }
 
-        // Motor slot interactions
+        // Motor slot interactions (scroll-aware)
         int motorPanelX = guiLeft + MOTOR_PANEL_X;
         int motorSlotY = guiTop + 20 + 14;
-        for (int i = 0; i < ControlProfile.MAX_MOTOR_BINDINGS; i++) {
-            int sy = motorSlotY + i * (SLOT_H + 2);
+        int motorMaxShow = Math.min(ControlProfile.MAX_MOTOR_BINDINGS - motorScrollOffset, MOTOR_ROWS_VISIBLE);
+        for (int vi = 0; vi < motorMaxShow; vi++) {
+            int i = vi + motorScrollOffset;
+            int sy = motorSlotY + vi * (SLOT_H + 2);
             int slotX = motorPanelX + 2;
             int slotW = MOTOR_PANEL_W - 4;
             MotorBinding mb = profile.getMotorBinding(i);
@@ -614,24 +631,46 @@ public class ControlConfigScreen extends Screen {
             return true;
         }
 
-        // Scroll speed on motor slots
+        // Scroll motor panel list
         int motorPanelX = guiLeft + MOTOR_PANEL_X;
-        int motorSlotY = guiTop + 20 + 14;
-        for (int i = 0; i < ControlProfile.MAX_MOTOR_BINDINGS; i++) {
-            int sy = motorSlotY + i * (SLOT_H + 2);
-            MotorBinding mb = profile.getMotorBinding(i);
-            if (!mb.hasTarget()) continue;
+        int motorPanelY = guiTop + 20;
+        int motorPanelH = GUI_HEIGHT - 24;
+        if (isInside(mX, mY, motorPanelX, motorPanelY, MOTOR_PANEL_W, motorPanelH)) {
+            // Check if hovering over a speed field first (speed scroll takes priority)
+            int motorSlotY = motorPanelY + 14;
+            boolean speedScrolled = false;
+            int motorMaxShow = Math.min(ControlProfile.MAX_MOTOR_BINDINGS - motorScrollOffset, MOTOR_ROWS_VISIBLE);
+            for (int vi = 0; vi < motorMaxShow; vi++) {
+                int idx = vi + motorScrollOffset;
+                int sy = motorSlotY + vi * (SLOT_H + 2);
+                MotorBinding mb = profile.getMotorBinding(idx);
+                if (!mb.hasTarget()) continue;
 
-            int slotW = MOTOR_PANEL_W - 4;
-            int speedX = motorPanelX + 2 + slotW - 50;
-            int speedY = sy + 2;
-            if (isInside(mX, mY, speedX, speedY, 48, 10)) {
-                int delta = (int) Math.signum(scrollY);
-                if (hasShiftDown()) delta *= 10;
-                mb.speed = Math.max(1, Math.min(256, mb.speed + delta));
-                autoSave();
+                int slotW = MOTOR_PANEL_W - 4;
+                int speedX = motorPanelX + 2 + slotW - 50;
+                int speedY = sy + 2;
+                if (isInside(mX, mY, speedX, speedY, 48, 10)) {
+                    int delta = (int) Math.signum(scrollY);
+                    if (hasShiftDown()) delta *= 10;
+                    mb.speed = Math.max(1, Math.min(256, mb.speed + delta));
+                    autoSave();
+                    speedScrolled = true;
+                    break;
+                }
+            }
+            if (speedScrolled) return true;
+
+            // Otherwise scroll the motor list
+            int maxOff = Math.max(0, ControlProfile.MAX_MOTOR_BINDINGS - MOTOR_ROWS_VISIBLE);
+            if (scrollY > 0 && motorScrollOffset > 0) {
+                motorScrollOffset--;
                 return true;
             }
+            if (scrollY < 0 && motorScrollOffset < maxOff) {
+                motorScrollOffset++;
+                return true;
+            }
+            return true;
         }
 
         // Scroll power on aux slots
@@ -760,7 +799,7 @@ public class ControlConfigScreen extends Screen {
                 net.minecraft.world.item.component.CustomData.EMPTY).copyTag();
 
         net.minecraft.nbt.ListTag axisList = new net.minecraft.nbt.ListTag();
-        for (int i = 0; i < Math.min(ControlProfile.MAX_MOTOR_BINDINGS, 8); i++) {
+        for (int i = 0; i < ControlProfile.MAX_MOTOR_BINDINGS; i++) {
             net.minecraft.nbt.CompoundTag slot = new net.minecraft.nbt.CompoundTag();
             MotorBinding mb = profile.getMotorBinding(i);
             if (mb.hasTarget()) {

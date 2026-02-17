@@ -64,9 +64,12 @@ public class RemoteClientHandler {
     private static byte prevAuxStates = 0;
     private static boolean useLock = false;
 
-    // Motor axis key values for 8 axes (keyboard-driven, -1/0/+1)
-    private static final float[] motorKeyValues = new float[8];
-    private static final float[] prevMotorKeyValues = new float[8];
+    // Motor direction values for 12 slots (unidirectional, 0 to 1)
+    // Slots 0-3: Left stick (up/down/left/right)
+    // Slots 4-7: Right stick (up/down/left/right)
+    // Slots 8-11: LT, RT, LB, RB
+    private static final float[] motorKeyValues = new float[12];
+    private static final float[] prevMotorKeyValues = new float[12];
     /** Cached control profile from the held item. */
     private static ControlProfile cachedProfile = null;
     /** Legacy compat: AxisSlot array derived from cachedProfile. */
@@ -343,67 +346,66 @@ public class RemoteClientHandler {
                 axisStates = axis;
             }
 
-            // ===== Motor Axis Control (8 axes: Keyboard + Gamepad) — runs in BOTH modes =====
+            // ===== Motor Axis Control (12 directions: Keyboard + Gamepad) — runs in BOTH modes =====
             if (motorAxisPacketCooldown > 0) motorAxisPacketCooldown--;
             if (cachedAxisConfig != null) {
                 long window = mc.getWindow().getWindow();
 
-                // Sample keyboard for 8 motor axes
-                motorKeyValues[0] = computeKeyAxis(window, GLFW.GLFW_KEY_D, GLFW.GLFW_KEY_A);       // Left X
-                motorKeyValues[1] = computeKeyAxis(window, GLFW.GLFW_KEY_W, GLFW.GLFW_KEY_S);       // Left Y
-                motorKeyValues[2] = computeKeyAxis(window, GLFW.GLFW_KEY_RIGHT, GLFW.GLFW_KEY_LEFT); // Right X
-                motorKeyValues[3] = computeKeyAxis(window, GLFW.GLFW_KEY_UP, GLFW.GLFW_KEY_DOWN);   // Right Y
-                motorKeyValues[4] = keyValue(window, GLFW.GLFW_KEY_Q);    // LT
-                motorKeyValues[5] = keyValue(window, GLFW.GLFW_KEY_E);    // RT
-                motorKeyValues[6] = keyValue(window, GLFW.GLFW_KEY_Z);    // LB
-                motorKeyValues[7] = keyValue(window, GLFW.GLFW_KEY_C);    // RB
+                // Sample keyboard for 12 motor directions (each unidirectional: 0 or 1)
+                // Left stick: W=up, S=down, A=left, D=right
+                motorKeyValues[0]  = keyValue(window, GLFW.GLFW_KEY_W);      // L Up
+                motorKeyValues[1]  = keyValue(window, GLFW.GLFW_KEY_S);      // L Down
+                motorKeyValues[2]  = keyValue(window, GLFW.GLFW_KEY_A);      // L Left
+                motorKeyValues[3]  = keyValue(window, GLFW.GLFW_KEY_D);      // L Right
+                // Right stick: arrow keys
+                motorKeyValues[4]  = keyValue(window, GLFW.GLFW_KEY_UP);     // R Up
+                motorKeyValues[5]  = keyValue(window, GLFW.GLFW_KEY_DOWN);   // R Down
+                motorKeyValues[6]  = keyValue(window, GLFW.GLFW_KEY_LEFT);   // R Left
+                motorKeyValues[7]  = keyValue(window, GLFW.GLFW_KEY_RIGHT);  // R Right
+                // Triggers + bumpers
+                motorKeyValues[8]  = keyValue(window, GLFW.GLFW_KEY_Q);      // LT
+                motorKeyValues[9]  = keyValue(window, GLFW.GLFW_KEY_E);      // RT
+                motorKeyValues[10] = keyValue(window, GLFW.GLFW_KEY_Z);      // LB
+                motorKeyValues[11] = keyValue(window, GLFW.GLFW_KEY_C);      // RB
 
-                // Merge gamepad analog input — keyboard takes priority (overrides gamepad)
+                // Merge gamepad analog input — keyboard takes priority
                 if (GamepadInputs.HasGamepad()) {
                     float deadzone = 0.15f;
-                    // Left stick X (GLFW axis 0)
-                    if (motorKeyValues[0] == 0) {
-                        float v = GamepadInputs.GetAxis(0);
-                        if (Math.abs(v) > deadzone) motorKeyValues[0] = v;
-                    }
-                    // Left stick Y (GLFW axis 1) — inverted: GLFW negative=up, we want up=positive
-                    if (motorKeyValues[1] == 0) {
-                        float v = -GamepadInputs.GetAxis(1);
-                        if (Math.abs(v) > deadzone) motorKeyValues[1] = v;
-                    }
+                    // Left stick Y (GLFW axis 1): negative=up, positive=down
+                    float lsy = GamepadInputs.GetAxis(1);
+                    if (motorKeyValues[0] == 0 && lsy < -deadzone) motorKeyValues[0] = -lsy;  // L Up
+                    if (motorKeyValues[1] == 0 && lsy > deadzone)  motorKeyValues[1] = lsy;   // L Down
+                    // Left stick X (GLFW axis 0): negative=left, positive=right
+                    float lsx = GamepadInputs.GetAxis(0);
+                    if (motorKeyValues[2] == 0 && lsx < -deadzone) motorKeyValues[2] = -lsx;  // L Left
+                    if (motorKeyValues[3] == 0 && lsx > deadzone)  motorKeyValues[3] = lsx;   // L Right
+                    // Right stick Y (GLFW axis 3)
+                    float rsy = GamepadInputs.GetAxis(3);
+                    if (motorKeyValues[4] == 0 && rsy < -deadzone) motorKeyValues[4] = -rsy;  // R Up
+                    if (motorKeyValues[5] == 0 && rsy > deadzone)  motorKeyValues[5] = rsy;   // R Down
                     // Right stick X (GLFW axis 2)
-                    if (motorKeyValues[2] == 0) {
-                        float v = GamepadInputs.GetAxis(2);
-                        if (Math.abs(v) > deadzone) motorKeyValues[2] = v;
-                    }
-                    // Right stick Y (GLFW axis 3) — inverted
-                    if (motorKeyValues[3] == 0) {
-                        float v = -GamepadInputs.GetAxis(3);
-                        if (Math.abs(v) > deadzone) motorKeyValues[3] = v;
-                    }
-                    // Left trigger (GLFW axis 4) — range [-1,1] → normalize to [0,1]
-                    if (motorKeyValues[4] == 0) {
+                    float rsx = GamepadInputs.GetAxis(2);
+                    if (motorKeyValues[6] == 0 && rsx < -deadzone) motorKeyValues[6] = -rsx;  // R Left
+                    if (motorKeyValues[7] == 0 && rsx > deadzone)  motorKeyValues[7] = rsx;   // R Right
+                    // Left trigger (GLFW axis 4): range [-1,1] → [0,1]
+                    if (motorKeyValues[8] == 0) {
                         float v = (GamepadInputs.GetAxis(4) + 1f) / 2f;
-                        if (v > deadzone) motorKeyValues[4] = v;
+                        if (v > deadzone) motorKeyValues[8] = v;
                     }
-                    // Right trigger (GLFW axis 5) — range [-1,1] → normalize to [0,1]
-                    if (motorKeyValues[5] == 0) {
+                    // Right trigger (GLFW axis 5): range [-1,1] → [0,1]
+                    if (motorKeyValues[9] == 0) {
                         float v = (GamepadInputs.GetAxis(5) + 1f) / 2f;
-                        if (v > deadzone) motorKeyValues[5] = v;
+                        if (v > deadzone) motorKeyValues[9] = v;
                     }
                     // Left bumper (button 4)
-                    if (motorKeyValues[6] == 0 && GamepadInputs.GetButton(4)) {
-                        motorKeyValues[6] = 1.0f;
-                    }
+                    if (motorKeyValues[10] == 0 && GamepadInputs.GetButton(4)) motorKeyValues[10] = 1.0f;
                     // Right bumper (button 5)
-                    if (motorKeyValues[7] == 0 && GamepadInputs.GetButton(5)) {
-                        motorKeyValues[7] = 1.0f;
-                    }
+                    if (motorKeyValues[11] == 0 && GamepadInputs.GetButton(5)) motorKeyValues[11] = 1.0f;
                 }
 
-                // Detect keyboard changes
+                // Detect changes
                 boolean keysChanged = false;
-                for (int i = 0; i < 8; i++) {
+                for (int i = 0; i < 12; i++) {
                     if (motorKeyValues[i] != prevMotorKeyValues[i]) keysChanged = true;
                 }
 
@@ -419,7 +421,7 @@ public class RemoteClientHandler {
                                     dir, slot.speed, slot.sequential, slot.distance));
                         }
                     }
-                    System.arraycopy(motorKeyValues, 0, prevMotorKeyValues, 0, 8);
+                    System.arraycopy(motorKeyValues, 0, prevMotorKeyValues, 0, 12);
                     if (keysChanged) {
                         motorAxisPacketCooldown = PACKET_RATE;
                     }
@@ -543,21 +545,21 @@ public class RemoteClientHandler {
                     Component.literal(title).withStyle(ChatFormatting.AQUA),
                     px + panelW / 2, py + 3, 0xFFFFFFFF);
 
-            // Derive WASD display states from motorKeyValues
-            boolean keyW = motorKeyValues[1] > 0;
-            boolean keyS = motorKeyValues[1] < 0;
-            boolean keyA = motorKeyValues[0] < 0;
-            boolean keyD = motorKeyValues[0] > 0;
+            // Derive WASD display states from unidirectional motorKeyValues
+            boolean keyW = motorKeyValues[0] > 0;  // L Up
+            boolean keyS = motorKeyValues[1] > 0;  // L Down
+            boolean keyA = motorKeyValues[2] > 0;  // L Left
+            boolean keyD = motorKeyValues[3] > 0;  // L Right;
 
             int centerX = px + panelW / 2;
             int keyY = py + 18;
             int keySize = 18;
             int gap = 2;
 
-            renderKey(graphics, mc, centerX - keySize / 2, keyY, keySize, keySize, "W", keyW, 1);
-            renderKey(graphics, mc, centerX - keySize - gap - keySize / 2, keyY + keySize + gap, keySize, keySize, "A", keyA, 0);
+            renderKey(graphics, mc, centerX - keySize / 2, keyY, keySize, keySize, "W", keyW, 0);
+            renderKey(graphics, mc, centerX - keySize - gap - keySize / 2, keyY + keySize + gap, keySize, keySize, "A", keyA, 2);
             renderKey(graphics, mc, centerX - keySize / 2, keyY + keySize + gap, keySize, keySize, "S", keyS, 1);
-            renderKey(graphics, mc, centerX + gap + keySize / 2, keyY + keySize + gap, keySize, keySize, "D", keyD, 0);
+            renderKey(graphics, mc, centerX + gap + keySize / 2, keyY + keySize + gap, keySize, keySize, "D", keyD, 3);
 
             if (cachedAxisConfig != null) {
                 int labelY = keyY + keySize * 2 + gap + 6;

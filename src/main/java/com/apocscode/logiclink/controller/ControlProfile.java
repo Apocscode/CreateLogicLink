@@ -178,8 +178,8 @@ public class ControlProfile {
     // ==================== Compat: AxisSlot array for RemoteClientHandler ====================
 
     /**
-     * Convert to the legacy AxisSlot array format for RemoteClientHandler compatibility.
-     * Returns all 8 motor bindings as AxisSlots.
+     * Convert to the AxisSlot array format for RemoteClientHandler.
+     * Returns all 12 motor bindings as AxisSlots (one per direction).
      */
     public com.apocscode.logiclink.client.MotorConfigScreen.AxisSlot[] toAxisSlots() {
         com.apocscode.logiclink.client.MotorConfigScreen.AxisSlot[] slots =
