@@ -293,3 +293,27 @@ Three behavior changes to the Contraption Remote block:
 
 ### Deployed
 - **Jar**: `logiclink-0.1.0.jar` → ATM10 mods folder
+
+---
+
+## Session 6f — 2026-02-16 — Joystick Tilt Animation
+
+### Commits
+- `bc6f4be` — Joystick tilt animation for both item and block controller
+
+### Summary
+Added smooth joystick tilt animation that visually emulates analog stick movement on the controller model. Works for both the handheld Logic Remote item and the Contraption Remote block.
+
+- **4 axis LerpedFloats** per mode (item + block): Left X, Left Y, Right X, Right Y
+- **Axis decoding**: 5-bit packed values (sign bit + 4-bit magnitude 0-15) decoded to -1.0..1.0 float
+- **Tilt rendering**: Up to 15° rotation around X axis (forward/back) and Z axis (left/right), pivoting around the joystick base center
+- **Smooth chase**: Uses `LerpedFloat.Chaser.EXP` at 0.4f speed for natural analog feel
+- Item-mode reads from `RemoteClientHandler.axisStates`, block-mode reads from synced BE `blockAxisStates`
+
+### Files Changed
+| File | Change |
+|------|--------|
+| `client/LogicRemoteItemRenderer.java` | Added `joystickAxes`/`blockJoystickAxes` LerpedFloat arrays, `tickJoystickAxes()` decoder, tilt rotation in `renderJoystick()` |
+
+### Deployed
+- **Jar**: `logiclink-0.1.0.jar` → ATM10 mods folder
