@@ -248,3 +248,23 @@ Transformed the Contraption Remote block into a seated controller station — pl
 ### Deployed
 - **Jar**: `logiclink-0.1.0.jar` → ATM10 mods folder
 
+---
+
+## Session 6d — 2026-02-16 — Restore Logic Remote Right-Click Active Mode
+
+### Commits
+- `8024fe4` — Restore right-click active mode toggle on Logic Remote item
+
+### Summary
+Restored plain right-click on the Logic Remote item to toggle active controller mode (like CTC's Tweaked Controller). The joystick/button floating animation and depression rendering were already functional — only the `toggleActive()` call in `use()` had been disabled in Session 6b.
+
+- **Plain right-click**: Toggles controller ACTIVE/IDLE mode with sound + chat message
+- **Shift+right-click**: Opens frequency config GUI (unchanged)
+
+### Files Changed
+| File | Change |
+|------|--------|
+| `block/LogicRemoteItem.java` | Restored `toggleActive()` call on plain right-click |
+
+### Deployed
+- **Jar**: `logiclink-0.1.0.jar` → ATM10 mods folder
