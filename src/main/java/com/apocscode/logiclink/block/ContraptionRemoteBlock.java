@@ -41,9 +41,9 @@ import java.util.Map;
  * Contraption Remote Control Block - functions like Create's train controls.
  * <p>
  * The player sits on a separate Create seat, then right-clicks this block's
- * hitbox to toggle controller mode. While active, the player's gamepad
+ * hitbox to activate controller mode. While active, the player's gamepad
  * input is read and sent to bound Logic Drives and Creative Logic Motors.
- * Sneak+right-click to view status and bindings.
+ * Right-click while standing to view status and bindings.
  * </p>
  */
 public class ContraptionRemoteBlock extends HorizontalDirectionalBlock implements EntityBlock {
@@ -152,18 +152,9 @@ public class ContraptionRemoteBlock extends HorizontalDirectionalBlock implement
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player,
                                                 BlockHitResult hitResult) {
-        if (player.isShiftKeyDown()) {
-            // Sneak + right-click = show status in chat
-            if (!level.isClientSide) {
-                BlockEntity be = level.getBlockEntity(pos);
-                if (be instanceof ContraptionRemoteBlockEntity remote && player instanceof ServerPlayer sp) {
-                    remote.sendStatusToPlayer(sp);
-                }
-            }
-            return InteractionResult.SUCCESS;
-        }
-
-        // Right-click while seated = activate controller mode
+        // Context-based interaction:
+        //   Seated → right-click activates controller mode (no shift — shift dismounts seats)
+        //   Standing → right-click shows status
         if (player.isPassenger()) {
             if (level.isClientSide) {
                 activateControllerClient(pos);
@@ -171,7 +162,14 @@ public class ContraptionRemoteBlock extends HorizontalDirectionalBlock implement
             return InteractionResult.SUCCESS;
         }
 
-        return InteractionResult.PASS;
+        // Standing: show status in chat
+        if (!level.isClientSide) {
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be instanceof ContraptionRemoteBlockEntity remote && player instanceof ServerPlayer sp) {
+                remote.sendStatusToPlayer(sp);
+            }
+        }
+        return InteractionResult.SUCCESS;
     }
 
     @Override
@@ -182,18 +180,9 @@ public class ContraptionRemoteBlock extends HorizontalDirectionalBlock implement
             return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
         }
 
-        if (player.isShiftKeyDown()) {
-            // Sneak + right-click = show status
-            if (!level.isClientSide && player instanceof ServerPlayer sp) {
-                BlockEntity be = level.getBlockEntity(pos);
-                if (be instanceof ContraptionRemoteBlockEntity remote) {
-                    remote.sendStatusToPlayer(sp);
-                }
-            }
-            return ItemInteractionResult.SUCCESS;
-        }
-
-        // Right-click while seated = activate controller mode
+        // Context-based interaction:
+        //   Seated → right-click activates controller mode
+        //   Standing → right-click shows status
         if (player.isPassenger()) {
             if (level.isClientSide) {
                 activateControllerClient(pos);
@@ -201,7 +190,14 @@ public class ContraptionRemoteBlock extends HorizontalDirectionalBlock implement
             return ItemInteractionResult.SUCCESS;
         }
 
-        return ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
+        // Standing: show status
+        if (!level.isClientSide && player instanceof ServerPlayer sp) {
+            BlockEntity be = level.getBlockEntity(pos);
+            if (be instanceof ContraptionRemoteBlockEntity remote) {
+                remote.sendStatusToPlayer(sp);
+            }
+        }
+        return ItemInteractionResult.SUCCESS;
     }
 
     // ==================== Controller Toggle ====================

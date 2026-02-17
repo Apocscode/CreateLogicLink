@@ -481,6 +481,7 @@ public class ControlConfigScreen extends Screen {
                     mb.speed = "drive".equals(dev.type) ? 8 : 64;
                     mb.reversed = false;
                     assigningMotorSlot = -1;
+                    autoSave();
                     return true;
                 }
             }
@@ -501,6 +502,7 @@ public class ControlConfigScreen extends Screen {
                 int dirY = sy + 2;
                 if (isInside(mX, mY, dirX, dirY, 28, 10)) {
                     mb.reversed = !mb.reversed;
+                    autoSave();
                     return true;
                 }
 
@@ -520,6 +522,7 @@ public class ControlConfigScreen extends Screen {
                     mb.targetType = "";
                     mb.label = "";
                     if (assigningMotorSlot == i) assigningMotorSlot = -1;
+                    autoSave();
                     return true;
                 }
             } else {
@@ -566,6 +569,7 @@ public class ControlConfigScreen extends Screen {
             int modeX = slotX + slotW - 20;
             if (isInside(mX, mY, modeX, pwrY, 18, 10)) {
                 ab.momentary = !ab.momentary;
+                autoSave();
                 return true;
             }
         }
@@ -609,6 +613,7 @@ public class ControlConfigScreen extends Screen {
                 int delta = (int) Math.signum(scrollY);
                 if (hasShiftDown()) delta *= 10;
                 mb.speed = Math.max(1, Math.min(256, mb.speed + delta));
+                autoSave();
                 return true;
             }
         }
@@ -625,6 +630,7 @@ public class ControlConfigScreen extends Screen {
                 AuxBinding ab = profile.getAuxBinding(i);
                 int delta = (int) Math.signum(scrollY);
                 ab.power = Math.max(1, Math.min(15, ab.power + delta));
+                autoSave();
                 return true;
             }
         }
@@ -700,6 +706,7 @@ public class ControlConfigScreen extends Screen {
         }
         editingSpeedSlot = -1;
         speedEditBuffer = "";
+        autoSave();
     }
 
     private void commitPowerEdit() {
@@ -711,6 +718,7 @@ public class ControlConfigScreen extends Screen {
         }
         editingPowerSlot = -1;
         powerEditBuffer = "";
+        autoSave();
     }
 
     private void saveProfile() {
@@ -754,6 +762,22 @@ public class ControlConfigScreen extends Screen {
         tag.put("AxisConfig", axisList);
         stack.set(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
                 net.minecraft.world.item.component.CustomData.of(tag));
+    }
+
+    /**
+     * Auto-save: sends the profile to the server immediately on every change.
+     * This ensures persistence even if the screen is closed unexpectedly.
+     */
+    private void autoSave() {
+        PacketDistributor.sendToServer(new SaveControlProfilePayload(profile.save()));
+        // Also update client-side item for immediate feedback
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player != null) {
+            ItemStack stack = getRemoteItem(mc);
+            if (!stack.isEmpty()) {
+                ControlProfile.saveToItem(stack, profile);
+            }
+        }
     }
 
     private boolean isDeviceAssignedToMotor(BlockPos pos) {
