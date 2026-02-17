@@ -717,3 +717,25 @@ Debugged aux redstone channels not transmitting. Added debug logging to AuxRedst
 
 ### Deployed
 - Jar: logiclink-0.1.0.jar to ATM10 mods folder
+
+---
+
+## Session 7r — Fix Aux Power Levels & Toggle Mode
+**Date:** 2026-02-17
+
+### Commits
+- `d030420` — Remap aux keys from F1-F8 to Numpad 1-8
+- `a403b6d` — Fix aux power levels (1-15) and toggle mode support
+
+### Summary
+Fixed two aux redstone issues: (1) Power level was hardcoded to 15 — the `receivePressed()` path used `ManualFrequency` which always returns strength 15. Switched to `receiveAxis()` which uses `ManualAxisFrequency` supporting variable power 0-15, now passes `aux.power` from the profile. (2) Toggle mode was not implemented — client always sent raw key state (momentary only). Added client-side toggle tracking: on key-down edge for non-momentary channels, the toggled state flips. Momentary channels still activate only while held. Also cleaned up debug logging from previous session. Remapped aux keys from F1-F8 to Numpad 1-8 (NP1-NP8) per user preference.
+
+### Files Changed
+| File | Change |
+|------|--------|
+| controller/ControlProfile.java | Changed AUX_KEYS from "F1"-"F8" to "NP1"-"NP8" |
+| controller/RemoteClientHandler.java | Added toggledAuxStates/prevRawAux fields, toggle logic per channel (momentary vs toggle), remapped GLFW_KEY_F1 to GLFW_KEY_KP_1, removed debug logging |
+| network/AuxRedstonePayload.java | Switched from receivePressed() to receiveAxis() with per-channel power levels, removed debug logging |
+
+### Deployed
+- Jar: logiclink-0.1.0.jar to ATM10 mods folder
