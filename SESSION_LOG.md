@@ -695,3 +695,25 @@ Added a complete frequency item picker system for the aux redstone channels. Eac
 
 ### Deployed
 - Jar: logiclink-0.1.0.jar to ATM10 mods folder
+
+---
+
+## Session 7q — Debug Aux Redstone & Remap Keys to Numpad
+**Date:** 2026-02-17
+
+### Commits
+- `10ed72f` — Remap aux keys from 1-8 to F1-F8 to avoid hotbar conflict (intermediate)
+- `d030420` — Remap aux keys from F1-F8 to Numpad 1-8
+
+### Summary
+Debugged aux redstone channels not transmitting. Added debug logging to AuxRedstonePayload handler and RemoteClientHandler aux sender. Fixed AuxRedstonePayload.handle() to use direct ControlProfile.load() from CustomData instead of fromItem(). Discovered root cause: keyboard keys 1-8 were intercepted by Minecraft's hotbar slot selection, so aux key presses never reached our handler. Initially remapped to F1-F8, then switched to Numpad 1-8 (NP1-NP8) since those are unassigned in vanilla Minecraft. Also added gamepad D-pad (Up/Down/Left/Right) and face button (A/B/X/Y) support for aux channels 0-7.
+
+### Files Changed
+| File | Change |
+|------|--------|
+| controller/ControlProfile.java | Changed AUX_KEYS labels from "1"-"8" → "F1"-"F8" → "NP1"-"NP8" |
+| controller/RemoteClientHandler.java | Changed aux key polling from GLFW_KEY_1 → GLFW_KEY_F1 → GLFW_KEY_KP_1; added gamepad D-pad + face button polling for aux; added debug logging |
+| network/AuxRedstonePayload.java | Added debug logging; changed fromItem() to direct ControlProfile.load() from CustomData compound tag |
+
+### Deployed
+- Jar: logiclink-0.1.0.jar to ATM10 mods folder
