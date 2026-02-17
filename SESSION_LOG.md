@@ -641,3 +641,21 @@ Added interactive UI controls for sequential movement mode in the ControlConfigS
 
 ### Deployed
 - Jar: logiclink-0.1.0.jar to ATM10 mods folder
+
+---
+
+## Session 7n -- 2026-02-17 -- Move S/C Toggle + Distance Under Direction Field
+
+### Commits
+- `4f288c3` -- Move S/C toggle and distance field under direction field
+
+### Summary
+Repositioned the Sequential/Continuous toggle button and distance field from the bottom-left of each motor slot row to the bottom-right, directly under the direction (FWD/REV) field. This prevents overlap with the motor/drive label text. Updated coordinates in the render method, click handler, and scroll handler.
+
+### Files Changed
+| File | Change |
+|------|--------|
+| client/ControlConfigScreen.java | Moved seqBtnX from `x + 4` to `dirX` (x + w - 80) in render, click, and scroll handlers |
+
+### Deployed
+- Jar: logiclink-0.1.0.jar to ATM10 mods folder
