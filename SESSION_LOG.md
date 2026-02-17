@@ -853,3 +853,11 @@ Fixed two issues with the Contraption Remote block, then added complete document
 
 ### Deployed
 - Jar: logiclink-0.1.0.jar to ATM10 mods folder
+
+### Additional Commits
+- `fbb8761` — Add Logic Drive color info to Patchouli spotlight page
+- `8edd790` — Add acknowledgment for Create: Tweaked Controllers by getItemFromBlock
+
+### Additional Changes
+7. **Patchouli Logic Drive**: Added orange/light-blue side information to the spotlight page description.
+8. **README.md Acknowledgments**: Added acknowledgment section crediting [getItemFromBlock](https://github.com/getItemFromBlock) and [Create: Tweaked Controllers](https://github.com/getItemFromBlock/Create-Tweaked-Controllers) as the source for the Logic Remote and Contraption Remote gamepad input, frequency-based redstone binding, and lectern-mounted controller mechanics.
