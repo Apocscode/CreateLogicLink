@@ -53,12 +53,14 @@ public record SeatInputPayload(BlockPos blockPos, short buttonStates, int axisSt
             if (!(context.player() instanceof ServerPlayer sp)) return;
             if (sp.isSpectator()) return;
 
-            // Validate: player must be within range of the block (32 blocks)
-            if (sp.blockPosition().distSqr(payload.blockPos) > 32 * 32) return;
-
-            // Get the block entity and apply the input
+            // Try to find the block entity at the given position.
+            // If the block is on a contraption (moved from its original position),
+            // the block entity won't be found — just silently ignore.
+            // Motor/aux control goes through MotorAxisPayload/AuxRedstonePayload directly.
             BlockEntity be = sp.level().getBlockEntity(payload.blockPos);
             if (be instanceof ContraptionRemoteBlockEntity remote) {
+                // Validate: player must be within range when block is in-world
+                if (sp.blockPosition().distSqr(payload.blockPos) > 64 * 64) return;
                 remote.applyGamepadInput(payload.buttonStates, payload.axisStates);
             }
         });

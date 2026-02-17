@@ -242,8 +242,11 @@ public class RemoteClientHandler {
 
         // Validate activation source
         if (activeBlockPos != null) {
-            // Block mode: auto-idle when player dismounts seat or moves too far
-            if (!player.isPassenger() || player.blockPosition().distSqr(activeBlockPos) > 32 * 32) {
+            // Block mode: auto-idle when player dismounts seat
+            // Note: no distance check — the block may be on a moving contraption,
+            // so the original world-space position becomes invalid. The seated
+            // check is sufficient since the player must stay seated to control.
+            if (!player.isPassenger()) {
                 MODE = Mode.IDLE;
                 if (mc.player != null) {
                     AllSoundEvents.CONTROLLER_CLICK.playAt(mc.player.level(), mc.player.blockPosition(), 1f, .5f, true);
