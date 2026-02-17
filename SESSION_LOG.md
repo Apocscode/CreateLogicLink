@@ -455,3 +455,42 @@ Block Mode now sends: SeatInputPayload (block entity targets) + MotorAxisPayload
 
 ### Deployed
 - **Jar**: `logiclink-0.1.0.jar` → ATM10 mods folder
+
+---
+
+## Session 7f — 2026-02-17 — Gamepad Analog Joystick → Motor Control
+
+### Commits
+- `931d677` — Fix: Gamepad joystick/trigger analog input now controls motors
+
+### Summary
+User confirmed keyboard W/S works for motor control, but gamepad joystick does not. Also requested 2 motors per joystick (left X + left Y, right X + right Y).
+
+**Root cause**: Motor axis control loop only sampled keyboard via `computeKeyAxis()`/`keyValue()`. Gamepad analog stick values from `GamepadInputs.GetAxis()` were never read or merged into `motorKeyValues[]`.
+
+**Fix (2 files)**:
+
+1. **RemoteClientHandler** — After keyboard sampling, merge gamepad analog values into `motorKeyValues[]` with keyboard priority and 0.15 deadzone:
+   - Left stick X/Y (GLFW axes 0,1) → `motorKeyValues[0,1]` (Y inverted for GLFW convention)
+   - Right stick X/Y (GLFW axes 2,3) → `motorKeyValues[2,3]` (Y inverted)
+   - Left/Right trigger (GLFW axes 4,5) → `motorKeyValues[4,5]` (normalized from [-1,1] to [0,1])
+   - Left/Right bumper (buttons 4,5) → `motorKeyValues[6,7]`
+
+2. **MotorAxisPayload handler** — Proportional analog speed control:
+   - Continuous mode: replaced `Math.signum(axisValue)` with raw `axisValue` for proportional motor speed (half-push = half speed, full push = full speed, keyboard still sends ±1.0 for full speed)
+   - Sequential mode: raised trigger threshold from 0.01f to 0.5f to prevent accidental analog triggers
+
+**Joystick axis mapping** (already supported, now works with gamepad):
+   - Left stick: slot 0 (left/right) + slot 1 (up/down) = 2 motors
+   - Right stick: slot 2 (left/right) + slot 3 (up/down) = 2 motors
+   - Triggers: slot 4 (LT) + slot 5 (RT) = 2 motors
+   - Bumpers: slot 6 (LB) + slot 7 (RB) = 2 motors
+
+### Files Changed
+| File | Change |
+|------|--------|
+| `controller/RemoteClientHandler.java` | Merge gamepad analog values into motorKeyValues after keyboard sampling |
+| `network/MotorAxisPayload.java` | Proportional axisValue for continuous mode; 0.5 threshold for sequential |
+
+### Deployed
+- **Jar**: `logiclink-0.1.0.jar` → ATM10 mods folder
