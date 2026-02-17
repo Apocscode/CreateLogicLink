@@ -762,11 +762,11 @@ Deprecated the original 2-page CTC-style config screen (button/axis frequency sl
 
 ---
 
-## Session 7t — Add ControlConfigScreen to Contraption Remote Block
+## Session 7t ï¿½ Add ControlConfigScreen to Contraption Remote Block
 **Date:** 2026-02-17
 
 ### Commits
-- `6dae246` — Add ControlConfigScreen to Contraption Remote block
+- `6dae246` ï¿½ Add ControlConfigScreen to Contraption Remote block
 
 ### Summary
 Added full ControlConfigScreen (motor bindings, aux redstone, frequency picker) support to the Contraption Remote block, mirroring the Logic Remote item's features. The key difference is the interaction model: shift+right-click while standing opens the config GUI (since normal right-click is used for seated controller activation). Created a new SaveBlockProfilePayload packet (Client?Server) to persist ControlProfile data to the block entity. ControlConfigScreen now supports dual-mode operation: item mode (Logic Remote) and block mode (Contraption Remote block). In block mode, device discovery scans for drives/motors near the block position using HubNetwork. RemoteClientHandler.activateForBlock() now loads the profile from the block entity instead of from a held item.
@@ -776,7 +776,7 @@ Added full ControlConfigScreen (motor bindings, aux redstone, frequency picker) 
 |------|--------|
 | block/ContraptionRemoteBlockEntity.java | Added ControlProfile field with getter/setter, NBT save/load for profile persistence |
 | block/ContraptionRemoteBlock.java | Added shift+right-click interaction to open ControlConfigScreen(blockPos); added openBlockConfigScreen() client method; added Minecraft import |
-| network/SaveBlockProfilePayload.java | NEW — Client?Server packet with BlockPos + CompoundTag; handler validates distance (64 blocks), loads ControlProfile, saves to block entity |
+| network/SaveBlockProfilePayload.java | NEW ï¿½ Client?Server packet with BlockPos + CompoundTag; handler validates distance (64 blocks), loads ControlProfile, saves to block entity |
 | client/ControlConfigScreen.java | Added dual-mode: configBlockPos field, two constructors (item vs block), init() loads from block entity; saveProfile()/autoSave() use SaveBlockProfilePayload in block mode; discoverDevices() scans near block position |
 | controller/RemoteClientHandler.java | activateForBlock() loads ControlProfile from ContraptionRemoteBlockEntity instead of held item; added BlockEntity import |
 | LogicLink.java | Registered SaveBlockProfilePayload; added import |
@@ -786,21 +786,46 @@ Added full ControlConfigScreen (motor bindings, aux redstone, frequency picker) 
 
 ---
 
-## Session 7u — Fix Contraption Remote IDLE on Moving Contraptions
+## Session 7u ï¿½ Fix Contraption Remote IDLE on Moving Contraptions
 **Date:** 2026-02-17
 
 ### Commits
-- `6dc6f28` — Fix Contraption Remote going IDLE on moving contraptions
-- `71bc39a` — Remove temp decompile files
+- `6dc6f28` ï¿½ Fix Contraption Remote going IDLE on moving contraptions
+- `71bc39a` ï¿½ Remove temp decompile files
 
 ### Summary
-Fixed the Contraption Remote block going IDLE immediately after a contraption starts moving. Root cause: the client-side tick validation in RemoteClientHandler checked `player.blockPosition().distSqr(activeBlockPos) > 32*32` — when the block is assembled onto a contraption, it's removed from the world and the original world-space position becomes invalid as the contraption moves. The distance check then triggers IDLE. Fix: removed the distance check for block mode; the existing `!player.isPassenger()` check is sufficient since the player must stay seated to control. Also made SeatInputPayload handler resilient to missing block entities (expected when block is on a contraption). Motor and aux control work independently via MotorAxisPayload/AuxRedstonePayload packets that target in-world motors/drives directly.
+Fixed the Contraption Remote block going IDLE immediately after a contraption starts moving. Root cause: the client-side tick validation in RemoteClientHandler checked `player.blockPosition().distSqr(activeBlockPos) > 32*32` ï¿½ when the block is assembled onto a contraption, it's removed from the world and the original world-space position becomes invalid as the contraption moves. The distance check then triggers IDLE. Fix: removed the distance check for block mode; the existing `!player.isPassenger()` check is sufficient since the player must stay seated to control. Also made SeatInputPayload handler resilient to missing block entities (expected when block is on a contraption). Motor and aux control work independently via MotorAxisPayload/AuxRedstonePayload packets that target in-world motors/drives directly.
 
 ### Files Changed
 | File | Change |
 |------|--------|
 | controller/RemoteClientHandler.java | Removed distance check from block mode tick validation; kept only `!player.isPassenger()` check |
 | network/SeatInputPayload.java | Made handler resilient to missing block entity (silently ignores when block is on contraption); moved distance check after entity lookup |
+
+### Deployed
+- Jar: logiclink-0.1.0.jar to ATM10 mods folder
+
+---
+
+## Session 7v â€” Fix Aux Redstone in Block Mode (Contraption Remote)
+**Date:** 2026-02-17
+
+### Commits
+- `5dbabf4` â€” Add grace period for block mode passenger check (contraption assembly)
+- `04c7476` â€” Fix aux redstone in block mode: embed profile tag in packet
+
+### Summary
+Fixed two issues with the Contraption Remote block:
+
+1. **Grace period for contraption assembly** (from 7u continued): Added a 10-tick grace period (`blockModeGraceTicks`) for the `isPassenger()` check in block mode. When Create assembles a contraption, the seat entity may be briefly removed/recreated, causing the passenger check to fail momentarily. The grace period prevents the controller from dropping to IDLE during this transition.
+
+2. **Aux redstone channels broken in block mode**: The `AuxRedstonePayload` server handler required the player to hold a `LogicRemoteItem` to load the `ControlProfile` (which contains frequency bindings for aux channels). In block mode, the player doesn't hold the item â€” they activated the controller from a block. The handler early-returned with a warning, so no aux redstone signals were ever sent. Fix: `AuxRedstonePayload` now carries an optional `CompoundTag` with the serialized `ControlProfile`. In block mode, the client embeds the cached profile in the packet. The server uses the embedded profile when present, falling back to held-item lookup for item mode. This also handles contraptions where the block entity isn't at its original world position.
+
+### Files Changed
+| File | Change |
+|------|--------|
+| network/AuxRedstonePayload.java | Added optional `@Nullable CompoundTag profileTag` field to record; updated StreamCodec to read/write optional tag; handler now uses embedded profile when present, falls back to held-item lookup |
+| controller/RemoteClientHandler.java | In block mode, sends `AuxRedstonePayload(newAux, profileTag)` with cached profile serialized; added 10-tick grace period for passenger check |
 
 ### Deployed
 - Jar: logiclink-0.1.0.jar to ATM10 mods folder
