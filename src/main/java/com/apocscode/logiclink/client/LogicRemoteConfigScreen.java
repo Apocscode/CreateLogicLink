@@ -115,19 +115,20 @@ public class LogicRemoteConfigScreen extends AbstractSimiContainerScreen<LogicRe
             menu.setPage(this.isSecondPage);
         });
         firstTabButton.setToolTip(Component.translatable("logiclink.gui_tab_button"));
-        secondTabButton = new IconButton(x + 42, y + background0.height - 27, RemoteIcons.I_AXES);
+        secondTabButton = new IconButton(x + 37, y + background0.height - 27, RemoteIcons.I_AXES);
         secondTabButton.withCallback(() -> {
             this.isSecondPage = true;
             menu.setPage(this.isSecondPage);
         });
         secondTabButton.setToolTip(Component.translatable("logiclink.gui_tab_axis"));
-        thirdTabButton = new IconButton(x + 67, y + background0.height - 27, AllIcons.I_CONFIG_OPEN);
+        thirdTabButton = new IconButton(x + 57, y + background0.height - 27, AllIcons.I_CONFIG_OPEN);
         thirdTabButton.withCallback(() -> {
             // Open the full Control Configuration screen
             minecraft.setScreen(new ControlConfigScreen());
         });
         thirdTabButton.setToolTip(Component.literal("Control Config"));
-        bugButton = new IconButton(x + background0.width - 178, y + background0.height - 24, AllIcons.I_PRIORITY_VERY_HIGH);
+        // Bug report button — placed in the extra area to the right of the GUI to avoid overlap
+        bugButton = new IconButton(x + background0.width + 6, y + background0.height - 42, AllIcons.I_PRIORITY_VERY_HIGH);
         bugButton.withCallback(() -> {
             Util.getPlatform().openUri("https://github.com/Apocscode/CreateLogicLink/issues");
         });

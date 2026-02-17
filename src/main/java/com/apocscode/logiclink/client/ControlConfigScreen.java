@@ -17,6 +17,9 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
+import com.apocscode.logiclink.network.SaveControlProfilePayload;
+import net.neoforged.neoforge.network.PacketDistributor;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -93,6 +96,9 @@ public class ControlConfigScreen extends Screen {
     // ==================== Tab State ====================
     /** 0 = Motor bindings, 1 = Aux bindings (for right panel) */
     private int activeTab = 0;
+
+    /** Ticks remaining for save flash feedback. */
+    private int saveFlashTicks = 0;
 
     public ControlConfigScreen() {
         super(Component.literal("Control Configuration"));
@@ -179,8 +185,14 @@ public class ControlConfigScreen extends Screen {
         // Back button (top-left)
         renderButton(g, mouseX, mouseY, guiLeft + 3, guiTop + 2, 32, 12, "\u2190 Back", BTN_IDLE, BTN_HOVER, WHITE);
 
-        // Save button (top-right)
-        renderButton(g, mouseX, mouseY, guiLeft + GUI_WIDTH - 35, guiTop + 2, 32, 12, "Save", BTN_ACTIVE, GREEN, WHITE);
+        // Save button (top-right) — flashes bright green after save
+        int saveBg = saveFlashTicks > 0 ? GREEN : BTN_ACTIVE;
+        int saveHover = saveFlashTicks > 0 ? 0xFF7FD97F : GREEN;
+        String saveLabel = saveFlashTicks > 0 ? "✔ Saved" : "Save";
+        renderButton(g, mouseX, mouseY, guiLeft + GUI_WIDTH - 35, guiTop + 2, 32, 12, saveLabel, saveBg, saveHover, WHITE);
+
+        // Tick down save flash
+        if (saveFlashTicks > 0) saveFlashTicks--;
 
         renderDevicePanel(g, mouseX, mouseY);
         renderMotorPanel(g, mouseX, mouseY);
@@ -433,9 +445,12 @@ public class ControlConfigScreen extends Screen {
         // Save button
         if (isInside(mX, mY, guiLeft + GUI_WIDTH - 35, guiTop + 2, 32, 12)) {
             saveProfile();
+            saveFlashTicks = 30; // 1.5 seconds visual feedback
             if (minecraft != null && minecraft.player != null) {
                 minecraft.player.displayClientMessage(
-                        Component.literal("Configuration saved!").withStyle(ChatFormatting.GREEN), true);
+                        Component.literal("✔ Profile Saved").withStyle(ChatFormatting.GREEN), true);
+                minecraft.player.playSound(
+                        net.minecraft.sounds.SoundEvents.EXPERIENCE_ORB_PICKUP, 0.5f, 1.2f);
             }
             return true;
         }
@@ -703,10 +718,12 @@ public class ControlConfigScreen extends Screen {
         if (mc.player == null) return;
         ItemStack stack = getRemoteItem(mc);
         if (!stack.isEmpty()) {
+            // Update client-side for immediate feedback
             ControlProfile.saveToItem(stack, profile);
-
-            // Also save in legacy AxisConfig format for backward compat with RemoteClientHandler
             saveLegacyAxisConfig(stack);
+
+            // Send to server so the data actually persists
+            PacketDistributor.sendToServer(new SaveControlProfilePayload(profile.save()));
         }
     }
 
