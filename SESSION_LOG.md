@@ -605,3 +605,21 @@ Rewrote LogicDriveBlockEntity from SplitShaftBlockEntity to GeneratingKineticBlo
 
 ### Deployed
 - Jar: logiclink-0.1.0.jar to ATM10 mods folder
+
+---
+
+## Session 7l -- 2026-02-17 -- Fix Joystick Left/Right Tilt Inversion
+
+### Commits
+- `364c39c` -- Fix joystick left/right tilt inversion - negate X axis rotation
+
+### Summary
+Left/right joystick animation was still reversed after session 7k (A tilted right, D tilted left). The X-axis `tiltX` value needed negation to match the model's coordinate system.
+
+### Files Changed
+| File | Change |
+|------|--------|
+| client/LogicRemoteItemRenderer.java | Negate X-axis tiltX value for correct left/right direction |
+
+### Deployed
+- Jar: logiclink-0.1.0.jar to ATM10 mods folder
