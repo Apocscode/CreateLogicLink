@@ -981,3 +981,22 @@ Also added trains and observers to the log output line and cap-hit warnings for 
 
 ### Files Changed
 - `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java`
+
+---
+
+## Session 9f — 2026-02-21 — Fix Check 3 False Positive on Chain Signals
+
+### Commits
+- `a325d1e` — Fix Check 3 false positive: stop flagging chain signals on outward-facing side of junction edges
+
+### Summary
+User reported a loop at coordinates (3566, 50, 8437): Check 1 says "place chain signal," user places it, then Check 3 immediately flags it red as a conflict to remove. Repeatable 3 times.
+
+**Root cause**: Create signals are two-sided (forward + backward). When you place a chain signal, BOTH sides become `cross_signal`. Check 3 evaluates each side independently — the junction-facing side is correct (chain protecting junction), but the outward-facing side triggers "chain signal unnecessary (not entering junction from this side)." This is a **false positive** — having chain on both sides of a junction edge is standard Create behavior and harmless.
+
+**Fix**: Removed the "unnecessary chain" warnings for signals on junction edges. Check 3 now only flags:
+1. Missing chain signals (regular signal where chain is needed to protect a junction)
+2. Chain signals on non-junction edges (actually wasteful)
+
+### Files Changed
+- `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java`
