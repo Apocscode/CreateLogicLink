@@ -951,7 +951,12 @@ public class TrainNetworkDataReader {
         // Track junctions flagged by Check 1 to avoid conflicting Check 3 diagnostics
         Set<Integer> unsignaledJunctions = new HashSet<>();
 
-        // === Check 1: Junctions with incomplete signal coverage ===
+        // === Check 1: Completely unsignaled junctions ===
+        // Only flag junctions where NO branches have signals at all.
+        // Partial coverage (some branches signaled, some not) is intentional in many
+        // layouts — one-way branches, dead-end spurs, etc. We don't suggest specific
+        // signal placements because Create signals are directional and segment-based;
+        // the correct placement depends on traffic flow which we can't determine.
         for (Map.Entry<Integer, List<int[]>> entry : adjacency.entrySet()) {
             List<int[]> branches = entry.getValue();
             if (branches.size() < 3) continue; // not a junction
@@ -963,88 +968,40 @@ public class TrainNetworkDataReader {
             float jy = jNode.getFloat("y");
             float jz = jNode.getFloat("z");
 
-            // Count unsignaled branches
-            List<int[]> unsignaled = new ArrayList<>();
+            // Count signaled branches
+            int signaledCount = 0;
             for (int[] branch : branches) {
                 String ek = Math.min(jId, branch[0]) + ":" + Math.max(jId, branch[0]);
-                if (!signaledEdges.contains(ek)) {
-                    unsignaled.add(branch);
+                if (signaledEdges.contains(ek)) {
+                    signaledCount++;
                 }
             }
 
-            if (unsignaled.isEmpty()) continue; // fully covered
-
-            // Partial coverage is worse — creates one-way gates that break routing
-            boolean partial = unsignaled.size() < branches.size();
-            String severity = partial ? "CRIT" : "WARN";
+            // Only flag if NO branches have any signals at all
+            if (signaledCount > 0) continue;
 
             CompoundTag diag = new CompoundTag();
             diag.putString("type", "JUNCTION_UNSIGNALED");
-            diag.putString("severity", severity);
+            diag.putString("severity", "WARN");
             diag.putFloat("x", jx);
             diag.putFloat("y", jy);
             diag.putFloat("z", jz);
             diag.putInt("branches", branches.size());
-            diag.putInt("unsignaled", unsignaled.size());
+            diag.putInt("unsignaled", branches.size());
 
-            // Suggest signal placement on each unsignaled branch
-            // Per Create wiki: chain signal at junction entry, regular signal further out
+            // Single suggestion: the junction location itself (so user can navigate to it)
             ListTag suggestions = new ListTag();
-            for (int[] branch : unsignaled) {
-                int nId = branch[0];
-                if (nId >= nodes.size()) continue;
-                CompoundTag nNode = nodes.getCompound(nId);
-                float nx = nNode.getFloat("x");
-                float ny = nNode.getFloat("y");
-                float nz = nNode.getFloat("z");
-
-                float dx = nx - jx, dy = ny - jy, dz = nz - jz;
-                float branchLen = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
-                if (branchLen < 0.5f) continue;
-
-                // Chain signal: close to junction (train-length distance so tail clears)
-                // Place at maxTrainLength blocks from junction, or 40% of branch if short
-                float chainDist = Math.min(maxTrainLength, branchLen * 0.4f);
-                float chainT = chainDist / branchLen;
-
-                // Normalized track direction vector (junction → branch)
-                float ndx = dx / branchLen;
-                float ndz = dz / branchLen;
-
-                CompoundTag chainSug = new CompoundTag();
-                chainSug.putInt("sx", Math.round(jx + dx * chainT));
-                chainSug.putInt("sy", Math.round(jy + dy * chainT));
-                chainSug.putInt("sz", Math.round(jz + dz * chainT));
-                chainSug.putString("signalType", "chain");
-                chainSug.putString("dir", getCardinalDir(dx, dz));
-                chainSug.putFloat("sdx", ndx);
-                chainSug.putFloat("sdz", ndz);
-                suggestions.add(chainSug);
-
-                // Regular signal: further out on the branch (section boundary)
-                // Place at 2x chain distance or 80% of branch
-                float sigDist = Math.min(maxTrainLength * 2, branchLen * 0.8f);
-                if (sigDist > chainDist + 5) { // only if there's meaningful separation
-                    float sigT = sigDist / branchLen;
-
-                    CompoundTag sigSug = new CompoundTag();
-                    sigSug.putInt("sx", Math.round(jx + dx * sigT));
-                    sigSug.putInt("sy", Math.round(jy + dy * sigT));
-                    sigSug.putInt("sz", Math.round(jz + dz * sigT));
-                    sigSug.putString("signalType", "signal");
-                    sigSug.putString("dir", getCardinalDir(dx, dz));
-                    sigSug.putFloat("sdx", ndx);
-                    sigSug.putFloat("sdz", ndz);
-                    suggestions.add(sigSug);
-                }
-            }
+            CompoundTag juncSug = new CompoundTag();
+            juncSug.putInt("sx", Math.round(jx));
+            juncSug.putInt("sy", Math.round(jy));
+            juncSug.putInt("sz", Math.round(jz));
+            juncSug.putString("signalType", "signal");
+            juncSug.putString("dir", "Unsignaled junction — check if signals needed");
+            suggestions.add(juncSug);
             diag.put("suggestions", suggestions);
 
-            diag.putString("desc", branches.size() + "-way junction: "
-                    + unsignaled.size() + "/" + branches.size()
-                    + " branches missing signals (max train: " + maxCarriages + " cars / "
-                    + (int) maxTrainLength + "m)"
-                    + (partial ? " PARTIAL - causes routing failures" : ""));
+            diag.putString("desc", branches.size() + "-way junction with no signals on any branch. "
+                    + "Consider adding chain signals before the junction on entry branches.");
 
             unsignaledJunctions.add(jId);
             diagnostics.add(diag);
