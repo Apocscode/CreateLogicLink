@@ -939,3 +939,21 @@ Fixed conflicting highlight suggestions where the Signal Tablet would show "add 
 
 ### Files Changed
 - `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java`
+
+---
+
+## Session 9d — 2026-02-21 — Fix Signal Cap Causing Stale Diagnostics
+
+### Commits
+- `b1ea341` — Raise MAX_SIGNALS 256->1024, add signal count to log output with cap warning
+
+### Summary
+Replaced signals weren't being recognized by the Signal Tablet scanner because `MAX_SIGNALS` was set to 256. With 7000+ nodes/edges, the network likely has 300+ signals — any signal past the 256th in iteration order was silently dropped, causing the diagnostics to still report junctions as unsignaled even after fixing them.
+
+**Fixes**:
+1. Raised `MAX_SIGNALS` from 256 to 1024
+2. Added signal count to the log output line (was missing — only nodes/edges/curves/stations/diagnostics were logged)
+3. Added a warning log if signal cap is hit so it's immediately visible
+
+### Files Changed
+- `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java`
