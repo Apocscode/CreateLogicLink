@@ -1000,3 +1000,20 @@ User reported a loop at coordinates (3566, 50, 8437): Check 1 says "place chain 
 
 ### Files Changed
 - `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java`
+
+---
+
+## Session 9g — 2026-02-21 — Remove Non-Junction Chain Check (Loop Fix)
+
+### Commits
+- `bf38561` — Remove 'chain on non-junction edge' check - causes false positive loops
+
+### Summary
+User still hitting a diagnostic loop: Check 3 flags chain signal for removal ("chain on non-junction edge"), user removes it, Check 1 fires ("junction branch unsignaled"), user places signal, loop repeats.
+
+**Root cause**: Create's track graph has intermediate nodes between junctions and signal placement points. A signal placed 5-10 blocks from a junction may be on a different edge (intermediate→neighbor) than the junction edge (junction→intermediate). Check 3 sees edgeA/edgeB neither being a junction node → "non-junction edge" → flags for removal. But the signal IS protecting the junction, just from one edge over.
+
+**Fix**: Removed the "chain signal on non-junction edge" check entirely. Chain signals on non-junction edges are merely slightly conservative — they work fine and cause no routing issues. The diagnostic was only cosmetic/optimization advice but was causing harmful loops. Check 3 now only flags truly broken signals (regular where chain is needed at a junction).
+
+### Files Changed
+- `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java`
