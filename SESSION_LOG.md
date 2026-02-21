@@ -920,3 +920,22 @@ Comprehensive TPS optimization for the Train Monitor block. Five lag sources ide
 - `src/main/java/com/apocscode/logiclink/block/TrainMonitorBlockEntity.java`
 - `src/main/java/com/apocscode/logiclink/client/TrainMapTexture.java`
 - `src/main/java/com/apocscode/logiclink/client/TrainMonitorRenderer.java`
+
+---
+
+## Session 9c — 2026-02-20 — Fix Conflicting Signal Diagnostics
+
+### Commits
+- `6e024e8` — Fix conflicting signal diagnostics
+
+### Summary
+Fixed conflicting highlight suggestions where the Signal Tablet would show "add signal" (green/cyan) AND "remove/fix signal" (red) at the same junction.
+
+**Root cause**: Check 1 (JUNCTION_UNSIGNALED) generates "add signal" suggestions for unsignaled branches, while Check 3 (SIGNAL_CONFLICT) independently flags existing signals at the SAME junction with a misleading "Remove unnecessary chain signal side" suggestion. Both diagnostics appearing near each other was confusing.
+
+**Fixes applied**:
+1. **Junction suppression**: Track junction IDs flagged by Check 1 (unsignaled branches). Check 3 now skips signals on edges connected to those junctions — fix the missing signals first, then re-scan.
+2. **Eliminated "remove" correctType**: The `else` fallthrough in Check 3's suggestion logic was using `correctType="remove"` with "Remove unnecessary chain signal side" — misleading since you can't remove one side of a signal boundary in Create. Changed to `correctType="signal"` with "Change chain to regular signal."
+
+### Files Changed
+- `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java`
