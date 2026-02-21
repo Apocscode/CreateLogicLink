@@ -132,15 +132,20 @@ public class TrainMapTexture {
         return tex;
     }
 
-    /** Check if the texture needs to be redrawn (data has changed). */
+    /** Check if the texture needs to be redrawn (data version changed). */
+    public boolean needsRedraw(int version) {
+        return version != lastHash;
+    }
+
+    /** @deprecated Use needsRedraw(int version) for O(1) check */
     public boolean needsRedraw(CompoundTag mapData) {
         int hash = mapData != null ? mapData.hashCode() : 0;
         return hash != lastHash;
     }
 
     /** Redraw the full map to the pixel buffer and upload to GPU. */
-    public void redraw(CompoundTag mapData) {
-        lastHash = mapData != null ? mapData.hashCode() : 0;
+    public void redraw(CompoundTag mapData, int version) {
+        lastHash = version;
         validBounds = false;
         drawnNodes = 0; drawnEdges = 0; drawnStations = 0; drawnSignals = 0; drawnTrains = 0;
 

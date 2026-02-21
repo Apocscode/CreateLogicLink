@@ -177,8 +177,8 @@ public class TrainMonitorRenderer implements BlockEntityRenderer<TrainMonitorBlo
         TrainMapTexture tex = TrainMapTexture.getOrCreate(
                 be.getBlockPos(), be.getMonitorWidth(), be.getMonitorHeight());
 
-        if (tex.needsRedraw(mapData)) {
-            tex.redraw(mapData);
+        if (tex.needsRedraw(be.getMapDataVersion())) {
+            tex.redraw(mapData, be.getMapDataVersion());
         }
 
         // Render texture as a single quad filling the inner panel area

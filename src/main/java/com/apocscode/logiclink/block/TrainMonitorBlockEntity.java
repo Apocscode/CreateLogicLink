@@ -73,15 +73,26 @@ public class TrainMonitorBlockEntity extends BlockEntity implements MenuProvider
     private CompoundTag mapData = new CompoundTag();
     /** Map data refresh is slower — topology doesn't change every tick */
     private int mapRefreshTimer = 0;
-    private int mapRefreshInterval = 200; // 10 seconds (topology changes rarely)
+    private int mapRefreshInterval = 600; // 30 seconds (topology changes rarely)
 
     // ==================== Refresh ====================
     private int refreshTimer = 0;
-    private int refreshInterval = 40; // 2 seconds for train/station list
+    private int refreshInterval = 60; // 3 seconds for train/station list
+
+    // ==================== Player Proximity ====================
+    /** Only refresh data when a player is within this distance (blocks) */
+    private static final double PLAYER_RANGE_SQ = 48.0 * 48.0;
+    private int proximityCheckTimer = 0;
+    private static final int PROXIMITY_CHECK_INTERVAL = 20; // check every 1 second
+    private boolean playerNearby = false;
 
     // ==================== Dirty Tracking (avoid redundant syncs) ====================
     private boolean dataDirty = false;
-    private int lastMapDataHash = 0;
+    private boolean mapDataDirty = false;
+    /** Incremented when map data changes; cheaper than CompoundTag.hashCode() */
+    private int mapDataVersion = 0;
+    /** Incremented when train/station data changes */
+    private int trainDataVersion = 0;
 
     // ==================== Reflection Cache ====================
     private static boolean reflectionInit = false;
@@ -199,6 +210,8 @@ public class TrainMonitorBlockEntity extends BlockEntity implements MenuProvider
     // ==================== Map Data Accessors ====================
 
     public CompoundTag getMapData() { return mapData; }
+    public int getMapDataVersion() { return mapDataVersion; }
+    public int getTrainDataVersion() { return trainDataVersion; }
 
     // ==================== MenuProvider ====================
 
@@ -219,14 +232,25 @@ public class TrainMonitorBlockEntity extends BlockEntity implements MenuProvider
                                    TrainMonitorBlockEntity be) {
         if (!be.isMaster()) return;
 
-        // Train/station list refresh (every ~2 seconds)
+        // Periodically check if any player is within render distance
+        be.proximityCheckTimer++;
+        if (be.proximityCheckTimer >= PROXIMITY_CHECK_INTERVAL) {
+            be.proximityCheckTimer = 0;
+            be.playerNearby = level.players().stream().anyMatch(p ->
+                    p.blockPosition().distSqr(pos) < PLAYER_RANGE_SQ);
+        }
+
+        // Skip data refresh entirely when no player is nearby — biggest TPS saver
+        if (!be.playerNearby) return;
+
+        // Train/station list refresh (every ~3 seconds)
         be.refreshTimer++;
         if (be.refreshTimer >= be.refreshInterval) {
             be.refreshTimer = 0;
             be.refreshData();
         }
 
-        // Map topology refresh (every ~10 seconds — topology changes are rare)
+        // Map topology refresh (every ~30 seconds — topology changes are rare)
         be.mapRefreshTimer++;
         if (be.mapRefreshTimer >= be.mapRefreshInterval) {
             be.mapRefreshTimer = 0;
@@ -234,8 +258,9 @@ public class TrainMonitorBlockEntity extends BlockEntity implements MenuProvider
         }
 
         // Only sync to client when data actually changed
-        if (be.dataDirty) {
+        if (be.dataDirty || be.mapDataDirty) {
             be.dataDirty = false;
+            be.mapDataDirty = false;
             level.sendBlockUpdated(pos, state, state, 3);
         }
     }
@@ -263,13 +288,25 @@ public class TrainMonitorBlockEntity extends BlockEntity implements MenuProvider
         try {
             CompoundTag newData = TrainNetworkDataReader.readNetworkMap(level);
             if (newData != null && !newData.isEmpty()) {
-                int newHash = newData.hashCode();
-                if (newHash != lastMapDataHash) {
+                // Quick size check before expensive comparison — if key counts differ, definitely changed
+                boolean changed = mapData.isEmpty()
+                        || newData.getAllKeys().size() != mapData.getAllKeys().size();
+                if (!changed) {
+                    // Compare node/edge/train counts as a fast proxy for change detection
+                    changed = getListSize(newData, "Nodes") != getListSize(mapData, "Nodes")
+                           || getListSize(newData, "Trains") != getListSize(mapData, "Trains")
+                           || getListSize(newData, "Signals") != getListSize(mapData, "Signals");
+                }
+                if (!changed) {
+                    // Check if any train position/speed changed (most frequent change)
+                    changed = trainDataChanged(newData);
+                }
+                if (changed) {
                     mapData = newData;
-                    lastMapDataHash = newHash;
-                    dataDirty = true;
-                    LogicLink.LOGGER.debug("TrainMonitor: Map data updated — {} keys",
-                            newData.getAllKeys().size());
+                    mapDataVersion++;
+                    mapDataDirty = true;
+                    LogicLink.LOGGER.debug("TrainMonitor: Map data updated v{} — {} keys",
+                            mapDataVersion, newData.getAllKeys().size());
                 }
             } else {
                 LogicLink.LOGGER.debug("TrainMonitor: readNetworkMap returned empty/null data");
@@ -277,6 +314,26 @@ public class TrainMonitorBlockEntity extends BlockEntity implements MenuProvider
         } catch (Exception e) {
             LogicLink.LOGGER.debug("TrainMonitor: Failed to read map data: {}", e.getMessage());
         }
+    }
+
+    /** Fast check if train positions/speeds changed between old and new map data */
+    private boolean trainDataChanged(CompoundTag newData) {
+        if (!newData.contains("Trains") || !mapData.contains("Trains")) return true;
+        ListTag newTrains = newData.getList("Trains", 10);
+        ListTag oldTrains = mapData.getList("Trains", 10);
+        if (newTrains.size() != oldTrains.size()) return true;
+        for (int i = 0; i < newTrains.size(); i++) {
+            CompoundTag nt = newTrains.getCompound(i);
+            CompoundTag ot = oldTrains.getCompound(i);
+            if (Math.abs(nt.getFloat("x") - ot.getFloat("x")) > 0.5f) return true;
+            if (Math.abs(nt.getFloat("z") - ot.getFloat("z")) > 0.5f) return true;
+            if (Math.abs(nt.getDouble("speed") - ot.getDouble("speed")) > 0.01) return true;
+        }
+        return false;
+    }
+
+    private static int getListSize(CompoundTag tag, String key) {
+        return tag.contains(key) ? tag.getList(key, 10).size() : 0;
     }
 
     private void readTrainData(Object manager) throws Exception {
@@ -376,8 +433,16 @@ public class TrainMonitorBlockEntity extends BlockEntity implements MenuProvider
         trainsMoving = moving;
         trainsStopped = stopped;
         trainsDerailed = derailed;
-        if (changed) dataDirty = true;
+        if (changed) {
+            dataDirty = true;
+            trainDataVersion++;
+        }
     }
+
+    // ==================== Station Reflection Cache ====================
+    private static Object cachedStationType = null;
+    private static Method cachedGetPointsMethod = null;
+    private static Class<?> cachedEdgePointTypeClass = null;
 
     private void readStationData(Object manager) throws Exception {
         stationDataList.clear();
@@ -389,19 +454,20 @@ public class TrainMonitorBlockEntity extends BlockEntity implements MenuProvider
 
         // Collect all stations from all track graphs
         try {
-            Class<?> edgePointTypeClass = Class.forName("com.simibubi.create.content.trains.graph.EdgePointType");
-            Field stationTypeField = edgePointTypeClass.getDeclaredField("STATION");
-            stationTypeField.setAccessible(true);
-            Object stationType = stationTypeField.get(null);
-
-            Method getPointsMethod = null;
+            // Cache the EdgePointType reflection — avoid re-discovering every refresh
+            if (cachedStationType == null) {
+                cachedEdgePointTypeClass = Class.forName("com.simibubi.create.content.trains.graph.EdgePointType");
+                Field stationTypeField = cachedEdgePointTypeClass.getDeclaredField("STATION");
+                stationTypeField.setAccessible(true);
+                cachedStationType = stationTypeField.get(null);
+            }
 
             for (Object graph : networks.values()) {
                 try {
-                    if (getPointsMethod == null) {
-                        getPointsMethod = graph.getClass().getMethod("getPoints", edgePointTypeClass);
+                    if (cachedGetPointsMethod == null) {
+                        cachedGetPointsMethod = graph.getClass().getMethod("getPoints", cachedEdgePointTypeClass);
                     }
-                    Collection<?> points = (Collection<?>) getPointsMethod.invoke(graph, stationType);
+                    Collection<?> points = (Collection<?>) cachedGetPointsMethod.invoke(graph, cachedStationType);
                     if (points == null) continue;
 
                     for (Object station : points) {
@@ -582,6 +648,12 @@ public class TrainMonitorBlockEntity extends BlockEntity implements MenuProvider
         if (tag.contains("MapData")) {
             mapData = tag.getCompound("MapData").copy();
         }
+        if (tag.contains("MapDataVersion")) {
+            mapDataVersion = tag.getInt("MapDataVersion");
+        }
+        if (tag.contains("TrainDataVersion")) {
+            trainDataVersion = tag.getInt("TrainDataVersion");
+        }
     }
 
     // ==================== Client Sync ====================
@@ -599,7 +671,9 @@ public class TrainMonitorBlockEntity extends BlockEntity implements MenuProvider
         // Display data (only master sends this)
         if (isMaster()) {
             saveDisplayData(tag);
-            // Include map topology data
+            // Include map topology data + version for client-side dirty check
+            tag.putInt("MapDataVersion", mapDataVersion);
+            tag.putInt("TrainDataVersion", trainDataVersion);
             if (!mapData.isEmpty()) {
                 tag.put("MapData", mapData.copy());
             }
@@ -612,6 +686,12 @@ public class TrainMonitorBlockEntity extends BlockEntity implements MenuProvider
         super.handleUpdateTag(tag, registries);
         if (tag.contains("DisplayMode")) {
             displayMode = tag.getInt("DisplayMode");
+        }
+        if (tag.contains("MapDataVersion")) {
+            mapDataVersion = tag.getInt("MapDataVersion");
+        }
+        if (tag.contains("TrainDataVersion")) {
+            trainDataVersion = tag.getInt("TrainDataVersion");
         }
         loadDisplayData(tag);
         if (tag.contains("MapData")) {
