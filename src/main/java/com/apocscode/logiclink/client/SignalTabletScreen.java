@@ -54,7 +54,7 @@ public class SignalTabletScreen extends Screen {
 
     /** Pre-processed diagnostic entry for display. */
     private record DiagEntry(CompoundTag diag, double distance, List<SugCoord> sugCoords) {}
-    private record SugCoord(int x, int y, int z, int type, String label) {}
+    private record SugCoord(int x, int y, int z, int type, String label, float dirX, float dirZ) {}
 
     // Layout constants for the list — computed in init
     private int entryH = 48;
@@ -106,6 +106,8 @@ public class SignalTabletScreen extends Screen {
                         CompoundTag sp = sug.getCompound(s);
                         int sx = sp.getInt("sx"), sy = sp.getInt("sy"), sz = sp.getInt("sz");
                         String sigType = sp.contains("signalType") ? sp.getString("signalType") : "signal";
+                        float sdx = sp.contains("sdx") ? sp.getFloat("sdx") : 0;
+                        float sdz = sp.contains("sdz") ? sp.getFloat("sdz") : 0;
                         int mType = switch (sigType) {
                             case "chain" -> SignalHighlightManager.TYPE_CHAIN;
                             case "conflict" -> SignalHighlightManager.TYPE_CONFLICT;
@@ -116,12 +118,12 @@ public class SignalTabletScreen extends Screen {
                             case "conflict" -> "\u26A0";
                             default -> "\u2691";
                         };
-                        coords.add(new SugCoord(sx, sy, sz, mType, label));
+                        coords.add(new SugCoord(sx, sy, sz, mType, label, sdx, sdz));
                     }
                 }
                 // For SIGNAL_CONFLICT, if no suggestions, use the diagnostic location itself
                 if (coords.isEmpty() && type.equals("SIGNAL_CONFLICT") && diag.contains("x")) {
-                    coords.add(new SugCoord((int) dx, (int) dy, (int) dz, SignalHighlightManager.TYPE_CONFLICT, "\u26A0"));
+                    coords.add(new SugCoord((int) dx, (int) dy, (int) dz, SignalHighlightManager.TYPE_CONFLICT, "\u26A0", 0, 0));
                 }
 
                 sortedDiags.add(new DiagEntry(diag, dist, coords));
@@ -367,7 +369,7 @@ public class SignalTabletScreen extends Screen {
                     int btnH = 11;
 
                     if (mouseX >= btnX && mouseX < btnX + btnW && mouseY >= btnY && mouseY < btnY + btnH) {
-                        boolean nowActive = SignalHighlightManager.toggle(sc.x, sc.y, sc.z, sc.type);
+                        boolean nowActive = SignalHighlightManager.toggle(sc.x, sc.y, sc.z, sc.type, sc.dirX, sc.dirZ);
                         // Play click sound
                         Minecraft.getInstance().player.playSound(
                                 net.minecraft.sounds.SoundEvents.UI_BUTTON_CLICK.value(), 0.5f, nowActive ? 1.2f : 0.8f);

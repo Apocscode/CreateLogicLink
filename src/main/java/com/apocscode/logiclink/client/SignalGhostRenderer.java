@@ -101,6 +101,11 @@ public class SignalGhostRenderer {
                         marker.x() + 0.75, y1, marker.z() + 0.75,
                         r, g, b, a);
             }
+
+            // Direction arrow — flat on the Y=0.5 plane inside the box
+            if (marker.hasDirection()) {
+                renderDirectionArrow(poseStack, lineConsumer, marker, r, g, b, a);
+            }
         }
 
         bufferSource.endBatch(RenderType.lines());
@@ -108,5 +113,105 @@ public class SignalGhostRenderer {
         RenderSystem.lineWidth(1.0f);
         RenderSystem.enableCull();
         poseStack.popPose();
+    }
+
+    /**
+     * Draws a direction arrow inside the highlight box.
+     * Arrow sits on the horizontal Y=0.5 plane, pointing along the track direction.
+     * Uses the marker's dirX/dirZ (normalized track direction from junction → branch).
+     *
+     * Arrow shape:
+     *   - Main shaft line from tail to tip
+     *   - Two angled barbs at the tip forming the arrowhead
+     *   - A perpendicular cross-bar at the tail for clarity
+     */
+    private static void renderDirectionArrow(PoseStack poseStack, VertexConsumer consumer,
+                                              SignalHighlightManager.Marker marker,
+                                              float r, float g, float b, float a) {
+        // Center of the block
+        double cx = marker.x() + 0.5;
+        double cy = marker.y() + 0.5;
+        double cz = marker.z() + 0.5;
+
+        // Direction vector (already normalized)
+        float dx = marker.dirX();
+        float dz = marker.dirZ();
+
+        // Perpendicular vector (rotated 90°)
+        float px = -dz;
+        float pz = dx;
+
+        // Arrow geometry — scaled to fit inside the box
+        double shaftLen = 0.38;   // half-length of the shaft
+        double headLen = 0.15;    // arrowhead barb length
+        double headWidth = 0.14;  // arrowhead barb spread
+        double tailWidth = 0.12;  // tail cross-bar half-width
+
+        // Shaft endpoints
+        double tailX = cx - dx * shaftLen;
+        double tailZ = cz - dz * shaftLen;
+        double tipX = cx + dx * shaftLen;
+        double tipZ = cz + dz * shaftLen;
+
+        // Draw shaft line
+        addLine(poseStack, consumer, tailX, cy, tailZ, tipX, cy, tipZ, r, g, b, a);
+
+        // Arrowhead barbs
+        double barbBaseX = tipX - dx * headLen;
+        double barbBaseZ = tipZ - dz * headLen;
+
+        double barbLeftX = barbBaseX + px * headWidth;
+        double barbLeftZ = barbBaseZ + pz * headWidth;
+        double barbRightX = barbBaseX - px * headWidth;
+        double barbRightZ = barbBaseZ - pz * headWidth;
+
+        addLine(poseStack, consumer, tipX, cy, tipZ, barbLeftX, cy, barbLeftZ, r, g, b, a);
+        addLine(poseStack, consumer, tipX, cy, tipZ, barbRightX, cy, barbRightZ, r, g, b, a);
+
+        // Connect barb tips for a solid arrowhead triangle
+        addLine(poseStack, consumer, barbLeftX, cy, barbLeftZ, barbRightX, cy, barbRightZ, r, g, b, a);
+
+        // Tail cross-bar (perpendicular line at the tail end)
+        double tailLeftX = tailX + px * tailWidth;
+        double tailLeftZ = tailZ + pz * tailWidth;
+        double tailRightX = tailX - px * tailWidth;
+        double tailRightZ = tailZ - pz * tailWidth;
+
+        addLine(poseStack, consumer, tailLeftX, cy, tailLeftZ, tailRightX, cy, tailRightZ, r, g, b, a);
+
+        // Duplicate arrow slightly above and below for vertical visibility
+        double yOff = 0.25;
+        addLine(poseStack, consumer, tailX, cy + yOff, tailZ, tipX, cy + yOff, tipZ, r, g, b, a * 0.5f);
+        addLine(poseStack, consumer, tipX, cy + yOff, tipZ, barbLeftX, cy + yOff, barbLeftZ, r, g, b, a * 0.5f);
+        addLine(poseStack, consumer, tipX, cy + yOff, tipZ, barbRightX, cy + yOff, barbRightZ, r, g, b, a * 0.5f);
+
+        addLine(poseStack, consumer, tailX, cy - yOff, tailZ, tipX, cy - yOff, tipZ, r, g, b, a * 0.5f);
+        addLine(poseStack, consumer, tipX, cy - yOff, tipZ, barbLeftX, cy - yOff, barbLeftZ, r, g, b, a * 0.5f);
+        addLine(poseStack, consumer, tipX, cy - yOff, tipZ, barbRightX, cy - yOff, barbRightZ, r, g, b, a * 0.5f);
+    }
+
+    /**
+     * Adds a single line segment to the vertex consumer.
+     * Uses the line's direction as the normal (required by the lines RenderType).
+     */
+    private static void addLine(PoseStack poseStack, VertexConsumer consumer,
+                                 double x1, double y1, double z1,
+                                 double x2, double y2, double z2,
+                                 float r, float g, float b, float a) {
+        // Compute normal direction for the line
+        float nx = (float)(x2 - x1);
+        float ny = (float)(y2 - y1);
+        float nz = (float)(z2 - z1);
+        float len = (float) Math.sqrt(nx * nx + ny * ny + nz * nz);
+        if (len < 0.0001f) return;
+        nx /= len; ny /= len; nz /= len;
+
+        PoseStack.Pose pose = poseStack.last();
+        consumer.addVertex(pose, (float) x1, (float) y1, (float) z1)
+                .setColor(r, g, b, a)
+                .setNormal(pose, nx, ny, nz);
+        consumer.addVertex(pose, (float) x2, (float) y2, (float) z2)
+                .setColor(r, g, b, a)
+                .setNormal(pose, nx, ny, nz);
     }
 }

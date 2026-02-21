@@ -19,17 +19,22 @@ public final class SignalHighlightManager {
     public static final int TYPE_CHAIN    = 1;  // Chain signal (cyan)
     public static final int TYPE_CONFLICT = 2;  // Conflict (red)
 
-    public record Marker(int x, int y, int z, int type) {
+    public record Marker(int x, int y, int z, int type, float dirX, float dirZ) {
         public long posKey() {
             return ((long)(x + 30000000) << 36) | ((long)(y + 512) << 26) | ((long)(z + 30000000));
+        }
+
+        /** Returns true if this marker has a valid track direction for arrow rendering. */
+        public boolean hasDirection() {
+            return dirX != 0 || dirZ != 0;
         }
     }
 
     private static final Map<Long, Marker> activeMarkers = new ConcurrentHashMap<>();
 
     /** Toggle a marker on/off. Returns true if now active, false if removed. */
-    public static boolean toggle(int x, int y, int z, int type) {
-        Marker m = new Marker(x, y, z, type);
+    public static boolean toggle(int x, int y, int z, int type, float dirX, float dirZ) {
+        Marker m = new Marker(x, y, z, type, dirX, dirZ);
         long key = m.posKey();
         if (activeMarkers.containsKey(key)) {
             activeMarkers.remove(key);
@@ -40,9 +45,14 @@ public final class SignalHighlightManager {
         }
     }
 
+    /** Toggle a marker on/off (no direction). */
+    public static boolean toggle(int x, int y, int z, int type) {
+        return toggle(x, y, z, type, 0, 0);
+    }
+
     /** Check if a position is currently highlighted. */
     public static boolean isActive(int x, int y, int z) {
-        return activeMarkers.containsKey(new Marker(x, y, z, 0).posKey());
+        return activeMarkers.containsKey(new Marker(x, y, z, 0, 0, 0).posKey());
     }
 
     /** Get all active markers for the renderer. */

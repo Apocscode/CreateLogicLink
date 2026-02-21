@@ -981,12 +981,18 @@ public class TrainNetworkDataReader {
                 float chainDist = Math.min(maxTrainLength, branchLen * 0.4f);
                 float chainT = chainDist / branchLen;
 
+                // Normalized track direction vector (junction → branch)
+                float ndx = dx / branchLen;
+                float ndz = dz / branchLen;
+
                 CompoundTag chainSug = new CompoundTag();
                 chainSug.putInt("sx", Math.round(jx + dx * chainT));
                 chainSug.putInt("sy", Math.round(jy + dy * chainT));
                 chainSug.putInt("sz", Math.round(jz + dz * chainT));
                 chainSug.putString("signalType", "chain");
                 chainSug.putString("dir", getCardinalDir(dx, dz));
+                chainSug.putFloat("sdx", ndx);
+                chainSug.putFloat("sdz", ndz);
                 suggestions.add(chainSug);
 
                 // Regular signal: further out on the branch (section boundary)
@@ -1001,6 +1007,8 @@ public class TrainNetworkDataReader {
                     sigSug.putInt("sz", Math.round(jz + dz * sigT));
                     sigSug.putString("signalType", "signal");
                     sigSug.putString("dir", getCardinalDir(dx, dz));
+                    sigSug.putFloat("sdx", ndx);
+                    sigSug.putFloat("sdz", ndz);
                     suggestions.add(sigSug);
                 }
             }
@@ -1168,6 +1176,11 @@ public class TrainNetworkDataReader {
                 conflictSug.putInt("sy", (int) sy);
                 conflictSug.putInt("sz", (int) sz);
                 conflictSug.putString("signalType", "conflict");
+                // Copy edge direction from existing signal data for arrow rendering
+                if (sig.contains("dirX") && sig.contains("dirZ")) {
+                    conflictSug.putFloat("sdx", sig.getFloat("dirX"));
+                    conflictSug.putFloat("sdz", sig.getFloat("dirZ"));
+                }
 
                 // Determine what the correct type should be
                 if (fShouldBeChain && !fIsChain) {
