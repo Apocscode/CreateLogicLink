@@ -898,3 +898,25 @@ Added directional arrow indicators inside signal highlight boxes so players know
 - `src/main/java/com/apocscode/logiclink/client/SignalHighlightManager.java`
 - `src/main/java/com/apocscode/logiclink/client/SignalTabletScreen.java`
 - `src/main/java/com/apocscode/logiclink/client/SignalGhostRenderer.java`
+
+---
+
+## Session 9b — 2026-02-20 — Train Monitor TPS Optimization
+
+### Commits
+- `77b577b` — Optimize Train Monitor TPS: player proximity gating, interval tuning, version-based dirty checks
+
+### Summary
+Comprehensive TPS optimization for the Train Monitor block. Five lag sources identified and fixed:
+
+1. **Player proximity gating** (biggest win): Server skips all reflection/data refresh when no player is within 48 blocks. Zero TPS cost when nobody is looking at the monitor.
+2. **Refresh interval tuning**: Map topology refresh 10s → 30s, train/station list 2s → 3s.
+3. **Version counters replace hashCode()**: `CompoundTag.hashCode()` recursively hashes all nested tags (O(n)). Replaced with incrementing `mapDataVersion`/`trainDataVersion` int counters (O(1)) on both server and client.
+4. **Fast proxy change detection**: Before marking map data dirty, compare list sizes and train positions as a fast pre-filter — avoids expensive full comparison.
+5. **Cached station EdgePointType reflection**: Was calling `Class.forName()` + `getDeclaredField()` every 3-second refresh. Now cached in static fields.
+6. **Split dirty flags**: Separate `dataDirty` (train list changes) from `mapDataDirty` (topology changes) to avoid unnecessary syncs.
+
+### Files Changed
+- `src/main/java/com/apocscode/logiclink/block/TrainMonitorBlockEntity.java`
+- `src/main/java/com/apocscode/logiclink/client/TrainMapTexture.java`
+- `src/main/java/com/apocscode/logiclink/client/TrainMonitorRenderer.java`
