@@ -34,13 +34,13 @@ import java.util.*;
 public class TrainNetworkDataReader {
 
     // ==================== Limits ====================
-    public static final int MAX_NODES = 8192;
-    public static final int MAX_EDGES = 8192;
+    public static final int MAX_NODES = 16384;
+    public static final int MAX_EDGES = 16384;
     public static final int MAX_CURVE_SAMPLES = 8;   // bezier sample points per curved edge
-    public static final int MAX_STATIONS = 128;
+    public static final int MAX_STATIONS = 512;
     public static final int MAX_SIGNALS = 1024;
-    public static final int MAX_TRAINS = 64;
-    public static final int MAX_OBSERVERS = 64;
+    public static final int MAX_TRAINS = 256;
+    public static final int MAX_OBSERVERS = 256;
 
     // ==================== Reflection State ====================
     private static boolean reflectionInit = false;
@@ -229,12 +229,31 @@ public class TrainNetworkDataReader {
 
             int diagCount = mapData.contains("Diagnostics") ? mapData.getList("Diagnostics", 10).size() : 0;
             int sigCount = mapData.contains("Signals") ? mapData.getList("Signals", 10).size() : 0;
-            LogicLink.LOGGER.info("TrainNetworkDataReader: Result -- {} nodes, {} edges, {} curves, {} stations, {} signals, {} diagnostics",
+            int staCount = mapData.contains("Stations") ? mapData.getList("Stations", 10).size() : 0;
+            int trnCount = mapData.contains("Trains") ? mapData.getList("Trains", 10).size() : 0;
+            int obsCount = mapData.contains("Observers") ? mapData.getList("Observers", 10).size() : 0;
+            LogicLink.LOGGER.info("TrainNetworkDataReader: Result -- {} nodes, {} edges, {} curves, {} stations, {} signals, {} trains, {} observers, {} diagnostics",
                     nodeList.size(), edgeList.size(), curveList.size(),
-                    mapData.contains("Stations") ? mapData.getList("Stations", 10).size() : 0,
-                    sigCount, diagCount);
+                    staCount, sigCount, trnCount, obsCount, diagCount);
+
+            // Cap warnings
+            if (nodeList.size() >= MAX_NODES) {
+                LogicLink.LOGGER.warn("TrainNetworkDataReader: Node cap hit! {} nodes, max is {}. Track topology may be incomplete.", nodeList.size(), MAX_NODES);
+            }
+            if (edgeList.size() >= MAX_EDGES) {
+                LogicLink.LOGGER.warn("TrainNetworkDataReader: Edge cap hit! {} edges, max is {}. Track topology may be incomplete.", edgeList.size(), MAX_EDGES);
+            }
+            if (staCount >= MAX_STATIONS) {
+                LogicLink.LOGGER.warn("TrainNetworkDataReader: Station cap hit! {} stations, max is {}. Some stations may be missing.", staCount, MAX_STATIONS);
+            }
             if (sigCount >= MAX_SIGNALS) {
-                LogicLink.LOGGER.warn("TrainNetworkDataReader: Signal cap hit! {} signals found, max is {}. Some signals may be missing from diagnostics.", sigCount, MAX_SIGNALS);
+                LogicLink.LOGGER.warn("TrainNetworkDataReader: Signal cap hit! {} signals, max is {}. Some signals may be missing from diagnostics.", sigCount, MAX_SIGNALS);
+            }
+            if (trnCount >= MAX_TRAINS) {
+                LogicLink.LOGGER.warn("TrainNetworkDataReader: Train cap hit! {} trains, max is {}. Some trains may be missing.", trnCount, MAX_TRAINS);
+            }
+            if (obsCount >= MAX_OBSERVERS) {
+                LogicLink.LOGGER.warn("TrainNetworkDataReader: Observer cap hit! {} observers, max is {}. Some observers may be missing.", obsCount, MAX_OBSERVERS);
             }
 
         } catch (Exception e) {
