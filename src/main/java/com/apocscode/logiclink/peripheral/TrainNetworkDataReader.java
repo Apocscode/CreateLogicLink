@@ -1166,20 +1166,15 @@ public class TrainNetworkDataReader {
 
             List<String> issues = new ArrayList<>();
 
-            // Check side F
+            // Check side F — only flag missing chain, not "unnecessary chain" on junction edges
+            // (chain on the outward-facing side of a junction edge is harmless and normal)
             if (onJunctionEdge && fShouldBeChain && !fIsChain) {
                 issues.add("Side F: regular signal should be CHAIN (protects junction at node " + edgeB + ")");
-            }
-            if (onJunctionEdge && !fShouldBeChain && fIsChain) {
-                issues.add("Side F: chain signal unnecessary (not entering junction from this side)");
             }
 
             // Check side B
             if (onJunctionEdge && bShouldBeChain && !bIsChain) {
                 issues.add("Side B: regular signal should be CHAIN (protects junction at node " + edgeA + ")");
-            }
-            if (onJunctionEdge && !bShouldBeChain && bIsChain) {
-                issues.add("Side B: chain signal unnecessary (not entering junction from this side)");
             }
 
             // Non-junction edge with chain signal = wasteful
