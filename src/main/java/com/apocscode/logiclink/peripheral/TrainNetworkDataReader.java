@@ -925,6 +925,9 @@ public class TrainNetworkDataReader {
             }
         }
 
+        // Track junctions flagged by Check 1 to avoid conflicting Check 3 diagnostics
+        Set<Integer> unsignaledJunctions = new HashSet<>();
+
         // === Check 1: Junctions with incomplete signal coverage ===
         for (Map.Entry<Integer, List<int[]>> entry : adjacency.entrySet()) {
             List<int[]> branches = entry.getValue();
@@ -1020,6 +1023,7 @@ public class TrainNetworkDataReader {
                     + (int) maxTrainLength + "m)"
                     + (partial ? " PARTIAL - causes routing failures" : ""));
 
+            unsignaledJunctions.add(jId);
             diagnostics.add(diag);
         }
 
@@ -1099,8 +1103,14 @@ public class TrainNetworkDataReader {
             CompoundTag sig = signals.getCompound(i);
             if (!sig.contains("edgeA") || !sig.contains("edgeB")) continue;
 
-            int edgeA = sig.getInt("edgeA");
-            int edgeB = sig.getInt("edgeB");
+            int edgeACheck = sig.getInt("edgeA");
+            int edgeBCheck = sig.getInt("edgeB");
+            // Skip signals at junctions already flagged by Check 1 (unsignaled branches)
+            // to avoid conflicting "add signal" + "fix existing signal" at same junction
+            if (unsignaledJunctions.contains(edgeACheck) || unsignaledJunctions.contains(edgeBCheck)) continue;
+
+            int edgeA = edgeACheck;
+            int edgeB = edgeBCheck;
             String typeF = sig.contains("typeF") ? sig.getString("typeF") : "entry_signal";
             String typeB = sig.contains("typeB") ? sig.getString("typeB") : "entry_signal";
 
@@ -1193,8 +1203,8 @@ public class TrainNetworkDataReader {
                     conflictSug.putString("correctType", "signal");
                     conflictSug.putString("dir", "Replace with regular signal");
                 } else {
-                    conflictSug.putString("correctType", "remove");
-                    conflictSug.putString("dir", "Remove unnecessary chain signal side");
+                    conflictSug.putString("correctType", "signal");
+                    conflictSug.putString("dir", "Change chain to regular signal");
                 }
                 suggestions.add(conflictSug);
                 diag.put("suggestions", suggestions);
