@@ -876,3 +876,25 @@ Fixed two issues with the Contraption Remote block, then added complete document
    - **Patchouli**: logic_link.json (name, title, text), overview.json (blocks list, quick start, peripheral names), wireless_hub.json, logic_remote.json
    - **README.md**: 9 block references (features, getting started, crafting, highlighting, remote usage)
    - **MOD_DOCUMENTATION.md**: 22 block references (blocks section, sensor linking, highlighting, Lua API, phases, crafting, Ponder tags, peripheral summary)
+
+---
+
+## Session 9 — 2026-02-20 — Signal Highlight Direction Arrows
+
+### Commits
+- `e4cdc1b` — Add direction arrows to signal highlight boxes
+
+### Summary
+Added directional arrow indicators inside signal highlight boxes so players know which way the track runs at each suggested signal placement.
+
+### Changes
+1. **TrainNetworkDataReader.java**: Store normalized track direction vector (`sdx`, `sdz`) in suggestion NBT tags for junction chain/regular signal suggestions. Conflict suggestions inherit `dirX`/`dirZ` from existing signal edge data.
+2. **SignalHighlightManager.java**: Extended `Marker` record with `dirX`/`dirZ` float fields and `hasDirection()` method. Added overloaded `toggle()` accepting direction.
+3. **SignalTabletScreen.java**: Extended `SugCoord` record with `dirX`/`dirZ`. Parses `sdx`/`sdz` from suggestion NBT and passes direction through to `SignalHighlightManager.toggle()`.
+4. **SignalGhostRenderer.java**: New `renderDirectionArrow()` method draws a flat arrow on the Y=0.5 plane inside each highlight box — arrow shaft, triangular arrowhead (with connecting barb line), and tail cross-bar. Duplicate semi-transparent arrows at ±0.25 Y offset for vertical visibility. New `addLine()` helper for individual line segments with proper normals.
+
+### Files Changed
+- `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java`
+- `src/main/java/com/apocscode/logiclink/client/SignalHighlightManager.java`
+- `src/main/java/com/apocscode/logiclink/client/SignalTabletScreen.java`
+- `src/main/java/com/apocscode/logiclink/client/SignalGhostRenderer.java`
