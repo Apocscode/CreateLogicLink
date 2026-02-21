@@ -61,7 +61,7 @@ public class SignalGhostRenderer {
         float pulse = (float) (Math.sin(now * 0.004) * 0.15 + 0.35);
 
         MultiBufferSource.BufferSource bufferSource = mc.renderBuffers().bufferSource();
-        RenderSystem.lineWidth(3.0f);
+        RenderSystem.lineWidth(5.0f);
         VertexConsumer lineConsumer = bufferSource.getBuffer(RenderType.lines());
 
         for (SignalHighlightManager.Marker marker : markers) {
