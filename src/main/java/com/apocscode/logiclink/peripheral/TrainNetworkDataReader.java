@@ -38,7 +38,7 @@ public class TrainNetworkDataReader {
     public static final int MAX_EDGES = 8192;
     public static final int MAX_CURVE_SAMPLES = 8;   // bezier sample points per curved edge
     public static final int MAX_STATIONS = 128;
-    public static final int MAX_SIGNALS = 256;
+    public static final int MAX_SIGNALS = 1024;
     public static final int MAX_TRAINS = 64;
     public static final int MAX_OBSERVERS = 64;
 
@@ -228,10 +228,14 @@ public class TrainNetworkDataReader {
             analyzeDiagnostics(mapData);
 
             int diagCount = mapData.contains("Diagnostics") ? mapData.getList("Diagnostics", 10).size() : 0;
-            LogicLink.LOGGER.info("TrainNetworkDataReader: Result -- {} nodes, {} edges, {} curves, {} stations, {} diagnostics",
+            int sigCount = mapData.contains("Signals") ? mapData.getList("Signals", 10).size() : 0;
+            LogicLink.LOGGER.info("TrainNetworkDataReader: Result -- {} nodes, {} edges, {} curves, {} stations, {} signals, {} diagnostics",
                     nodeList.size(), edgeList.size(), curveList.size(),
                     mapData.contains("Stations") ? mapData.getList("Stations", 10).size() : 0,
-                    diagCount);
+                    sigCount, diagCount);
+            if (sigCount >= MAX_SIGNALS) {
+                LogicLink.LOGGER.warn("TrainNetworkDataReader: Signal cap hit! {} signals found, max is {}. Some signals may be missing from diagnostics.", sigCount, MAX_SIGNALS);
+            }
 
         } catch (Exception e) {
             LogicLink.LOGGER.warn("TrainNetworkDataReader: Failed to read map data: {}", e.getMessage(), e);
