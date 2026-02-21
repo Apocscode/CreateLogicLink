@@ -1017,3 +1017,23 @@ User still hitting a diagnostic loop: Check 3 flags chain signal for removal ("c
 
 ### Files Changed
 - `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java`
+
+---
+
+## Session 9h — 2026-02-21 — Rework Check 1 Junction Diagnostics
+
+### Commits
+- `20464d6` — Rework Check 1: only flag completely unsignaled junctions, remove specific placement suggestions
+
+### Summary
+User identified fundamental flaw in Check 1: it was suggesting signal placements on every unsignaled branch of every junction, but Create signals are directional and segment-based. Placing signals exactly where Check 1 suggested often didn't match actual track segments, and "partial coverage" (some branches signaled, some not) is intentional in one-way track designs.
+
+**Changes**:
+1. **Only flag completely unsignaled junctions** — junctions with ANY signaled branch are now skipped. Partial coverage is intentional in most layouts.
+2. **Removed specific chain/signal placement suggestions** — we can't reliably calculate where signals should go because: graph nodes don't correspond to valid signal placement points, we don't know traffic direction, and Create signals create segments that depend on the full network topology.
+3. **Single junction highlight instead** — just shows the junction position (green marker) with a text note to check if signals are needed. User decides placement based on their traffic flow.
+4. **Downgraded severity** — all junction diagnostics are now WARN (was CRIT for partial coverage).
+5. **Net reduction**: -67 lines of unreliable suggestion logic, +24 lines of simpler accurate logic.
+
+### Files Changed
+- `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java`
