@@ -957,3 +957,27 @@ Replaced signals weren't being recognized by the Signal Tablet scanner because `
 
 ### Files Changed
 - `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java`
+
+---
+
+## Session 9e — 2026-02-21 — Raise All Scanner Caps + Cap Warnings
+
+### Commits
+- `a722b34` — Raise all scanner caps and add cap-hit warnings
+
+### Summary
+All scanner limits were too low for the user's large track network (7098 nodes, 96 stations). Raised all caps and added per-limit warning logs.
+
+| Limit | Old | New |
+|-------|-----|-----|
+| MAX_NODES | 8,192 | 16,384 |
+| MAX_EDGES | 8,192 | 16,384 |
+| MAX_STATIONS | 128 | 512 |
+| MAX_SIGNALS | 1,024 | 1,024 (already raised in 9d) |
+| MAX_TRAINS | 64 | 256 |
+| MAX_OBSERVERS | 64 | 256 |
+
+Also added trains and observers to the log output line and cap-hit warnings for all 6 limits (nodes, edges, stations, signals, trains, observers).
+
+### Files Changed
+- `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java`
