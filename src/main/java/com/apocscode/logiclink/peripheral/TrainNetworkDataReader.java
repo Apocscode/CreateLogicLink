@@ -1177,10 +1177,9 @@ public class TrainNetworkDataReader {
                 issues.add("Side B: regular signal should be CHAIN (protects junction at node " + edgeA + ")");
             }
 
-            // Non-junction edge with chain signal = wasteful
-            if (!onJunctionEdge && (fIsChain || bIsChain)) {
-                issues.add("Chain signal on non-junction edge (unnecessary, reduces routing flexibility)");
-            }
+            // Note: "chain on non-junction edge" check removed — Create's graph can have
+            // intermediate nodes between junctions and signals, causing false positives.
+            // Chain signals on non-junction edges are harmless (just slightly conservative).
 
             if (!issues.isEmpty()) {
                 CompoundTag diag = new CompoundTag();
