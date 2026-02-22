@@ -442,8 +442,9 @@ public class TrainMonitorScreen extends AbstractContainerScreen<TrainMonitorMenu
             int ey = listY + (i - stationScrollOffset) * entryH;
 
             String name = station.getString("name");
-            boolean trainPresent = station.getBoolean("trainPresent");
-            boolean trainImminent = station.getBoolean("trainImminent");
+            // trainPresent/trainImminent are stored as Strings (train name), not booleans
+            boolean hasTrainPresent = station.contains("trainPresent");
+            boolean hasTrainImminent = station.contains("trainImminent");
 
             // Station name (truncated)
             if (font.width(name) > (colStatusX - colNameX - 4)) {
@@ -454,17 +455,22 @@ public class TrainMonitorScreen extends AbstractContainerScreen<TrainMonitorMenu
             gfx.drawString(font, name, colNameX, ey, WHITE, false);
 
             // Status
-            if (trainPresent) {
+            if (hasTrainPresent) {
                 gfx.drawString(font, "\u25CF Occupied", colStatusX, ey, GREEN, false);
-            } else if (trainImminent) {
+            } else if (hasTrainImminent) {
                 gfx.drawString(font, "\u25CF Arriving", colStatusX, ey, YELLOW, false);
             } else {
                 gfx.drawString(font, "\u25CB Empty", colStatusX, ey, GRAY, false);
             }
 
-            // Train name if present
-            if (station.contains("trainName")) {
-                String tName = station.getString("trainName");
+            // Train name if present or imminent
+            String tName = null;
+            if (hasTrainPresent) {
+                tName = station.getString("trainPresent");
+            } else if (hasTrainImminent) {
+                tName = station.getString("trainImminent");
+            }
+            if (tName != null && !tName.isEmpty()) {
                 if (tName.length() > 10) tName = tName.substring(0, 8) + "..";
                 gfx.drawString(font, tName, colTrainX, ey, TEXT_COLOR, false);
             }
