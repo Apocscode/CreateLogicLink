@@ -85,10 +85,21 @@ public class SignalGhostRenderer {
 
             double pad = 0.05;
 
+            // Offset box to the right side of the track (Create signals go on the right)
+            // Right perpendicular of direction (dx,dz) is (dz, -dx) — 90° clockwise
+            double offsetX = 0, offsetZ = 0;
+            if (marker.hasDirection()) {
+                offsetX = marker.dirZ() * 1.0;   // right-side offset
+                offsetZ = -marker.dirX() * 1.0;
+            }
+
+            double baseX = marker.x() + offsetX;
+            double baseZ = marker.z() + offsetZ;
+
             // Render outer box with multiple offset passes for thickness
             for (double off : thicknessOffsets) {
-                double x0 = marker.x() - pad + off, y0 = marker.y() - pad + off, z0 = marker.z() - pad + off;
-                double x1 = marker.x() + 1.0 + pad - off, y1 = marker.y() + 1.0 + pad - off, z1 = marker.z() + 1.0 + pad - off;
+                double x0 = baseX - pad + off, y0 = marker.y() - pad + off, z0 = baseZ - pad + off;
+                double x1 = baseX + 1.0 + pad - off, y1 = marker.y() + 1.0 + pad - off, z1 = baseZ + 1.0 + pad - off;
                 LevelRenderer.renderLineBox(poseStack, lineConsumer,
                         x0, y0, z0, x1, y1, z1, r, g, b, a);
             }
@@ -97,8 +108,8 @@ public class SignalGhostRenderer {
             double inner = 0.15;
             for (double off : thicknessOffsets) {
                 LevelRenderer.renderLineBox(poseStack, lineConsumer,
-                        marker.x() + inner + off, marker.y() + inner + off, marker.z() + inner + off,
-                        marker.x() + 1.0 - inner - off, marker.y() + 1.0 - inner - off, marker.z() + 1.0 - inner - off,
+                        baseX + inner + off, marker.y() + inner + off, baseZ + inner + off,
+                        baseX + 1.0 - inner - off, marker.y() + 1.0 - inner - off, baseZ + 1.0 - inner - off,
                         r, g, b, a * 0.7f);
             }
 
@@ -106,8 +117,8 @@ public class SignalGhostRenderer {
             if (marker.type() == SignalHighlightManager.TYPE_CONFLICT) {
                 double crossTop = marker.y() + 1.0 + pad;
                 LevelRenderer.renderLineBox(poseStack, lineConsumer,
-                        marker.x() + 0.25, crossTop - 0.01, marker.z() + 0.25,
-                        marker.x() + 0.75, crossTop, marker.z() + 0.75,
+                        baseX + 0.25, crossTop - 0.01, baseZ + 0.25,
+                        baseX + 0.75, crossTop, baseZ + 0.75,
                         r, g, b, a);
             }
 
@@ -137,10 +148,14 @@ public class SignalGhostRenderer {
     private static void renderDirectionArrow(PoseStack poseStack, VertexConsumer consumer,
                                               SignalHighlightManager.Marker marker,
                                               float r, float g, float b, float a) {
-        // Center of the block
-        double cx = marker.x() + 0.5;
+        // Right-side offset (same as the box offset)
+        double offsetX = marker.dirZ() * 1.0;
+        double offsetZ = -marker.dirX() * 1.0;
+
+        // Center of the offset block
+        double cx = marker.x() + 0.5 + offsetX;
         double cy = marker.y() + 0.5;
-        double cz = marker.z() + 0.5;
+        double cz = marker.z() + 0.5 + offsetZ;
 
         // Direction vector (already normalized)
         float dx = marker.dirX();
