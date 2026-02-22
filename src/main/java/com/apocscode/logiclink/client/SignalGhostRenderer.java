@@ -85,40 +85,46 @@ public class SignalGhostRenderer {
 
             double pad = 0.05;
 
-            // Offset box to the right side of the track (Create signals go on the right)
-            // Right perpendicular of direction (dx,dz) is (dz, -dx) — 90° clockwise
+            // Offset box to the right rail of the track
+            // Create tracks have 2 rails within 1 block; signals go on the right side.
+            // Right perpendicular of direction (dx,dz) is (dz, -dx) — 90° clockwise.
+            // Offset 0.4 blocks to center on the right rail, box is 0.6 blocks wide.
             double offsetX = 0, offsetZ = 0;
+            double boxSize = 1.0;  // default full-block box for no-direction markers
             if (marker.hasDirection()) {
-                offsetX = marker.dirZ() * 1.0;   // right-side offset
-                offsetZ = -marker.dirX() * 1.0;
+                offsetX = marker.dirZ() * 0.4;   // right rail is ~0.4 blocks from center
+                offsetZ = -marker.dirX() * 0.4;
+                boxSize = 0.6;  // narrower box wrapping just the rail
             }
 
-            double baseX = marker.x() + offsetX;
-            double baseZ = marker.z() + offsetZ;
+            // Box origin: marker position offset to right rail, centered on the rail
+            double bx = marker.x() + 0.5 + offsetX - boxSize / 2.0;
+            double bz = marker.z() + 0.5 + offsetZ - boxSize / 2.0;
 
             // Render outer box with multiple offset passes for thickness
             for (double off : thicknessOffsets) {
-                double x0 = baseX - pad + off, y0 = marker.y() - pad + off, z0 = baseZ - pad + off;
-                double x1 = baseX + 1.0 + pad - off, y1 = marker.y() + 1.0 + pad - off, z1 = baseZ + 1.0 + pad - off;
+                double x0 = bx - pad + off, y0 = marker.y() - pad + off, z0 = bz - pad + off;
+                double x1 = bx + boxSize + pad - off, y1 = marker.y() + 1.0 + pad - off, z1 = bz + boxSize + pad - off;
                 LevelRenderer.renderLineBox(poseStack, lineConsumer,
                         x0, y0, z0, x1, y1, z1, r, g, b, a);
             }
 
             // Inner box for visual weight (also thickened)
-            double inner = 0.15;
+            double inner = 0.1;
             for (double off : thicknessOffsets) {
                 LevelRenderer.renderLineBox(poseStack, lineConsumer,
-                        baseX + inner + off, marker.y() + inner + off, baseZ + inner + off,
-                        baseX + 1.0 - inner - off, marker.y() + 1.0 - inner - off, baseZ + 1.0 - inner - off,
+                        bx + inner + off, marker.y() + inner + off, bz + inner + off,
+                        bx + boxSize - inner - off, marker.y() + 1.0 - inner - off, bz + boxSize - inner - off,
                         r, g, b, a * 0.7f);
             }
 
             // Cross pattern for conflicts
             if (marker.type() == SignalHighlightManager.TYPE_CONFLICT) {
                 double crossTop = marker.y() + 1.0 + pad;
+                double cm = boxSize * 0.2;  // cross margin
                 LevelRenderer.renderLineBox(poseStack, lineConsumer,
-                        baseX + 0.25, crossTop - 0.01, baseZ + 0.25,
-                        baseX + 0.75, crossTop, baseZ + 0.75,
+                        bx + cm, crossTop - 0.01, bz + cm,
+                        bx + boxSize - cm, crossTop, bz + boxSize - cm,
                         r, g, b, a);
             }
 
@@ -148,11 +154,11 @@ public class SignalGhostRenderer {
     private static void renderDirectionArrow(PoseStack poseStack, VertexConsumer consumer,
                                               SignalHighlightManager.Marker marker,
                                               float r, float g, float b, float a) {
-        // Right-side offset (same as the box offset)
-        double offsetX = marker.dirZ() * 1.0;
-        double offsetZ = -marker.dirX() * 1.0;
+        // Right-side offset (same as the box offset — 0.4 blocks to the right rail)
+        double offsetX = marker.dirZ() * 0.4;
+        double offsetZ = -marker.dirX() * 0.4;
 
-        // Center of the offset block
+        // Center of the offset rail position
         double cx = marker.x() + 0.5 + offsetX;
         double cy = marker.y() + 0.5;
         double cz = marker.z() + 0.5 + offsetZ;
