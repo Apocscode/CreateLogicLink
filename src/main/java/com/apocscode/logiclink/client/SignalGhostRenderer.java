@@ -85,46 +85,72 @@ public class SignalGhostRenderer {
 
             double pad = 0.05;
 
-            // Offset box to the right rail of the track
-            // Create tracks have 2 rails within 1 block; signals go on the right side.
-            // Right perpendicular of direction (dx,dz) is (dz, -dx) — 90° clockwise.
-            // Offset 0.4 blocks to center on the right rail, box is 0.6 blocks wide.
-            double offsetX = 0, offsetZ = 0;
-            double boxSize = 1.0;  // default full-block box for no-direction markers
-            if (marker.hasDirection()) {
-                offsetX = marker.dirZ() * 0.4;   // right rail is ~0.4 blocks from center
-                offsetZ = -marker.dirX() * 0.4;
-                boxSize = 0.6;  // narrower box wrapping just the rail
-            }
+            // Right-side half-block highlight within the same track block.
+            // In Minecraft, facing direction (dx,dz), right = (-dz, dx):
+            //   North (0,-1) → right = (1,0) = East ✓
+            //   South (0,+1) → right = (-1,0) = West ✓
+            //   East  (+1,0) → right = (0,1) = South ✓
+            //   West  (-1,0) → right = (0,-1) = North ✓
+            // Box covers the right half of the track block (0.5 wide perpendicular,
+            // ~full along track). Two opposite-direction markers on the same block
+            // will highlight opposite halves — perfect for bi-directional signals.
 
-            // Box origin: marker position offset to right rail, centered on the rail
-            double bx = marker.x() + 0.5 + offsetX - boxSize / 2.0;
-            double bz = marker.z() + 0.5 + offsetZ - boxSize / 2.0;
+            double bx0, bz0, bx1, bz1; // box corners (XZ)
+            if (marker.hasDirection()) {
+                float dx = marker.dirX();
+                float dz = marker.dirZ();
+
+                // Right perpendicular
+                double rx = -dz;
+                double rz = dx;
+
+                // Center of the right half: block center + right * 0.25
+                double centerX = marker.x() + 0.5 + rx * 0.25;
+                double centerZ = marker.z() + 0.5 + rz * 0.25;
+
+                // Half-widths: narrow across track (0.25), longer along track (0.45)
+                double halfPerp = 0.25;
+                double halfPar = 0.45;
+                double halfX = Math.abs(dx) * halfPar + Math.abs(rx) * halfPerp;
+                double halfZ = Math.abs(dz) * halfPar + Math.abs(rz) * halfPerp;
+
+                bx0 = centerX - halfX;
+                bz0 = centerZ - halfZ;
+                bx1 = centerX + halfX;
+                bz1 = centerZ + halfZ;
+            } else {
+                // No direction — full block box
+                bx0 = marker.x();
+                bz0 = marker.z();
+                bx1 = marker.x() + 1.0;
+                bz1 = marker.z() + 1.0;
+            }
 
             // Render outer box with multiple offset passes for thickness
             for (double off : thicknessOffsets) {
-                double x0 = bx - pad + off, y0 = marker.y() - pad + off, z0 = bz - pad + off;
-                double x1 = bx + boxSize + pad - off, y1 = marker.y() + 1.0 + pad - off, z1 = bz + boxSize + pad - off;
                 LevelRenderer.renderLineBox(poseStack, lineConsumer,
-                        x0, y0, z0, x1, y1, z1, r, g, b, a);
+                        bx0 - pad + off, marker.y() - pad + off, bz0 - pad + off,
+                        bx1 + pad - off, marker.y() + 1.0 + pad - off, bz1 + pad - off,
+                        r, g, b, a);
             }
 
             // Inner box for visual weight (also thickened)
-            double inner = 0.1;
+            double inner = 0.08;
             for (double off : thicknessOffsets) {
                 LevelRenderer.renderLineBox(poseStack, lineConsumer,
-                        bx + inner + off, marker.y() + inner + off, bz + inner + off,
-                        bx + boxSize - inner - off, marker.y() + 1.0 - inner - off, bz + boxSize - inner - off,
+                        bx0 + inner + off, marker.y() + inner + off, bz0 + inner + off,
+                        bx1 - inner - off, marker.y() + 1.0 - inner - off, bz1 - inner - off,
                         r, g, b, a * 0.7f);
             }
 
             // Cross pattern for conflicts
             if (marker.type() == SignalHighlightManager.TYPE_CONFLICT) {
                 double crossTop = marker.y() + 1.0 + pad;
-                double cm = boxSize * 0.2;  // cross margin
+                double cmx = (bx1 - bx0) * 0.2;
+                double cmz = (bz1 - bz0) * 0.2;
                 LevelRenderer.renderLineBox(poseStack, lineConsumer,
-                        bx + cm, crossTop - 0.01, bz + cm,
-                        bx + boxSize - cm, crossTop, bz + boxSize - cm,
+                        bx0 + cmx, crossTop - 0.01, bz0 + cmz,
+                        bx1 - cmx, crossTop, bz1 - cmz,
                         r, g, b, a);
             }
 
@@ -154,28 +180,26 @@ public class SignalGhostRenderer {
     private static void renderDirectionArrow(PoseStack poseStack, VertexConsumer consumer,
                                               SignalHighlightManager.Marker marker,
                                               float r, float g, float b, float a) {
-        // Right-side offset (same as the box offset — 0.4 blocks to the right rail)
-        double offsetX = marker.dirZ() * 0.4;
-        double offsetZ = -marker.dirX() * 0.4;
-
-        // Center of the offset rail position
-        double cx = marker.x() + 0.5 + offsetX;
+        // Center arrow in the right-half box (same offset as the box)
+        double rx = -marker.dirZ();  // right perpendicular
+        double rz = marker.dirX();
+        double cx = marker.x() + 0.5 + rx * 0.25;
         double cy = marker.y() + 0.5;
-        double cz = marker.z() + 0.5 + offsetZ;
+        double cz = marker.z() + 0.5 + rz * 0.25;
 
         // Direction vector (already normalized)
         float dx = marker.dirX();
         float dz = marker.dirZ();
 
-        // Perpendicular vector (rotated 90°)
+        // Perpendicular vector — right side in Minecraft: (-dz, dx)
         float px = -dz;
         float pz = dx;
 
-        // Arrow geometry — scaled to fit inside the box
-        double shaftLen = 0.38;   // half-length of the shaft
-        double headLen = 0.15;    // arrowhead barb length
-        double headWidth = 0.14;  // arrowhead barb spread
-        double tailWidth = 0.12;  // tail cross-bar half-width
+        // Arrow geometry — scaled to fit inside the half-block box
+        double shaftLen = 0.32;   // half-length of the shaft
+        double headLen = 0.13;    // arrowhead barb length
+        double headWidth = 0.10;  // arrowhead barb spread
+        double tailWidth = 0.08;  // tail cross-bar half-width
 
         // Shaft endpoints
         double tailX = cx - dx * shaftLen;
