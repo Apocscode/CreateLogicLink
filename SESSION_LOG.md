@@ -1037,3 +1037,21 @@ User identified fundamental flaw in Check 1: it was suggesting signal placements
 
 ### Files Changed
 - `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java`
+
+---
+
+## Session 9i — 2026-02-21 — Thicker Highlight Outlines + Chain Signal Color Fix
+
+### Commits
+- `93e08d6` — Thicker highlight box outlines + fix chain signal color (was green, now cyan)
+
+### Summary
+Two visual fixes for the Signal Tablet highlight system:
+
+1. **Thicker highlight box outlines** — `RenderSystem.lineWidth()` is capped at 1.0 on most modern GPUs (OpenGL spec allows implementations to only support width 1.0). The existing `lineWidth(5.0f)` call had no visible effect. Fixed by rendering each box 7 times with slight offsets (±0.005, ±0.01, ±0.015) creating a visually thick outline that works on all hardware. Both outer and inner boxes are thickened.
+
+2. **Chain signal suggestions showing green instead of cyan** — Check 1 (JUNCTION_UNSIGNALED) was setting `signalType = "signal"` which renders green, but the description text said "Consider adding **chain** signals." Changed to `signalType = "chain"` so junction suggestions correctly render in cyan. Updated suggestion text to "check if chain signals needed."
+
+### Files Changed
+- `src/main/java/com/apocscode/logiclink/client/SignalGhostRenderer.java` — Multi-pass offset rendering for thick outlines; fixed `y1` reference in conflict cross pattern
+- `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java` — Changed Check 1 junction `signalType` from `"signal"` to `"chain"`
