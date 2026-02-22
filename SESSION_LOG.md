@@ -1143,3 +1143,20 @@ Signal highlight boxes now render on the **right side** of the track instead of 
 
 ### Files Changed
 - `src/main/java/com/apocscode/logiclink/client/SignalGhostRenderer.java` — Added right-side offset to outer box, inner box, conflict cross, and direction arrow rendering using perpendicular of track direction
+
+---
+
+## Session 9n — 2026-02-22 — Fix Signal Highlight to Wrap Right Rail
+
+### Commits
+- `f028b45` — Fix signal highlight to wrap right rail within track block
+
+### Summary
+Corrected the signal highlight box positioning. The previous 1-block offset moved the box entirely off the track. Create tracks have two rails within a single block — the right rail is ~0.4 blocks from center. The box now wraps the right rail specifically:
+
+- **Offset**: Reduced from 1.0 to 0.4 blocks (centers on the right rail within the track block)
+- **Box size**: Shrunk from 1.0 to 0.6 blocks wide to wrap just the rail, not the whole block
+- **Arrow**: Repositioned to match the 0.4-block rail offset
+
+### Files Changed
+- `src/main/java/com/apocscode/logiclink/client/SignalGhostRenderer.java` — Adjusted right-rail offset, box size, inner box, conflict cross, and arrow positioning
