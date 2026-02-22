@@ -1128,3 +1128,18 @@ Overhauled the train alert system to provide specific diagnoses and actionable s
 - `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java` — Schedule runtime reflection fields, enhanced readTrains() data collection, differentiated Check 2 diagnostics with cause/detail, station name cross-referencing
 - `src/main/java/com/apocscode/logiclink/client/TrainMonitorScreen.java` — PAUSED/DONE/STUCK train list status, multi-line alert rendering, enhanced gatherAlerts() with all diagnostic types, detail text display
 - `src/main/java/com/apocscode/logiclink/client/SignalTabletScreen.java` — Icons for TRAIN_PAUSED/SCHEDULE_DONE, detail text rendering, expanded train name display for new types
+
+---
+
+## Session 9m — 2026-02-22 — Offset Signal Highlight Boxes to Right Side of Track
+
+### Commits
+- `a7213f3` — Offset signal highlight boxes to right side of track for correct placement
+
+### Summary
+Signal highlight boxes now render on the **right side** of the track instead of centered on the track. In Create mod, signals must be placed on the right side of the track relative to the direction of travel. The highlight box was previously on the track centerline, making it unclear where to actually place the signal.
+
+**Offset calculation**: For a direction vector `(dx, dz)`, the right-side perpendicular is computed as a 90° clockwise rotation: `(dz, -dx)`. The box, inner box, conflict cross pattern, and direction arrow are all offset by 1 block along this perpendicular. Markers without direction data remain centered (no offset).
+
+### Files Changed
+- `src/main/java/com/apocscode/logiclink/client/SignalGhostRenderer.java` — Added right-side offset to outer box, inner box, conflict cross, and direction arrow rendering using perpendicular of track direction
