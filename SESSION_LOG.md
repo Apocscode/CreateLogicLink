@@ -1094,3 +1094,37 @@ Fixed signal chain suggestions having no direction arrows and being placed at th
 
 ### Files Changed
 - `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java` — Per-branch suggestions with direction vectors for Check 1 and Check 2; direction fallback for Check 3
+
+---
+
+## Session 9l — 2026-02-22 — Enhanced Train Alerts with Detailed Diagnostics
+
+### Commits
+- `079c925` — Enhanced train alerts with detailed diagnostics, causes, and suggestions
+
+### Summary
+Overhauled the train alert system to provide specific diagnoses and actionable suggestions instead of generic "NO PATH" messages.
+
+**Schedule state reflection**: Added reflection into Create's `ScheduleRuntime` to read `paused`, `completed`, `state`, `currentTitle`, `currentEntry` fields, plus `Schedule.entries` and `cyclic`. This allows differentiating why a train is idle.
+
+**Differentiated Check 2 diagnostics**: Instead of a single "NO_PATH" type for all stuck trains, now produces three distinct types:
+- `TRAIN_PAUSED` (INFO) — Schedule manually paused, shows current step info
+- `SCHEDULE_DONE` (INFO) — Non-cyclic schedule completed all entries
+- `NO_PATH` (CRIT) — True stuck train with detailed cause analysis:
+  - Cross-references schedule title against known station names to detect missing destinations
+  - Checks nearest junction's signal coverage and reports unsignaled/partially-signaled status
+  - Includes actionable fix suggestions in a `detail` field
+
+**Train list status**: The TRAINS tab now shows specific status labels instead of generic "idle":
+- `PAUSED` (light blue) — schedule paused
+- `DONE` (light green) — non-cyclic schedule finished
+- `STUCK` (red) — has schedule but can't navigate
+
+**Multi-line alerts**: The ALERTS tab now renders two-line entries — main message on line 1, cause/suggestion detail on line 2 in a dimmer color. All alert types include helpful detail text (e.g., "Train left the tracks — right-click with wrench to re-rail").
+
+**Signal Tablet**: Added icons for new types (pause/check symbols) and renders `detail` text from diagnostics.
+
+### Files Changed
+- `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java` — Schedule runtime reflection fields, enhanced readTrains() data collection, differentiated Check 2 diagnostics with cause/detail, station name cross-referencing
+- `src/main/java/com/apocscode/logiclink/client/TrainMonitorScreen.java` — PAUSED/DONE/STUCK train list status, multi-line alert rendering, enhanced gatherAlerts() with all diagnostic types, detail text display
+- `src/main/java/com/apocscode/logiclink/client/SignalTabletScreen.java` — Icons for TRAIN_PAUSED/SCHEDULE_DONE, detail text rendering, expanded train name display for new types
