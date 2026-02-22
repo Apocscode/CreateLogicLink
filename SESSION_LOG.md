@@ -1073,3 +1073,24 @@ Fixed the stations tab showing all stations as "Empty" with no train names, and 
 ### Files Changed
 - `src/main/java/com/apocscode/logiclink/client/TrainMonitorScreen.java` — Fixed `trainPresent`/`trainImminent` from `getBoolean()` to `contains()` + `getString()`; read train name from correct keys
 - `src/main/java/com/apocscode/logiclink/block/TrainMonitorBlockEntity.java` — Changed `refreshTimer` init to 59, `mapRefreshTimer` init to 599 for immediate first refresh
+
+---
+
+## Session 9k — 2026-02-22 — Fix Chain Signal Direction Arrows & Branch Placement
+
+### Commits
+- `fa8ebd6` — Fix chain signal suggestions: per-branch placement with direction arrows pointing toward junction
+
+### Summary
+Fixed signal chain suggestions having no direction arrows and being placed at the junction center instead of on individual track branches.
+
+**Bug 1 — No direction arrow on chain suggestions**: Check 1 (JUNCTION_UNSIGNALED) created a single suggestion at the junction node position without setting `sdx`/`sdz` direction fields. The `SignalGhostRenderer` only draws direction arrows when `hasDirection()` returns true (both fields non-zero). Fixed: now generates a **separate suggestion per branch** with direction vectors computed from node positions, pointing toward the junction (entry direction).
+
+**Bug 2 — Suggestion at wrong position**: The suggestion was placed at the exact junction node coordinate — useless because Create signals can't be placed at junction nodes. Fixed: each branch suggestion is now offset **5 blocks** (or 40% of branch length, whichever is shorter) away from the junction along the branch, where a signal could actually be placed.
+
+**Bug 3 — Check 2 (NO_PATH) also had no direction**: Stuck-train suggestions pointed to the nearest junction but with no direction data. Fixed: now generates per-branch suggestions for the nearest junction, same as Check 1.
+
+**Bug 4 — Check 3 (SIGNAL_CONFLICT) fallback direction**: When existing signal data lacked `dirX`/`dirZ`, the conflict highlight had no arrow. Added fallback: compute direction from edge node positions (A→B).
+
+### Files Changed
+- `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java` — Per-branch suggestions with direction vectors for Check 1 and Check 2; direction fallback for Check 3
