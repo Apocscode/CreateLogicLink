@@ -989,15 +989,46 @@ public class TrainNetworkDataReader {
             diag.putInt("branches", branches.size());
             diag.putInt("unsignaled", branches.size());
 
-            // Single suggestion: the junction location itself (so user can navigate to it)
+            // Per-branch suggestions: place chain signal on each branch,
+            // offset a few blocks away from the junction toward the neighbor node.
+            // Direction arrow points from the branch TOWARD the junction (entry direction).
             ListTag suggestions = new ListTag();
-            CompoundTag juncSug = new CompoundTag();
-            juncSug.putInt("sx", Math.round(jx));
-            juncSug.putInt("sy", Math.round(jy));
-            juncSug.putInt("sz", Math.round(jz));
-            juncSug.putString("signalType", "chain");
-            juncSug.putString("dir", "Unsignaled junction — check if chain signals needed");
-            suggestions.add(juncSug);
+            for (int[] branch : branches) {
+                int neighborId = branch[0];
+                if (neighborId >= nodes.size()) continue;
+                CompoundTag neighborNode = nodes.getCompound(neighborId);
+                float nx = neighborNode.getFloat("x");
+                float ny = neighborNode.getFloat("y");
+                float nz = neighborNode.getFloat("z");
+
+                // Direction from neighbor toward junction (entry direction for the arrow)
+                float ddx = jx - nx;
+                float ddy = jy - ny;
+                float ddz = jz - nz;
+                float dist = (float) Math.sqrt(ddx * ddx + ddy * ddy + ddz * ddz);
+                if (dist < 0.01f) continue;
+                float ndx = ddx / dist; // normalized direction toward junction
+                float ndz = ddz / dist;
+
+                // Place suggestion a few blocks from the junction along this branch
+                // (offset outward so the signal isn't right on top of the junction)
+                float offset = Math.min(5.0f, dist * 0.4f); // 5 blocks or 40% of branch length
+                float sugX = jx - ndx * offset;
+                float sugY = jy - (ddy / dist) * offset;
+                float sugZ = jz - ndz * offset;
+
+                CompoundTag branchSug = new CompoundTag();
+                branchSug.putInt("sx", Math.round(sugX));
+                branchSug.putInt("sy", Math.round(sugY));
+                branchSug.putInt("sz", Math.round(sugZ));
+                branchSug.putString("signalType", "chain");
+                // Arrow points toward junction (entry direction)
+                branchSug.putFloat("sdx", ndx);
+                branchSug.putFloat("sdz", ndz);
+                String cardinal = getCardinalDir(ndx, ndz);
+                branchSug.putString("dir", "Place chain signal — entry from " + cardinal);
+                suggestions.add(branchSug);
+            }
             diag.put("suggestions", suggestions);
 
             diag.putString("desc", branches.size() + "-way junction with no signals on any branch. "
@@ -1054,14 +1085,50 @@ public class TrainNetworkDataReader {
                     }
                     if (bestJunction >= 0 && bestDist < 10000) { // within ~100 blocks
                         CompoundTag jNode = nodes.getCompound(bestJunction);
+                        float jjx = jNode.getFloat("x");
+                        float jjy = jNode.getFloat("y");
+                        float jjz = jNode.getFloat("z");
+
+                        // Generate per-branch suggestions for this junction too
+                        List<int[]> jBranches = adjacency.get(bestJunction);
                         ListTag sug = new ListTag();
-                        CompoundTag s = new CompoundTag();
-                        s.putInt("sx", (int) jNode.getFloat("x"));
-                        s.putInt("sy", (int) jNode.getFloat("y"));
-                        s.putInt("sz", (int) jNode.getFloat("z"));
-                        s.putString("signalType", "chain");
-                        s.putString("dir", "Check junction signals");
-                        sug.add(s);
+                        if (jBranches != null) {
+                            for (int[] br : jBranches) {
+                                int nId = br[0];
+                                if (nId >= nodes.size()) continue;
+                                CompoundTag nNode = nodes.getCompound(nId);
+                                float nnx = nNode.getFloat("x");
+                                float nny = nNode.getFloat("y");
+                                float nnz = nNode.getFloat("z");
+                                float ddx2 = jjx - nnx;
+                                float ddy2 = jjy - nny;
+                                float ddz2 = jjz - nnz;
+                                float d2 = (float) Math.sqrt(ddx2 * ddx2 + ddy2 * ddy2 + ddz2 * ddz2);
+                                if (d2 < 0.01f) continue;
+                                float bndx = ddx2 / d2;
+                                float bndz = ddz2 / d2;
+                                float boff = Math.min(5.0f, d2 * 0.4f);
+                                CompoundTag s = new CompoundTag();
+                                s.putInt("sx", Math.round(jjx - bndx * boff));
+                                s.putInt("sy", Math.round(jjy - (ddy2 / d2) * boff));
+                                s.putInt("sz", Math.round(jjz - bndz * boff));
+                                s.putString("signalType", "chain");
+                                s.putFloat("sdx", bndx);
+                                s.putFloat("sdz", bndz);
+                                s.putString("dir", "Check junction signals — entry from " + getCardinalDir(bndx, bndz));
+                                sug.add(s);
+                            }
+                        }
+                        if (sug.isEmpty()) {
+                            // Fallback: just the junction position
+                            CompoundTag s = new CompoundTag();
+                            s.putInt("sx", (int) jjx);
+                            s.putInt("sy", (int) jjy);
+                            s.putInt("sz", (int) jjz);
+                            s.putString("signalType", "chain");
+                            s.putString("dir", "Check junction signals");
+                            sug.add(s);
+                        }
                         diag.put("suggestions", sug);
                     }
                 }
@@ -1164,6 +1231,17 @@ public class TrainNetworkDataReader {
                 if (sig.contains("dirX") && sig.contains("dirZ")) {
                     conflictSug.putFloat("sdx", sig.getFloat("dirX"));
                     conflictSug.putFloat("sdz", sig.getFloat("dirZ"));
+                } else if (edgeA < nodes.size() && edgeB < nodes.size()) {
+                    // Fallback: compute direction from edge node positions
+                    CompoundTag nodeA = nodes.getCompound(edgeA);
+                    CompoundTag nodeB = nodes.getCompound(edgeB);
+                    float fdx = nodeB.getFloat("x") - nodeA.getFloat("x");
+                    float fdz = nodeB.getFloat("z") - nodeA.getFloat("z");
+                    float flen = (float) Math.sqrt(fdx * fdx + fdz * fdz);
+                    if (flen > 0.01f) {
+                        conflictSug.putFloat("sdx", fdx / flen);
+                        conflictSug.putFloat("sdz", fdz / flen);
+                    }
                 }
 
                 // Determine what the correct type should be
