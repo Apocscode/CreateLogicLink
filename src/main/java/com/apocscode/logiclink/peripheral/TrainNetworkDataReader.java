@@ -116,6 +116,13 @@ public class TrainNetworkDataReader {
     private static Method trainGetPositionInDimMethod;
     private static Field trainRuntimeField;
     private static Method runtimeGetScheduleMethod;
+    private static Field runtimePausedField;
+    private static Field runtimeCompletedField;
+    private static Field runtimeCurrentEntryField;
+    private static Field runtimeCurrentTitleField;
+    private static Field runtimeStateField;
+    private static Field scheduleEntriesField;
+    private static Field scheduleCyclicField;
 
     // Navigation
     private static Field navDestinationField;
@@ -284,18 +291,22 @@ public class TrainNetworkDataReader {
             result.putInt("issueCount", diags.size());
 
             // Count by type
-            int junctionCount = 0, noPathCount = 0, conflictCount = 0;
+            int junctionCount = 0, noPathCount = 0, conflictCount = 0, pausedCount = 0, doneCount = 0;
             for (int i = 0; i < diags.size(); i++) {
                 String type = diags.getCompound(i).getString("type");
                 switch (type) {
                     case "JUNCTION_UNSIGNALED" -> junctionCount++;
                     case "NO_PATH" -> noPathCount++;
                     case "SIGNAL_CONFLICT" -> conflictCount++;
+                    case "TRAIN_PAUSED" -> pausedCount++;
+                    case "SCHEDULE_DONE" -> doneCount++;
                 }
             }
             result.putInt("junctionCount", junctionCount);
             result.putInt("noPathCount", noPathCount);
             result.putInt("conflictCount", conflictCount);
+            result.putInt("pausedCount", pausedCount);
+            result.putInt("doneCount", doneCount);
         } else {
             result.putInt("issueCount", 0);
         }
@@ -821,12 +832,32 @@ public class TrainNetworkDataReader {
                         }
                     } catch (Exception ignored) {}
 
-                    // Schedule info (for no-path detection)
+                    // Schedule info (for detailed diagnostics)
                     try {
                         Object runtime = trainRuntimeField.get(train);
                         if (runtime != null) {
                             Object schedule = runtimeGetScheduleMethod.invoke(runtime);
                             tag.putBoolean("hasSchedule", schedule != null);
+
+                            if (schedule != null) {
+                                try {
+                                    tag.putBoolean("schedulePaused", runtimePausedField.getBoolean(runtime));
+                                    tag.putBoolean("scheduleCompleted", runtimeCompletedField.getBoolean(runtime));
+                                    tag.putInt("scheduleEntry", runtimeCurrentEntryField.getInt(runtime));
+
+                                    Object state = runtimeStateField.get(runtime);
+                                    if (state != null) tag.putString("scheduleState", state.toString().toLowerCase());
+
+                                    String title = (String) runtimeCurrentTitleField.get(runtime);
+                                    if (title != null && !title.isEmpty()) tag.putString("scheduleTitle", title);
+
+                                    List<?> entries = (List<?>) scheduleEntriesField.get(schedule);
+                                    if (entries != null) {
+                                        tag.putInt("scheduleEntryCount", entries.size());
+                                        tag.putBoolean("scheduleCyclic", scheduleCyclicField.getBoolean(schedule));
+                                    }
+                                } catch (Exception ignored2) {}
+                            }
                         }
                     } catch (Exception ignored) {}
 
@@ -1038,7 +1069,15 @@ public class TrainNetworkDataReader {
             diagnostics.add(diag);
         }
 
-        // === Check 2: Trains stuck without navigation (no-path heuristic) ===
+        // === Check 2: Trains stuck without navigation (detailed diagnostics) ===
+        // Build set of known station names for destination cross-referencing
+        Set<String> knownStationNames = new HashSet<>();
+        ListTag stationsList = mapData.contains("Stations") ? mapData.getList("Stations", 10) : new ListTag();
+        for (int i = 0; i < stationsList.size(); i++) {
+            String sn = stationsList.getCompound(i).getString("name");
+            if (sn != null && !sn.isEmpty()) knownStationNames.add(sn);
+        }
+
         for (int i = 0; i < trains.size(); i++) {
             CompoundTag train = trains.getCompound(i);
             if (train.getBoolean("derailed")) continue;
@@ -1048,23 +1087,74 @@ public class TrainNetworkDataReader {
             boolean navigating = train.getBoolean("navigating");
             boolean atStation = train.contains("currentStation");
 
-            // Stuck = has schedule, not moving, not navigating, not at station
-            if (speed < 0.01 && !navigating && !atStation) {
-                CompoundTag diag = new CompoundTag();
+            // Skip trains that are moving, actively navigating, or parked at a station
+            if (speed > 0.01 || navigating || atStation) continue;
+
+            // Train has schedule, not moving, not navigating, not at station — diagnose why
+            String trainName = train.getString("name");
+            boolean paused = train.getBoolean("schedulePaused");
+            boolean completed = train.getBoolean("scheduleCompleted");
+            String schedState = train.contains("scheduleState") ? train.getString("scheduleState") : "";
+            String schedTitle = train.contains("scheduleTitle") ? train.getString("scheduleTitle") : "";
+            int schedEntry = train.getInt("scheduleEntry");
+            int schedEntryCount = train.contains("scheduleEntryCount") ? train.getInt("scheduleEntryCount") : 0;
+            boolean cyclic = train.getBoolean("scheduleCyclic");
+
+            CompoundTag diag = new CompoundTag();
+            diag.putString("trainName", trainName);
+            if (train.contains("x")) {
+                diag.putFloat("x", train.getFloat("x"));
+                diag.putFloat("y", train.contains("y") ? train.getFloat("y") : 0);
+                diag.putFloat("z", train.getFloat("z"));
+            }
+
+            // Differentiate the cause
+            if (paused) {
+                // Schedule manually paused — informational, not an error
+                diag.putString("type", "TRAIN_PAUSED");
+                diag.putString("severity", "INFO");
+                String stepInfo = schedEntryCount > 0
+                        ? " (step " + (schedEntry + 1) + "/" + schedEntryCount + ")"
+                        : "";
+                diag.putString("desc", "Schedule paused" + stepInfo);
+                diag.putString("detail", !schedTitle.isEmpty()
+                        ? "Current step: " + schedTitle
+                        : "Resume schedule to continue operation");
+            } else if (completed && !cyclic) {
+                // Non-cyclic schedule finished — informational
+                diag.putString("type", "SCHEDULE_DONE");
+                diag.putString("severity", "INFO");
+                diag.putString("desc", "Schedule completed (non-cyclic, " + schedEntryCount + " steps)");
+                diag.putString("detail", "Set schedule to cyclic or assign a new schedule");
+            } else {
+                // True stuck train — try to determine why
                 diag.putString("type", "NO_PATH");
                 diag.putString("severity", "CRIT");
-                diag.putString("trainName", train.getString("name"));
 
-                if (train.contains("x")) {
-                    diag.putFloat("x", train.getFloat("x"));
-                    diag.putFloat("y", train.contains("y") ? train.getFloat("y") : 0);
-                    diag.putFloat("z", train.getFloat("z"));
+                // Build a detailed cause description
+                StringBuilder cause = new StringBuilder();
+                StringBuilder detail = new StringBuilder();
+
+                // Check if the train's schedule title hints at a destination
+                if (!schedTitle.isEmpty()) {
+                    cause.append("Stuck at step: ").append(schedTitle);
+                    // Check if the destination station exists
+                    // schedTitle often looks like "Travel to StationName" or just the station name
+                    boolean destFound = false;
+                    for (String sName : knownStationNames) {
+                        if (schedTitle.contains(sName)) {
+                            destFound = true;
+                            break;
+                        }
+                    }
+                    if (!destFound && !knownStationNames.isEmpty()) {
+                        detail.append("Destination may not exist — check station name spelling");
+                    }
+                } else {
+                    cause.append("No navigation path found");
                 }
 
-                diag.putString("desc", "Train '" + train.getString("name")
-                        + "' stuck (has schedule, no navigation, not at station)");
-
-                // Suggest: check nearest junction for signal issues
+                // Check if nearest junction has signal issues
                 if (train.contains("x")) {
                     float tx = train.getFloat("x");
                     float tz = train.getFloat("z");
@@ -1088,8 +1178,29 @@ public class TrainNetworkDataReader {
                         float jjx = jNode.getFloat("x");
                         float jjy = jNode.getFloat("y");
                         float jjz = jNode.getFloat("z");
+                        int jBranchCount = adjacency.get(bestJunction).size();
 
-                        // Generate per-branch suggestions for this junction too
+                        // Check if this junction has signals
+                        int jId2 = bestJunction;
+                        int jSigCount = 0;
+                        for (int[] br : adjacency.get(jId2)) {
+                            String ek = Math.min(jId2, br[0]) + ":" + Math.max(jId2, br[0]);
+                            if (signaledEdges.contains(ek)) jSigCount++;
+                        }
+
+                        if (jSigCount == 0) {
+                            if (detail.length() > 0) detail.append("; ");
+                            detail.append("Nearest junction (").append(jBranchCount)
+                                  .append("-way @ ").append((int) jjx).append(",").append((int) jjz)
+                                  .append(") has NO signals — add chain signals");
+                        } else if (jSigCount < jBranchCount) {
+                            if (detail.length() > 0) detail.append("; ");
+                            detail.append("Nearest junction @ ").append((int) jjx).append(",").append((int) jjz)
+                                  .append(" has ").append(jSigCount).append("/").append(jBranchCount)
+                                  .append(" signaled branches — check coverage");
+                        }
+
+                        // Generate per-branch suggestions for this junction
                         List<int[]> jBranches = adjacency.get(bestJunction);
                         ListTag sug = new ListTag();
                         if (jBranches != null) {
@@ -1115,12 +1226,11 @@ public class TrainNetworkDataReader {
                                 s.putString("signalType", "chain");
                                 s.putFloat("sdx", bndx);
                                 s.putFloat("sdz", bndz);
-                                s.putString("dir", "Check junction signals — entry from " + getCardinalDir(bndx, bndz));
+                                s.putString("dir", "Check junction signals \u2014 entry from " + getCardinalDir(bndx, bndz));
                                 sug.add(s);
                             }
                         }
                         if (sug.isEmpty()) {
-                            // Fallback: just the junction position
                             CompoundTag s = new CompoundTag();
                             s.putInt("sx", (int) jjx);
                             s.putInt("sy", (int) jjy);
@@ -1133,8 +1243,16 @@ public class TrainNetworkDataReader {
                     }
                 }
 
-                diagnostics.add(diag);
+                // Fallback detail if nothing specific found
+                if (detail.length() == 0) {
+                    detail.append("Check track connections, signal placement, and station name spelling");
+                }
+
+                diag.putString("desc", cause.toString());
+                diag.putString("detail", detail.toString());
             }
+
+            diagnostics.add(diag);
         }
 
         // === Check 3: Existing signals with wrong type (conflict/improper) ===
@@ -1418,10 +1536,20 @@ public class TrainNetworkDataReader {
             trainGraphField = trainClass.getDeclaredField("graph");
             trainGraphField.setAccessible(true);
 
-            // ScheduleRuntime — for no-path detection
+            // ScheduleRuntime — for detailed train status diagnostics
             trainRuntimeField = trainClass.getField("runtime");
             Class<?> runtimeClass = Class.forName("com.simibubi.create.content.trains.schedule.ScheduleRuntime");
             runtimeGetScheduleMethod = runtimeClass.getMethod("getSchedule");
+            runtimePausedField = runtimeClass.getField("paused");
+            runtimeCompletedField = runtimeClass.getField("completed");
+            runtimeCurrentEntryField = runtimeClass.getField("currentEntry");
+            runtimeCurrentTitleField = runtimeClass.getField("currentTitle");
+            runtimeStateField = runtimeClass.getField("state");
+
+            Class<?> scheduleClass = Class.forName(
+                    "com.simibubi.create.content.trains.schedule.Schedule");
+            scheduleEntriesField = scheduleClass.getField("entries");
+            scheduleCyclicField = scheduleClass.getField("cyclic");
 
             try {
                 trainOccupiedSignalBlocksField = trainClass.getField("occupiedSignalBlocks");

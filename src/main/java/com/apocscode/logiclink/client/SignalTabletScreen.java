@@ -280,6 +280,8 @@ public class SignalTabletScreen extends Screen {
                 case "JUNCTION_UNSIGNALED" -> "\u26A0";
                 case "NO_PATH" -> "\u2716";
                 case "SIGNAL_CONFLICT" -> "\u2B55";
+                case "TRAIN_PAUSED" -> "\u23F8";
+                case "SCHEDULE_DONE" -> "\u2713";
                 default -> "?";
             };
             gfx.drawString(font, icon + " [" + severity + "] " + type, col1, ey + 2, sevColor, false);
@@ -329,9 +331,24 @@ public class SignalTabletScreen extends Screen {
                 if (btnX + 60 > x + w - margin) break; // prevent overflow
             }
 
-            // Train name for NO_PATH
-            if (type.equals("NO_PATH") && diag.contains("trainName") && entry.sugCoords.isEmpty()) {
+            // Train name for train-related diagnostics
+            if ((type.equals("NO_PATH") || type.equals("TRAIN_PAUSED") || type.equals("SCHEDULE_DONE"))
+                    && diag.contains("trainName") && entry.sugCoords.isEmpty()) {
                 gfx.drawString(font, "Train: " + diag.getString("trainName"), col1, ey + 34, YELLOW, false);
+            }
+
+            // Detail/suggestion text
+            if (diag.contains("detail")) {
+                String detailText = "\u2192 " + diag.getString("detail");
+                int maxDetailW = w - margin * 2 - 12;
+                if (font.width(detailText) > maxDetailW) {
+                    while (font.width(detailText + "..") > maxDetailW && detailText.length() > 4)
+                        detailText = detailText.substring(0, detailText.length() - 1);
+                    detailText += "..";
+                }
+                int detailY = entry.sugCoords.isEmpty() ? ey + 34 : ey + 46;
+                if (diag.contains("trainName") && entry.sugCoords.isEmpty()) detailY = ey + 45;
+                gfx.drawString(font, detailText, col1, detailY, 0xFF8888AA, false);
             }
 
             gfx.fill(x + margin, ey + entryH - 2, x + w - margin, ey + entryH - 1, SEPARATOR);

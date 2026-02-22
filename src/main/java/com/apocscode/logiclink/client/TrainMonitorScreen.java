@@ -387,6 +387,15 @@ public class TrainMonitorScreen extends AbstractContainerScreen<TrainMonitorMenu
                 String dest = train.getString("destination");
                 status = "\u2192 " + (dest.length() > 10 ? dest.substring(0, 8) + ".." : dest);
                 statusColor = YELLOW;
+            } else if (train.getBoolean("schedulePaused")) {
+                status = "PAUSED";
+                statusColor = 0xFFAAAAFF; // light blue
+            } else if (train.getBoolean("scheduleCompleted") && !train.getBoolean("scheduleCyclic")) {
+                status = "DONE";
+                statusColor = 0xFF88CC88; // light green
+            } else if (train.getBoolean("hasSchedule")) {
+                status = "STUCK";
+                statusColor = RED;
             } else {
                 status = "idle";
                 statusColor = GRAY;
@@ -629,6 +638,7 @@ public class TrainMonitorScreen extends AbstractContainerScreen<TrainMonitorMenu
 
             String severity = alert[0]; // "CRIT", "WARN", "INFO"
             String message = alert[1];
+            String detail = alert.length > 2 ? alert[2] : null;
 
             int sevColor;
             int bgColor;
@@ -638,11 +648,29 @@ public class TrainMonitorScreen extends AbstractContainerScreen<TrainMonitorMenu
                 default     -> { sevColor = HEADER_COLOR; bgColor = PANEL_BG; }
             }
 
-            gfx.fill(x + margin, lineY - 1, x + w - margin, lineY + 10, bgColor);
+            // Calculate entry height (1 or 2 lines)
+            int entryH = (detail != null && !detail.isEmpty()) ? 22 : 12;
+            if (lineY + entryH > y + h - margin) break;
+
+            gfx.fill(x + margin, lineY - 1, x + w - margin, lineY + entryH - 1, bgColor);
             gfx.drawString(font, "[" + severity + "]", x + margin + 2, lineY, sevColor, false);
             gfx.drawString(font, message, x + margin + 36, lineY, TEXT_COLOR, false);
 
-            lineY += 13;
+            // Detail/suggestion line
+            if (detail != null && !detail.isEmpty()) {
+                // Truncate if too long for the panel
+                int maxDetailW = w - margin * 2 - 42;
+                String displayDetail = "\u2192 " + detail;
+                if (font.width(displayDetail) > maxDetailW) {
+                    while (font.width(displayDetail + "..") > maxDetailW && displayDetail.length() > 4) {
+                        displayDetail = displayDetail.substring(0, displayDetail.length() - 1);
+                    }
+                    displayDetail += "..";
+                }
+                gfx.drawString(font, displayDetail, x + margin + 38, lineY + 10, 0xFF8888AA, false);
+            }
+
+            lineY += entryH + 2;
         }
     }
 
@@ -654,46 +682,74 @@ public class TrainMonitorScreen extends AbstractContainerScreen<TrainMonitorMenu
         for (CompoundTag train : trains) {
             if (train.getBoolean("derailed")) {
                 String name = train.getString("name");
-                alerts.add(new String[]{"CRIT", "DERAILED: " + name});
+                String loc = train.contains("x")
+                        ? " @ " + (int) train.getFloat("x") + "," + (int) train.getFloat("z")
+                        : "";
+                alerts.add(new String[]{"CRIT", "DERAILED: " + name + loc,
+                        "Train left the tracks \u2014 right-click with wrench to re-rail"});
             }
         }
 
-        // No-path and signal diagnostics from map analysis
+        // Diagnostics from map analysis
         CompoundTag mapData = monitorBE.getMapData();
         if (mapData != null && mapData.contains("Diagnostics")) {
             ListTag diags = mapData.getList("Diagnostics", 10);
             for (int i = 0; i < diags.size(); i++) {
                 CompoundTag d = diags.getCompound(i);
                 String type = d.getString("type");
-                if (type.equals("NO_PATH")) {
-                    String loc = d.contains("x")
-                            ? " @ " + (int) d.getFloat("x") + "," + (int) d.getFloat("z")
-                            : "";
-                    alerts.add(new String[]{"CRIT", "NO PATH: " + d.getString("trainName") + loc});
-                } else if (type.equals("SIGNAL_CONFLICT")) {
-                    String loc = d.contains("x")
-                            ? " @ " + (int) d.getFloat("x") + "," + (int) d.getFloat("z")
-                            : "";
-                    alerts.add(new String[]{d.getString("severity"), "CONFLICT: Wrong signal type" + loc});
-                } else if (d.getString("severity").equals("CRIT")) {
-                    alerts.add(new String[]{"WARN", "SIGNAL: " + d.getString("desc")});
+                String loc = d.contains("x")
+                        ? " @ " + (int) d.getFloat("x") + "," + (int) d.getFloat("z")
+                        : "";
+                String detail = d.contains("detail") ? d.getString("detail") : "";
+
+                switch (type) {
+                    case "NO_PATH" -> {
+                        String desc = d.contains("desc") ? d.getString("desc") : "No navigation path";
+                        alerts.add(new String[]{"CRIT",
+                                "STUCK: " + d.getString("trainName") + loc,
+                                desc + (detail.isEmpty() ? "" : " \u2014 " + detail)});
+                    }
+                    case "TRAIN_PAUSED" -> {
+                        alerts.add(new String[]{"INFO",
+                                "PAUSED: " + d.getString("trainName") + loc,
+                                d.getString("desc") + (detail.isEmpty() ? "" : " \u2014 " + detail)});
+                    }
+                    case "SCHEDULE_DONE" -> {
+                        alerts.add(new String[]{"INFO",
+                                "DONE: " + d.getString("trainName") + loc,
+                                d.getString("desc") + (detail.isEmpty() ? "" : " \u2014 " + detail)});
+                    }
+                    case "SIGNAL_CONFLICT" -> {
+                        alerts.add(new String[]{d.getString("severity"),
+                                "CONFLICT: Wrong signal type" + loc,
+                                d.getString("desc")});
+                    }
+                    case "JUNCTION_UNSIGNALED" -> {
+                        int branches = d.getInt("branches");
+                        alerts.add(new String[]{"WARN",
+                                "UNSIGNALED: " + branches + "-way junction" + loc,
+                                d.getString("desc")});
+                    }
                 }
             }
         }
 
         // No trains
         if (monitorBE.getTrainCount() == 0 && trains.isEmpty()) {
-            alerts.add(new String[]{"WARN", "No trains detected on network"});
+            alerts.add(new String[]{"WARN", "No trains detected on network",
+                    "Assemble a train on a station to begin"});
         }
 
         // No stations
         if (monitorBE.getStationCount() == 0) {
-            alerts.add(new String[]{"WARN", "No stations found"});
+            alerts.add(new String[]{"WARN", "No stations found",
+                    "Place and name track stations for train routing"});
         }
 
         // No map data
         if (mapData == null || mapData.isEmpty()) {
-            alerts.add(new String[]{"INFO", "Network topology scan pending"});
+            alerts.add(new String[]{"INFO", "Network topology scan pending",
+                    "Waiting for initial network scan (up to 30 seconds)"});
         }
 
         return alerts;
@@ -708,7 +764,10 @@ public class TrainMonitorScreen extends AbstractContainerScreen<TrainMonitorMenu
             ListTag diags = mapData.getList("Diagnostics", 10);
             for (int i = 0; i < diags.size(); i++) {
                 String type = diags.getCompound(i).getString("type");
-                if (type.equals("NO_PATH") || type.equals("SIGNAL_CONFLICT")) count++;
+                switch (type) {
+                    case "NO_PATH", "SIGNAL_CONFLICT", "TRAIN_PAUSED",
+                         "SCHEDULE_DONE", "JUNCTION_UNSIGNALED" -> count++;
+                }
             }
         }
         return count;
