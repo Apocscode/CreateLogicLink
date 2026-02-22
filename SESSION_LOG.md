@@ -1055,3 +1055,21 @@ Two visual fixes for the Signal Tablet highlight system:
 ### Files Changed
 - `src/main/java/com/apocscode/logiclink/client/SignalGhostRenderer.java` — Multi-pass offset rendering for thick outlines; fixed `y1` reference in conflict cross pattern
 - `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java` — Changed Check 1 junction `signalType` from `"signal"` to `"chain"`
+
+---
+
+## Session 9j — 2026-02-21 — Fix Stations Tab Empty + Initial Data Delay
+
+### Commits
+- `7074e29` — Fix stations tab: trainPresent/trainImminent read as boolean instead of string, fix initial data delay
+
+### Summary
+Fixed the stations tab showing all stations as "Empty" with no train names, and eliminated a 30-second delay before any data appears.
+
+**Bug 1 — All stations showing "Empty"**: `TrainNetworkDataReader.readAllStations()` stores `trainPresent` and `trainImminent` as **String** values (containing the train's name). But `TrainMonitorScreen.renderStationsTab()` was reading them with `getBoolean()` — which always returns `false` for String-typed NBT tags. Additionally, the screen checked for a `"trainName"` key that doesn't exist in the data. Fixed: now uses `contains("trainPresent")` to check presence, and reads the train name directly from the String value.
+
+**Bug 2 — 30-second initial delay**: `mapRefreshTimer` started at 0 and needed to reach 600 (30 seconds) before the first map/station data was fetched. During this time the stations tab showed "Scanning stations..." and the trains tab showed "No trains detected". Fixed: initialized both timers to `interval - 1` so the first refresh fires on the very next server tick.
+
+### Files Changed
+- `src/main/java/com/apocscode/logiclink/client/TrainMonitorScreen.java` — Fixed `trainPresent`/`trainImminent` from `getBoolean()` to `contains()` + `getString()`; read train name from correct keys
+- `src/main/java/com/apocscode/logiclink/block/TrainMonitorBlockEntity.java` — Changed `refreshTimer` init to 59, `mapRefreshTimer` init to 599 for immediate first refresh
