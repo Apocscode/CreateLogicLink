@@ -61,8 +61,12 @@ public class SignalGhostRenderer {
         float pulse = (float) (Math.sin(now * 0.004) * 0.15 + 0.35);
 
         MultiBufferSource.BufferSource bufferSource = mc.renderBuffers().bufferSource();
-        RenderSystem.lineWidth(5.0f);
+        RenderSystem.lineWidth(6.0f);
         VertexConsumer lineConsumer = bufferSource.getBuffer(RenderType.lines());
+
+        // Offsets to render multiple passes for thick outlines
+        // (glLineWidth is capped at 1.0 on most modern GPUs)
+        double[] thicknessOffsets = { 0.0, 0.005, -0.005, 0.01, -0.01, 0.015, -0.015 };
 
         for (SignalHighlightManager.Marker marker : markers) {
             double distSq = cam.distanceToSqr(marker.x() + 0.5, marker.y() + 0.5, marker.z() + 0.5);
@@ -80,25 +84,30 @@ public class SignalGhostRenderer {
                     : (pulse * 0.6f + 0.4f);
 
             double pad = 0.05;
-            double x0 = marker.x() - pad, y0 = marker.y() - pad, z0 = marker.z() - pad;
-            double x1 = marker.x() + 1.0 + pad, y1 = marker.y() + 1.0 + pad, z1 = marker.z() + 1.0 + pad;
 
-            // Outer box
-            LevelRenderer.renderLineBox(poseStack, lineConsumer,
-                    x0, y0, z0, x1, y1, z1, r, g, b, a);
+            // Render outer box with multiple offset passes for thickness
+            for (double off : thicknessOffsets) {
+                double x0 = marker.x() - pad + off, y0 = marker.y() - pad + off, z0 = marker.z() - pad + off;
+                double x1 = marker.x() + 1.0 + pad - off, y1 = marker.y() + 1.0 + pad - off, z1 = marker.z() + 1.0 + pad - off;
+                LevelRenderer.renderLineBox(poseStack, lineConsumer,
+                        x0, y0, z0, x1, y1, z1, r, g, b, a);
+            }
 
-            // Inner box for visual weight
+            // Inner box for visual weight (also thickened)
             double inner = 0.15;
-            LevelRenderer.renderLineBox(poseStack, lineConsumer,
-                    marker.x() + inner, marker.y() + inner, marker.z() + inner,
-                    marker.x() + 1.0 - inner, marker.y() + 1.0 - inner, marker.z() + 1.0 - inner,
-                    r, g, b, a * 0.7f);
+            for (double off : thicknessOffsets) {
+                LevelRenderer.renderLineBox(poseStack, lineConsumer,
+                        marker.x() + inner + off, marker.y() + inner + off, marker.z() + inner + off,
+                        marker.x() + 1.0 - inner - off, marker.y() + 1.0 - inner - off, marker.z() + 1.0 - inner - off,
+                        r, g, b, a * 0.7f);
+            }
 
             // Cross pattern for conflicts
             if (marker.type() == SignalHighlightManager.TYPE_CONFLICT) {
+                double crossTop = marker.y() + 1.0 + pad;
                 LevelRenderer.renderLineBox(poseStack, lineConsumer,
-                        marker.x() + 0.25, y1 - 0.01, marker.z() + 0.25,
-                        marker.x() + 0.75, y1, marker.z() + 0.75,
+                        marker.x() + 0.25, crossTop - 0.01, marker.z() + 0.25,
+                        marker.x() + 0.75, crossTop, marker.z() + 0.75,
                         r, g, b, a);
             }
 

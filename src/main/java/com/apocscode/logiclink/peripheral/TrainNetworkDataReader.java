@@ -995,8 +995,8 @@ public class TrainNetworkDataReader {
             juncSug.putInt("sx", Math.round(jx));
             juncSug.putInt("sy", Math.round(jy));
             juncSug.putInt("sz", Math.round(jz));
-            juncSug.putString("signalType", "signal");
-            juncSug.putString("dir", "Unsignaled junction — check if signals needed");
+            juncSug.putString("signalType", "chain");
+            juncSug.putString("dir", "Unsignaled junction — check if chain signals needed");
             suggestions.add(juncSug);
             diag.put("suggestions", suggestions);
 
