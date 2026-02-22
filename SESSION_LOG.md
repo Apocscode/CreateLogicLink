@@ -1160,3 +1160,24 @@ Corrected the signal highlight box positioning. The previous 1-block offset move
 
 ### Files Changed
 - `src/main/java/com/apocscode/logiclink/client/SignalGhostRenderer.java` — Adjusted right-rail offset, box size, inner box, conflict cross, and arrow positioning
+
+---
+
+## Session 9o — 2026-02-22 — Fix Signal Highlight to Right Half of Track Block
+
+### Commits
+- `7fd9e11` — Fix signal highlight: right-half box within track block using correct perpendicular
+
+### Summary
+Corrected the signal highlight box to cover the **right half** of the track block relative to the arrow direction. Previous versions either offset the box to a neighboring block or used the wrong perpendicular direction.
+
+**Root cause**: The right perpendicular was computed as `(dz, -dx)` (LEFT side) instead of `(-dz, dx)` (RIGHT side in Minecraft's coordinate system). Verified:
+- North arrow `(0,-1)` → right = `(1,0)` = East half ✓
+- South arrow `(0,+1)` → right = `(-1,0)` = West half ✓
+
+**Box geometry**: The box stays within the same track block, offset 0.25 blocks from center to the right. It's 0.5 blocks wide (perpendicular to track) and 0.9 blocks long (along track), creating an elongated highlight over the right rail. Two opposite-direction markers on the same block highlight opposite halves — correct for bi-directional signal placement.
+
+**Arrow**: Centered in the right-half box, scaled down to fit the narrower space.
+
+### Files Changed
+- `src/main/java/com/apocscode/logiclink/client/SignalGhostRenderer.java` — Fixed perpendicular direction, half-block box geometry with directional elongation, repositioned arrow and cross pattern
