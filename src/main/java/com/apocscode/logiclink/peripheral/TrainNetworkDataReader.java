@@ -8,6 +8,7 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.world.level.Level;
+import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 
 import org.jetbrains.annotations.Nullable;
@@ -115,6 +116,9 @@ public class TrainNetworkDataReader {
     private static Field trainGraphField;
     private static Method trainGetPositionInDimMethod;
     private static Field trainRuntimeField;
+
+    // Carriage (for actual train length measurement)
+    private static Field carriageBogeySpacingField;  // int bogeySpacing
     private static Method runtimeGetScheduleMethod;
     private static Field runtimePausedField;
     private static Field runtimeCompletedField;
@@ -725,9 +729,30 @@ public class TrainNetworkDataReader {
                     boolean derailed = trainDerailedField.getBoolean(train);
                     tag.putBoolean("derailed", derailed);
 
-                    // Carriages
+                    // Carriages — compute actual train length from bogey spacing
                     List<?> carriages = (List<?>) trainCarriagesField.get(train);
-                    tag.putInt("carriages", carriages != null ? carriages.size() : 0);
+                    int carriageCount = carriages != null ? carriages.size() : 0;
+                    tag.putInt("carriages", carriageCount);
+
+                    // Measure actual train length from Carriage.bogeySpacing
+                    float trainLength = 0;
+                    if (carriages != null && carriageBogeySpacingField != null) {
+                        for (Object carriage : carriages) {
+                            try {
+                                int spacing = carriageBogeySpacingField.getInt(carriage);
+                                // Single-bogey carriages have spacing=0, occupy ~3 blocks
+                                trainLength += Math.max(spacing, 3);
+                            } catch (Exception e) {
+                                trainLength += 5; // fallback per carriage
+                            }
+                        }
+                        // Add 1-block buffer for leading/trailing overhang
+                        trainLength += 1;
+                    } else {
+                        // Fallback heuristic if reflection unavailable
+                        trainLength = carriageCount * 5.0f + 3.0f;
+                    }
+                    tag.putFloat("trainLength", trainLength);
 
                     // Current station
                     Object curStation = trainCurrentStationField.get(train);
@@ -947,14 +972,16 @@ public class TrainNetworkDataReader {
         ListTag signals = mapData.contains("Signals") ? mapData.getList("Signals", 10) : new ListTag();
         ListTag trains = mapData.contains("Trains") ? mapData.getList("Trains", 10) : new ListTag();
 
-        // Compute max train length (in blocks) from carriage count
-        // Each carriage is ~5 blocks (bogey spacing); use carriages * 5 + buffer
+        // Compute max train length from actual measured lengths (or fallback to heuristic)
         int maxCarriages = 1;
+        float maxTrainLength = 8.0f; // minimum assumption: 1 carriage
         for (int i = 0; i < trains.size(); i++) {
-            int c = trains.getCompound(i).getInt("carriages");
+            CompoundTag t = trains.getCompound(i);
+            int c = t.getInt("carriages");
             if (c > maxCarriages) maxCarriages = c;
+            float len = t.getFloat("trainLength");
+            if (len > maxTrainLength) maxTrainLength = len;
         }
-        float maxTrainLength = maxCarriages * 5.0f + 3.0f; // ~5 blocks/car + 3 buffer
         mapData.putFloat("MaxTrainLength", maxTrainLength);
         mapData.putInt("MaxCarriages", maxCarriages);
 
@@ -1020,10 +1047,8 @@ public class TrainNetworkDataReader {
             diag.putInt("branches", branches.size());
             diag.putInt("unsignaled", branches.size());
 
-            // Per-branch suggestions: place chain signal on each branch,
-            // offset a few blocks away from the junction toward the neighbor node.
-            // Direction arrow points from the branch TOWARD the junction (entry direction).
-            ListTag suggestions = new ListTag();
+            // Compute normalized direction for each branch (toward junction = entry direction)
+            List<float[]> branchDirs = new ArrayList<>(); // [ndx, ndz, dist, nx, ny, nz] per branch
             for (int[] branch : branches) {
                 int neighborId = branch[0];
                 if (neighborId >= nodes.size()) continue;
@@ -1031,39 +1056,104 @@ public class TrainNetworkDataReader {
                 float nx = neighborNode.getFloat("x");
                 float ny = neighborNode.getFloat("y");
                 float nz = neighborNode.getFloat("z");
-
-                // Direction from neighbor toward junction (entry direction for the arrow)
                 float ddx = jx - nx;
                 float ddy = jy - ny;
                 float ddz = jz - nz;
                 float dist = (float) Math.sqrt(ddx * ddx + ddy * ddy + ddz * ddz);
                 if (dist < 0.01f) continue;
-                float ndx = ddx / dist; // normalized direction toward junction
-                float ndz = ddz / dist;
+                branchDirs.add(new float[]{ ddx / dist, ddz / dist, dist, nx, ny, nz });
+            }
 
-                // Place suggestion a few blocks from the junction along this branch
-                // (offset outward so the signal isn't right on top of the junction)
-                float offset = Math.min(5.0f, dist * 0.4f); // 5 blocks or 40% of branch length
+            // Detect collinear branch pairs (through-lines) via dot product.
+            // Two branches with dot < -0.7 are roughly opposite = main through-line.
+            // The remaining branch(es) are diverging and need chain signals.
+            Set<Integer> throughBranches = new HashSet<>();
+            if (branchDirs.size() == 3) {
+                float[][] dirs = branchDirs.toArray(new float[0][]);
+                float dot01 = dirs[0][0] * dirs[1][0] + dirs[0][1] * dirs[1][1];
+                float dot02 = dirs[0][0] * dirs[2][0] + dirs[0][1] * dirs[2][1];
+                float dot12 = dirs[1][0] * dirs[2][0] + dirs[1][1] * dirs[2][1];
+
+                // Find the most collinear pair (lowest dot product, closest to -1)
+                float minDot = Math.min(dot01, Math.min(dot02, dot12));
+                if (minDot < -0.7f) {
+                    if (dot01 == minDot) { throughBranches.add(0); throughBranches.add(1); }
+                    else if (dot02 == minDot) { throughBranches.add(0); throughBranches.add(2); }
+                    else { throughBranches.add(1); throughBranches.add(2); }
+                }
+            }
+
+            // Generate suggestions only for diverging branches (not through-line)
+            ListTag suggestions = new ListTag();
+            LogicLink.LOGGER.info("[LogicLink] Junction at ({}, {}, {}) [float: {}, {}, {}] with {} branches, {} through-line branches",
+                    Mth.floor(jx), Mth.floor(jy), Mth.floor(jz),
+                    String.format("%.2f", jx), String.format("%.2f", jy), String.format("%.2f", jz),
+                    branchDirs.size(), throughBranches.size());
+
+            for (int bi = 0; bi < branchDirs.size(); bi++) {
+                float[] bd = branchDirs.get(bi);
+                float ndx = bd[0], ndz = bd[1], dist = bd[2];
+                float nx = bd[3], ny = bd[4], nz = bd[5];
+                boolean isThrough = throughBranches.contains(bi);
+
+                // Place signal far enough from junction for train clearance.
+                // Ideal: at least half the max train length from the junction center,
+                // so trains queued at the signal don't extend back into the junction.
+                // Capped at 80% of edge length (must stay on this branch's track).
+                float idealOffset = Math.max(3.0f, maxTrainLength * 0.5f);
+                float offset = Math.min(idealOffset, dist * 0.8f);
                 float sugX = jx - ndx * offset;
-                float sugY = jy - (ddy / dist) * offset;
+                float sugY = jy - ((jy - ny) / dist) * offset;
                 float sugZ = jz - ndz * offset;
 
+                LogicLink.LOGGER.info("[LogicLink]   Branch {} neighbor ({}, {}, {}), dist={}, dir=({}, {}), through={}, sugBlock=({}, {}, {})",
+                        bi, (int)nx, (int)ny, (int)nz, String.format("%.1f", dist),
+                        String.format("%.3f", ndx), String.format("%.3f", ndz),
+                        isThrough, Mth.floor(sugX), Mth.floor(sugY), Mth.floor(sugZ));
+
+                // Skip through-line branches — they don't need signals at T-junctions
+                if (isThrough) continue;
+
                 CompoundTag branchSug = new CompoundTag();
-                branchSug.putInt("sx", Math.round(sugX));
-                branchSug.putInt("sy", Math.round(sugY));
-                branchSug.putInt("sz", Math.round(sugZ));
+                branchSug.putInt("sx", Mth.floor(sugX));
+                branchSug.putInt("sy", Mth.floor(sugY));
+                branchSug.putInt("sz", Mth.floor(sugZ));
                 branchSug.putString("signalType", "chain");
-                // Arrow points toward junction (entry direction)
                 branchSug.putFloat("sdx", ndx);
                 branchSug.putFloat("sdz", ndz);
+                branchSug.putFloat("edgeLength", dist);
+                branchSug.putFloat("maxTrainLength", maxTrainLength);
                 String cardinal = getCardinalDir(ndx, ndz);
-                branchSug.putString("dir", "Place chain signal — entry from " + cardinal);
-                suggestions.add(branchSug);
+                boolean clearanceOk = dist >= maxTrainLength;
+                branchSug.putBoolean("clearanceWarning", !clearanceOk);
+                String clearanceNote = clearanceOk
+                        ? ""
+                        : " [!] Edge " + (int) dist + "b < max train " + (int) maxTrainLength + "b";
+                branchSug.putString("dir", "Place chain signal — entry from " + cardinal + clearanceNote);
+
+                // Deduplicate: skip if another suggestion already occupies this block
+                boolean duplicate = false;
+                int bsx = Mth.floor(sugX), bsy = Mth.floor(sugY), bsz = Mth.floor(sugZ);
+                for (int i = 0; i < suggestions.size(); i++) {
+                    CompoundTag existing = suggestions.getCompound(i);
+                    if (existing.getInt("sx") == bsx && existing.getInt("sy") == bsy && existing.getInt("sz") == bsz) {
+                        duplicate = true;
+                        break;
+                    }
+                }
+                if (!duplicate) {
+                    suggestions.add(branchSug);
+                }
             }
             diag.put("suggestions", suggestions);
 
-            diag.putString("desc", branches.size() + "-way junction with no signals on any branch. "
-                    + "Consider adding chain signals before the junction on entry branches.");
+            // Skip diagnostic entirely if no suggestions remain (all branches were through-line)
+            if (suggestions.isEmpty()) continue;
+
+            int divergingCount = branchDirs.size() - throughBranches.size();
+            diag.putString("desc", branchDirs.size() + "-way junction: " + divergingCount
+                    + " diverging branch(es) need chain signals."
+                    + " (max train: " + (int) maxTrainLength + " blocks)");
 
             unsignaledJunctions.add(jId);
             diagnostics.add(diag);
@@ -1220,9 +1310,9 @@ public class TrainNetworkDataReader {
                                 float bndz = ddz2 / d2;
                                 float boff = Math.min(5.0f, d2 * 0.4f);
                                 CompoundTag s = new CompoundTag();
-                                s.putInt("sx", Math.round(jjx - bndx * boff));
-                                s.putInt("sy", Math.round(jjy - (ddy2 / d2) * boff));
-                                s.putInt("sz", Math.round(jjz - bndz * boff));
+                                s.putInt("sx", Mth.floor(jjx - bndx * boff));
+                                s.putInt("sy", Mth.floor(jjy - (ddy2 / d2) * boff));
+                                s.putInt("sz", Mth.floor(jjz - bndz * boff));
                                 s.putString("signalType", "chain");
                                 s.putFloat("sdx", bndx);
                                 s.putFloat("sdz", bndz);
@@ -1232,9 +1322,9 @@ public class TrainNetworkDataReader {
                         }
                         if (sug.isEmpty()) {
                             CompoundTag s = new CompoundTag();
-                            s.putInt("sx", (int) jjx);
-                            s.putInt("sy", (int) jjy);
-                            s.putInt("sz", (int) jjz);
+                            s.putInt("sx", Mth.floor(jjx));
+                            s.putInt("sy", Mth.floor(jjy));
+                            s.putInt("sz", Mth.floor(jjz));
                             s.putString("signalType", "chain");
                             s.putString("dir", "Check junction signals");
                             sug.add(s);
@@ -1535,6 +1625,14 @@ public class TrainNetworkDataReader {
             trainCurrentStationField = trainClass.getField("currentStation");
             trainGraphField = trainClass.getDeclaredField("graph");
             trainGraphField.setAccessible(true);
+
+            // === Carriage (for actual train length from bogey spacing) ===
+            try {
+                Class<?> carriageClass = Class.forName("com.simibubi.create.content.trains.entity.Carriage");
+                carriageBogeySpacingField = carriageClass.getField("bogeySpacing");
+            } catch (Exception e) {
+                LogicLink.LOGGER.debug("TrainNetworkDataReader: Carriage.bogeySpacing not found, using heuristic");
+            }
 
             // ScheduleRuntime — for detailed train status diagnostics
             trainRuntimeField = trainClass.getField("runtime");

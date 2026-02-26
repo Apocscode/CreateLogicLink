@@ -17,6 +17,10 @@ import net.neoforged.fml.common.EventBusSubscriber;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Client-side world renderer that draws highlight boxes at locations
@@ -68,69 +72,70 @@ public class SignalGhostRenderer {
         // (glLineWidth is capped at 1.0 on most modern GPUs)
         double[] thicknessOffsets = { 0.0, 0.005, -0.005, 0.01, -0.01, 0.015, -0.015 };
 
+        // Group markers by block position so we can detect same-block pairs.
+        // Per Create rules, two-way signals must be on the SAME track block,
+        // so we render a single full-block box with both arrows for clarity.
+        Map<Long, List<SignalHighlightManager.Marker>> byBlock = new HashMap<>();
         for (SignalHighlightManager.Marker marker : markers) {
-            double distSq = cam.distanceToSqr(marker.x() + 0.5, marker.y() + 0.5, marker.z() + 0.5);
+            byBlock.computeIfAbsent(marker.posKey(), k -> new ArrayList<>()).add(marker);
+        }
+
+        for (List<SignalHighlightManager.Marker> group : byBlock.values()) {
+            SignalHighlightManager.Marker first = group.get(0);
+            double distSq = cam.distanceToSqr(first.x() + 0.5, first.y() + 0.5, first.z() + 0.5);
             if (distSq > MAX_RENDER_DIST_SQ) continue;
 
+            // Use highest-priority type in the group for box color
+            int groupType = first.type();
+            for (SignalHighlightManager.Marker m : group) {
+                if (m.type() > groupType) groupType = m.type();
+            }
+
             float r, g, b, a;
-            switch (marker.type()) {
+            switch (groupType) {
                 case SignalHighlightManager.TYPE_CHAIN    -> { r = 0.0f;  g = 0.85f; b = 0.95f; }
                 case SignalHighlightManager.TYPE_CONFLICT -> { r = 1.0f;  g = 0.2f;  b = 0.2f;  }
                 default                                   -> { r = 0.1f;  g = 0.9f;  b = 0.2f;  }
             }
 
-            a = (marker.type() == SignalHighlightManager.TYPE_CONFLICT)
+            a = (groupType == SignalHighlightManager.TYPE_CONFLICT)
                     ? (float) (Math.sin(now * 0.006) * 0.2 + 0.85)
                     : (pulse * 0.6f + 0.4f);
 
             double pad = 0.05;
+            boolean multiMarker = group.size() > 1;
 
-            // Right-side half-block highlight within the same track block.
-            // In Minecraft, facing direction (dx,dz), right = (-dz, dx):
-            //   North (0,-1) → right = (1,0) = East ✓
-            //   South (0,+1) → right = (-1,0) = West ✓
-            //   East  (+1,0) → right = (0,1) = South ✓
-            //   West  (-1,0) → right = (0,-1) = North ✓
-            // Box covers the right half of the track block (0.5 wide perpendicular,
-            // ~full along track). Two opposite-direction markers on the same block
-            // will highlight opposite halves — perfect for bi-directional signals.
-
-            double bx0, bz0, bx1, bz1; // box corners (XZ)
-            if (marker.hasDirection()) {
-                float dx = marker.dirX();
-                float dz = marker.dirZ();
-
-                // Right perpendicular
+            double bx0, bz0, bx1, bz1;
+            if (groupType == SignalHighlightManager.TYPE_CONFLICT || multiMarker || !first.hasDirection()) {
+                // Full-block box: conflict markers, multi-marker blocks (opposing signals),
+                // or markers without direction
+                bx0 = first.x();
+                bz0 = first.z();
+                bx1 = first.x() + 1.0;
+                bz1 = first.z() + 1.0;
+            } else {
+                // Single marker with direction — right-half box
+                float dx = first.dirX();
+                float dz = first.dirZ();
                 double rx = -dz;
                 double rz = dx;
-
-                // Center of the right half: block center + right * 0.25
-                double centerX = marker.x() + 0.5 + rx * 0.25;
-                double centerZ = marker.z() + 0.5 + rz * 0.25;
-
-                // Half-widths: narrow across track (0.25), longer along track (0.45)
+                double centerX = first.x() + 0.5 + rx * 0.25;
+                double centerZ = first.z() + 0.5 + rz * 0.25;
                 double halfPerp = 0.25;
                 double halfPar = 0.45;
                 double halfX = Math.abs(dx) * halfPar + Math.abs(rx) * halfPerp;
                 double halfZ = Math.abs(dz) * halfPar + Math.abs(rz) * halfPerp;
-
                 bx0 = centerX - halfX;
                 bz0 = centerZ - halfZ;
                 bx1 = centerX + halfX;
                 bz1 = centerZ + halfZ;
-            } else {
-                // No direction — full block box
-                bx0 = marker.x();
-                bz0 = marker.z();
-                bx1 = marker.x() + 1.0;
-                bz1 = marker.z() + 1.0;
             }
 
             // Render outer box with multiple offset passes for thickness
             for (double off : thicknessOffsets) {
                 LevelRenderer.renderLineBox(poseStack, lineConsumer,
-                        bx0 - pad + off, marker.y() - pad + off, bz0 - pad + off,
-                        bx1 + pad - off, marker.y() + 1.0 + pad - off, bz1 + pad - off,
+                        bx0 - pad + off, first.y() - pad + off, bz0 - pad + off,
+                        bx1 + pad - off, first.y() + 1.0 + pad - off, bz1 + pad - off,
                         r, g, b, a);
             }
 
@@ -138,14 +143,14 @@ public class SignalGhostRenderer {
             double inner = 0.08;
             for (double off : thicknessOffsets) {
                 LevelRenderer.renderLineBox(poseStack, lineConsumer,
-                        bx0 + inner + off, marker.y() + inner + off, bz0 + inner + off,
-                        bx1 - inner - off, marker.y() + 1.0 - inner - off, bz1 - inner - off,
+                        bx0 + inner + off, first.y() + inner + off, bz0 + inner + off,
+                        bx1 - inner - off, first.y() + 1.0 - inner - off, bz1 - inner - off,
                         r, g, b, a * 0.7f);
             }
 
             // Cross pattern for conflicts
-            if (marker.type() == SignalHighlightManager.TYPE_CONFLICT) {
-                double crossTop = marker.y() + 1.0 + pad;
+            if (groupType == SignalHighlightManager.TYPE_CONFLICT) {
+                double crossTop = first.y() + 1.0 + pad;
                 double cmx = (bx1 - bx0) * 0.2;
                 double cmz = (bz1 - bz0) * 0.2;
                 LevelRenderer.renderLineBox(poseStack, lineConsumer,
@@ -154,9 +159,13 @@ public class SignalGhostRenderer {
                         r, g, b, a);
             }
 
-            // Direction arrow — flat on the Y=0.5 plane inside the box
-            if (marker.hasDirection()) {
-                renderDirectionArrow(poseStack, lineConsumer, marker, r, g, b, a);
+            // Direction arrows — render one per marker in the group.
+            // For multi-marker groups (opposing signals), each arrow sits in its
+            // own right-half of the full block, so both are visible side by side.
+            for (SignalHighlightManager.Marker marker : group) {
+                if (marker.hasDirection()) {
+                    renderDirectionArrow(poseStack, lineConsumer, marker, multiMarker, r, g, b, a);
+                }
             }
         }
 
@@ -170,7 +179,11 @@ public class SignalGhostRenderer {
     /**
      * Draws a direction arrow inside the highlight box.
      * Arrow sits on the horizontal Y=0.5 plane, pointing along the track direction.
-     * Uses the marker's dirX/dirZ (normalized track direction from junction → branch).
+     *
+     * For single markers: arrow centered in the right-half box.
+     * For multi-marker groups (opposing signals in same block): each arrow sits
+     * in its own right-half so both arrows are visible side by side within the
+     * single full-block box.
      *
      * Arrow shape:
      *   - Main shaft line from tail to tip
@@ -179,8 +192,10 @@ public class SignalGhostRenderer {
      */
     private static void renderDirectionArrow(PoseStack poseStack, VertexConsumer consumer,
                                               SignalHighlightManager.Marker marker,
+                                              boolean multiMarker,
                                               float r, float g, float b, float a) {
-        // Center arrow in the right-half box (same offset as the box)
+        // Arrow always positioned in the right-half of the block for this direction.
+        // In a multi-marker group, opposing arrows naturally sit on opposite halves.
         double rx = -marker.dirZ();  // right perpendicular
         double rz = marker.dirX();
         double cx = marker.x() + 0.5 + rx * 0.25;
