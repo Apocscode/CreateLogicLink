@@ -736,14 +736,18 @@ public class TrainNetworkDataReader {
 
                     // Measure actual train length from Carriage.bogeySpacing
                     float trainLength = 0;
+                    StringBuilder spacingDebug = new StringBuilder();
                     if (carriages != null && carriageBogeySpacingField != null) {
                         for (Object carriage : carriages) {
                             try {
                                 int spacing = carriageBogeySpacingField.getInt(carriage);
+                                if (spacingDebug.length() > 0) spacingDebug.append("+");
+                                spacingDebug.append(spacing);
                                 // Single-bogey carriages have spacing=0, occupy ~3 blocks
                                 trainLength += Math.max(spacing, 3);
                             } catch (Exception e) {
                                 trainLength += 5; // fallback per carriage
+                                spacingDebug.append("ERR");
                             }
                         }
                         // Add 1-block buffer for leading/trailing overhang
@@ -753,6 +757,9 @@ public class TrainNetworkDataReader {
                         trainLength = carriageCount * 5.0f + 3.0f;
                     }
                     tag.putFloat("trainLength", trainLength);
+                    String tName = getTrainNameStr(train);
+                    LogicLink.LOGGER.debug("[LogicLink] Train '{}': {} carriages, bogeySpacings=[{}], length={}",
+                            tName, carriageCount, spacingDebug, (int) trainLength);
 
                     // Current station
                     Object curStation = trainCurrentStationField.get(train);
@@ -975,15 +982,22 @@ public class TrainNetworkDataReader {
         // Compute max train length from actual measured lengths (or fallback to heuristic)
         int maxCarriages = 1;
         float maxTrainLength = 8.0f; // minimum assumption: 1 carriage
+        String maxTrainName = "";
         for (int i = 0; i < trains.size(); i++) {
             CompoundTag t = trains.getCompound(i);
             int c = t.getInt("carriages");
             if (c > maxCarriages) maxCarriages = c;
             float len = t.getFloat("trainLength");
-            if (len > maxTrainLength) maxTrainLength = len;
+            if (len > maxTrainLength) {
+                maxTrainLength = len;
+                maxTrainName = t.contains("name") ? t.getString("name") : "";
+            }
         }
         mapData.putFloat("MaxTrainLength", maxTrainLength);
         mapData.putInt("MaxCarriages", maxCarriages);
+        if (!maxTrainName.isEmpty()) {
+            mapData.putString("MaxTrainName", maxTrainName);
+        }
 
         // Build adjacency: nodeId -> list of {neighborId, edgeIndex}
         Map<Integer, List<int[]>> adjacency = new HashMap<>();
@@ -996,18 +1010,19 @@ public class TrainNetworkDataReader {
         }
 
         // Build set of edges that have signals on them (by "min:max" node ID key)
+        // Also build a lookup of signals by edge for type verification
         Set<String> signaledEdges = new HashSet<>();
+        Map<String, List<CompoundTag>> signalsByEdge = new HashMap<>();
         for (int i = 0; i < signals.size(); i++) {
             CompoundTag sig = signals.getCompound(i);
             if (sig.contains("edgeA") && sig.contains("edgeB")) {
                 int a = sig.getInt("edgeA");
                 int b = sig.getInt("edgeB");
-                signaledEdges.add(Math.min(a, b) + ":" + Math.max(a, b));
+                String ek = Math.min(a, b) + ":" + Math.max(a, b);
+                signaledEdges.add(ek);
+                signalsByEdge.computeIfAbsent(ek, k -> new ArrayList<>()).add(sig);
             }
         }
-
-        // Track junctions flagged by Check 1 to avoid conflicting Check 3 diagnostics
-        Set<Integer> unsignaledJunctions = new HashSet<>();
 
         // === Check 1: Completely unsignaled junctions ===
         // Only flag junctions where NO branches have signals at all.
@@ -1026,17 +1041,38 @@ public class TrainNetworkDataReader {
             float jy = jNode.getFloat("y");
             float jz = jNode.getFloat("z");
 
-            // Count signaled branches
-            int signaledCount = 0;
+            // Count branches with proper chain signals facing this junction.
+            // A branch is "properly signaled" only if at least one signal on that edge
+            // has the correct chain (cross_signal) type on the side facing this junction.
+            // Regular signals placed where chain is needed don't count — the junction
+            // still needs protection.
+            int properlySignaledCount = 0;
+            int anySignalCount = 0;
             for (int[] branch : branches) {
                 String ek = Math.min(jId, branch[0]) + ":" + Math.max(jId, branch[0]);
-                if (signaledEdges.contains(ek)) {
-                    signaledCount++;
+                if (!signaledEdges.contains(ek)) continue;
+                anySignalCount++;
+                // Check if any signal on this edge has chain type on the junction-facing side
+                List<CompoundTag> edgeSignals = signalsByEdge.get(ek);
+                if (edgeSignals != null) {
+                    for (CompoundTag s : edgeSignals) {
+                        int sA = s.getInt("edgeA");
+                        // If edgeA == jId, trains from B approach junction → typeB should be chain
+                        // If edgeB == jId, trains from A approach junction → typeF should be chain
+                        String junctionFacingType = (sA == jId)
+                                ? s.getString("typeB")  // B→A direction faces junction
+                                : s.getString("typeF"); // A→B direction faces junction
+                        if ("cross_signal".equals(junctionFacingType)) {
+                            properlySignaledCount++;
+                            break;
+                        }
+                    }
                 }
             }
 
-            // Only flag if NO branches have any signals at all
-            if (signaledCount > 0) continue;
+            // Only flag if no branches have proper chain signals facing this junction.
+            // Branches with regular signals are still flagged — they don't protect the junction.
+            if (properlySignaledCount > 0) continue;
 
             CompoundTag diag = new CompoundTag();
             diag.putString("type", "JUNCTION_UNSIGNALED");
@@ -1085,7 +1121,7 @@ public class TrainNetworkDataReader {
 
             // Generate suggestions only for diverging branches (not through-line)
             ListTag suggestions = new ListTag();
-            LogicLink.LOGGER.info("[LogicLink] Junction at ({}, {}, {}) [float: {}, {}, {}] with {} branches, {} through-line branches",
+            LogicLink.LOGGER.debug("[LogicLink] Junction at ({}, {}, {}) [float: {}, {}, {}] with {} branches, {} through-line branches",
                     Mth.floor(jx), Mth.floor(jy), Mth.floor(jz),
                     String.format("%.2f", jx), String.format("%.2f", jy), String.format("%.2f", jz),
                     branchDirs.size(), throughBranches.size());
@@ -1106,7 +1142,7 @@ public class TrainNetworkDataReader {
                 float sugY = jy - ((jy - ny) / dist) * offset;
                 float sugZ = jz - ndz * offset;
 
-                LogicLink.LOGGER.info("[LogicLink]   Branch {} neighbor ({}, {}, {}), dist={}, dir=({}, {}), through={}, sugBlock=({}, {}, {})",
+                LogicLink.LOGGER.debug("[LogicLink]   Branch {} neighbor ({}, {}, {}), dist={}, dir=({}, {}), through={}, sugBlock=({}, {}, {})",
                         bi, (int)nx, (int)ny, (int)nz, String.format("%.1f", dist),
                         String.format("%.3f", ndx), String.format("%.3f", ndz),
                         isThrough, Mth.floor(sugX), Mth.floor(sugY), Mth.floor(sugZ));
@@ -1151,11 +1187,17 @@ public class TrainNetworkDataReader {
             if (suggestions.isEmpty()) continue;
 
             int divergingCount = branchDirs.size() - throughBranches.size();
+            String wrongTypeNote = anySignalCount > 0
+                    ? " (" + anySignalCount + " branch(es) have signals but wrong type — need chain, not regular)"
+                    : "";
+            String trainInfo = maxTrainName.isEmpty()
+                    ? " (max train: " + (int) maxTrainLength + "b)"
+                    : " (max train: " + (int) maxTrainLength + "b — '" + maxTrainName + "')";
             diag.putString("desc", branchDirs.size() + "-way junction: " + divergingCount
                     + " diverging branch(es) need chain signals."
-                    + " (max train: " + (int) maxTrainLength + " blocks)");
+                    + wrongTypeNote
+                    + trainInfo);
 
-            unsignaledJunctions.add(jId);
             diagnostics.add(diag);
         }
 
@@ -1358,14 +1400,8 @@ public class TrainNetworkDataReader {
             CompoundTag sig = signals.getCompound(i);
             if (!sig.contains("edgeA") || !sig.contains("edgeB")) continue;
 
-            int edgeACheck = sig.getInt("edgeA");
-            int edgeBCheck = sig.getInt("edgeB");
-            // Skip signals at junctions already flagged by Check 1 (unsignaled branches)
-            // to avoid conflicting "add signal" + "fix existing signal" at same junction
-            if (unsignaledJunctions.contains(edgeACheck) || unsignaledJunctions.contains(edgeBCheck)) continue;
-
-            int edgeA = edgeACheck;
-            int edgeB = edgeBCheck;
+            int edgeA = sig.getInt("edgeA");
+            int edgeB = sig.getInt("edgeB");
             String typeF = sig.contains("typeF") ? sig.getString("typeF") : "entry_signal";
             String typeB = sig.contains("typeB") ? sig.getString("typeB") : "entry_signal";
 
@@ -1379,6 +1415,12 @@ public class TrainNetworkDataReader {
             float sy = sig.contains("y") ? sig.getFloat("y") : 0;
             float sz = sig.contains("z") ? sig.getFloat("z") : 0;
             if (sx == 0 && sz == 0) continue; // no valid position
+
+            // Debug: log signal type data for all junction-edge signals
+            if (onJunctionEdge) {
+                LogicLink.LOGGER.debug("[LogicLink] Check3 Signal#{} @ ({},{},{}) edgeA={} edgeB={} typeF='{}' typeB='{}' aIsJ={} bIsJ={}",
+                        i, (int) sx, (int) sy, (int) sz, edgeA, edgeB, typeF, typeB, aIsJunction, bIsJunction);
+            }
 
             // For each side (F and B) of the signal boundary:
             // - "forward" side faces from edgeA toward edgeB
@@ -1402,11 +1444,15 @@ public class TrainNetworkDataReader {
             // (chain on the outward-facing side of a junction edge is harmless and normal)
             if (onJunctionEdge && fShouldBeChain && !fIsChain) {
                 issues.add("Side F: regular signal should be CHAIN (protects junction at node " + edgeB + ")");
+                LogicLink.LOGGER.debug("[LogicLink] Check3 ISSUE: Signal#{} @ ({},{},{}) Side F: typeF='{}' should be cross_signal (edgeB={} is junction)",
+                        i, (int) sx, (int) sy, (int) sz, typeF, edgeB);
             }
 
             // Check side B
             if (onJunctionEdge && bShouldBeChain && !bIsChain) {
                 issues.add("Side B: regular signal should be CHAIN (protects junction at node " + edgeA + ")");
+                LogicLink.LOGGER.debug("[LogicLink] Check3 ISSUE: Signal#{} @ ({},{},{}) Side B: typeB='{}' should be cross_signal (edgeA={} is junction)",
+                        i, (int) sx, (int) sy, (int) sz, typeB, edgeA);
             }
 
             // Note: "chain on non-junction edge" check removed — Create's graph can have
@@ -1455,10 +1501,10 @@ public class TrainNetworkDataReader {
                 // Determine what the correct type should be
                 if (fShouldBeChain && !fIsChain) {
                     conflictSug.putString("correctType", "chain");
-                    conflictSug.putString("dir", "Replace with chain signal");
+                    conflictSug.putString("dir", "Break & place Chain Signal block (or right-click to toggle)");
                 } else if (bShouldBeChain && !bIsChain) {
                     conflictSug.putString("correctType", "chain");
-                    conflictSug.putString("dir", "Replace with chain signal");
+                    conflictSug.putString("dir", "Break & place Chain Signal block (or right-click to toggle)");
                 } else if (!onJunctionEdge && (fIsChain || bIsChain)) {
                     conflictSug.putString("correctType", "signal");
                     conflictSug.putString("dir", "Replace with regular signal");
@@ -1472,6 +1518,31 @@ public class TrainNetworkDataReader {
                 diagnostics.add(diag);
             }
         }
+
+        // === Debug: dump all diagnostics for troubleshooting ===
+        LogicLink.LOGGER.debug("[LogicLink] ===== DIAGNOSTICS DUMP ({} total) =====", diagnostics.size());
+        for (int di = 0; di < diagnostics.size(); di++) {
+            CompoundTag d = diagnostics.getCompound(di);
+            String dtype = d.getString("type");
+            String dsev = d.getString("severity");
+            String ddesc = d.getString("desc");
+            float dx = d.contains("x") ? d.getFloat("x") : 0;
+            float dz = d.contains("z") ? d.getFloat("z") : 0;
+            StringBuilder sugStr = new StringBuilder();
+            if (d.contains("suggestions")) {
+                ListTag sl = d.getList("suggestions", 10);
+                for (int si = 0; si < sl.size(); si++) {
+                    CompoundTag s = sl.getCompound(si);
+                    if (sugStr.length() > 0) sugStr.append(" | ");
+                    sugStr.append(s.getString("signalType")).append("@")
+                          .append(s.getInt("sx")).append(",").append(s.getInt("sy")).append(",").append(s.getInt("sz"))
+                          .append(" [").append(s.getString("dir")).append("]");
+                }
+            }
+            LogicLink.LOGGER.debug("[LogicLink] Diag#{}: {} {} @ ({},{}) -- {} -- sugs: {}",
+                    di, dsev, dtype, (int) dx, (int) dz, ddesc, sugStr);
+        }
+        LogicLink.LOGGER.debug("[LogicLink] ===== END DIAGNOSTICS DUMP =====");
 
         mapData.put("Diagnostics", diagnostics);
     }
