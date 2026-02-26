@@ -1245,3 +1245,52 @@ Made Check 1 verify chain type — only counted "properly signaled" if signal ha
 
 ### Files Changed
 - `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java` — Check 1/Check 3 separation, removed type-checking from Check 1, per-branch signaled-edge skip, debug-level logging
+
+---
+
+## Session 9r — 2026-02-27 — System-Level Train Network Diagnostics
+
+### Commits
+- `94b6d5f` — Add 5 system-level diagnostics: schedule validation, signal-blocked detection, deadlock detection, route signal coverage, network connectivity
+
+### Summary
+Major expansion of the diagnostic system from junction-level checks to holistic train network analysis. Added 5 new diagnostic checks (4-8) and new Create data extraction via reflection.
+
+**New Reflection Fields:**
+- `Navigation.waitingForSignal` (Couple\<UUID\>) — which signal group a train is blocked on
+- `Navigation.ticksWaitingForSignal` (int) — how long a train has been waiting at a signal
+- `ScheduleEntry.instruction` (ScheduleInstruction) — for iterating full schedule entries
+- `ScheduleInstruction.data` (CompoundTag) — contains destination name in "Text" key
+- `SignalBoundary.groups` (Couple\<UUID\>) — per-side signal group linkage
+
+**New Train Serialization Data:**
+- `scheduleDestinations` — ListTag of all schedule entry destination names with step indices
+- `waitingForSignal` — UUID string of the signal group the train is blocked on
+- `ticksWaitingForSignal` — wait duration in ticks
+- Path segments now include `aId`/`bId` node IDs for route analysis
+
+**Check 4: SCHEDULE_INVALID_DEST (CRIT)**
+Iterates ALL schedule entry destinations against known station names. Supports Create's `*` wildcard matching. Includes Levenshtein-based "did you mean?" suggestions for misspelled destinations. Catches problems BEFORE the train gets stuck.
+
+**Check 5: TRAIN_SIGNAL_BLOCKED (WARN→CRIT)**
+Uses `Navigation.waitingForSignal` for precise signal-blocked detection instead of the speed=0 heuristic. Shows wait duration formatted as seconds/minutes. Escalates to CRIT after 60 seconds. Only flags waits >5 seconds to filter brief normal stops.
+
+**Check 6: DEADLOCK (CRIT)**
+Detects mutual signal group blocking cycles. Builds maps: trainId → waitingOnGroup and groupId → occupyingTrains. If train A waits on a group occupied by B AND B waits on a group occupied by A → deadlock. Flags all trains in the cycle.
+
+**Check 7: ROUTE_UNSIGNALED (WARN)**
+For navigating trains, traces the active navigation path using embedded node IDs. Checks each junction (3+ connections) along the route for signal coverage. Flags junctions with incomplete signaling that could cause path-finding failures.
+
+**Check 8: STATION_UNREACHABLE (WARN)**
+BFS from a root station across the adjacency graph. Maps each station to its nearest graph node. Flags any station that is on a disconnected track network (unreachable from the root).
+
+**Helper Methods Added:**
+- `matchesAnyStation()` — glob pattern matching with `*` wildcard support
+- `findClosestStation()` — Levenshtein distance fuzzy matching for suggestions
+- `levenshteinDistance()` — standard edit distance computation
+- `bfsReachable()` — BFS traversal returning set of reachable node IDs
+
+**Updated scanDiagnosticsOnly:** Counts all 10 diagnostic types (original 5 + new 5).
+
+### Files Changed
+- `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java` — +474 lines: 5 new checks, 3 new reflection fields, extended train serialization, 4 helper methods
