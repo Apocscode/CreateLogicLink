@@ -1181,3 +1181,34 @@ Corrected the signal highlight box to cover the **right half** of the track bloc
 
 ### Files Changed
 - `src/main/java/com/apocscode/logiclink/client/SignalGhostRenderer.java` — Fixed perpendicular direction, half-block box geometry with directional elongation, repositioned arrow and cross pattern
+
+---
+
+## Session 9p — 2026-02-26 — Signal Placement Fixes + Train-Length-Aware Suggestions
+
+### Commits
+- `9dbce9c` — feat: train-length-aware signal placement + rendering fixes
+
+### Summary
+Four major improvements to the signal diagnostic system:
+
+**1. Block coordinate fix (Math.round → Mth.floor)**
+Signal highlight boxes were appearing on the wrong side of track at half-block boundaries. `Math.round(5044.5f)` returns 5045, but the actual Minecraft block is 5044. Replaced all `Math.round()` calls with `Mth.floor()` — the standard Minecraft world-to-block conversion.
+
+**2. Smart T-junction suggestions (collinearity detection)**
+Previously all 3+ branches at a junction got chain signal suggestions, but T-junctions only need signals on the diverging branch. Implemented dot-product collinearity detection: branch pairs with dot < -0.7 are identified as the through-line, and only non-through (diverging) branches get suggestions. Reduces typical T-junction from 3 suggestions to 1.
+
+**3. Opposing signal same-block rendering**
+Two opposite-facing signals on the same block now render as a single full-block highlight box with both direction arrows, instead of one overwriting the other. `SignalHighlightManager.uniqueKey()` quantizes direction into 8 octants so opposing directions get different keys. `SignalGhostRenderer` groups markers by block position and renders full-block boxes for multi-marker groups.
+
+**4. Train-length-aware signal placement**
+- Added `Carriage.bogeySpacing` reflection to measure actual train lengths instead of the `carriages × 5 + 3` heuristic
+- Per-train length stored as sum of bogey spacings (min 3 per carriage) + 1 buffer
+- Signal suggestion offset now scales: `max(3, min(maxTrainLength × 0.5, edgeLength × 0.8))` — places signals far enough from junctions for longest-train clearance
+- Clearance warnings added when branch edge is shorter than max train length
+- Max train length shown in junction diagnostic descriptions
+
+### Files Changed
+- `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java` — Mth.floor coords, collinearity detection, Carriage reflection, train-length-aware offset, clearance warnings
+- `src/main/java/com/apocscode/logiclink/client/SignalHighlightManager.java` — uniqueKey() with direction quantization, multi-marker isActive()
+- `src/main/java/com/apocscode/logiclink/client/SignalGhostRenderer.java` — Marker grouping by block, full-block rendering for multi-marker/conflict, updated arrow method
