@@ -1212,3 +1212,35 @@ Two opposite-facing signals on the same block now render as a single full-block 
 - `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java` — Mth.floor coords, collinearity detection, Carriage reflection, train-length-aware offset, clearance warnings
 - `src/main/java/com/apocscode/logiclink/client/SignalHighlightManager.java` — uniqueKey() with direction quantization, multi-marker isActive()
 - `src/main/java/com/apocscode/logiclink/client/SignalGhostRenderer.java` — Marker grouping by block, full-block rendering for multi-marker/conflict, updated arrow method
+
+---
+
+## Session 9q — 2026-02-26 — Fix Signal Diagnostic Contradictions
+
+### Commits
+- `6b4eda1` — Fix signal diagnostic contradictions and improve Check 1/Check 3 independence
+
+### Summary
+Fixed the core issue where placing a signal as requested by Check 1 (JUNCTION_UNSIGNALED) would cause Check 3 (SIGNAL_CONFLICT) to immediately flag the same area, creating contradictory diagnostics.
+
+**Root cause analysis (via debug logging):**
+- Check 1 would fire for unsignaled junctions, suppress Check 3 via `unsignaledJunctions` guard
+- User places a signal → Check 1 goes silent (sees signaledCount > 0)
+- Check 3 is no longer suppressed → flags the signal if wrong type
+- Created a hide-then-reveal pattern that confused users
+
+**Fix 1: Check 1 type-aware signal counting**
+Changed Check 1 to only count branches as "properly signaled" if the signal has the correct chain (cross_signal) type on the junction-facing side. Regular signals placed where chain is needed no longer suppress the diagnostic. Added `signalsByEdge` lookup map for efficient per-branch type verification using Couple F/B direction semantics.
+
+**Fix 2: Removed unsignaledJunctions guard from Check 3**
+Both checks now run independently. Check 1 flags missing/wrong-type signals, Check 3 flags existing wrong-type signals. No more conflicting hide-then-reveal patterns.
+
+**Fix 3: Improved diagnostic messages**
+- Check 1 description now notes when branches have signals of wrong type (e.g., "2 branch(es) have signals but wrong type — need chain, not regular")
+- Check 3 suggestion: "Break & place Chain Signal block (or right-click to toggle)" instead of generic "Replace with chain signal"
+- Max train diagnostic now shows which train is longest (e.g., "max train: 85b — 'ICE 3'")
+
+**Debug logging downgraded to debug level** — all per-signal, per-junction, and diagnostics dump logging moved from INFO to DEBUG for production use.
+
+### Files Changed
+- `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java` — Check 1 type-aware counting, removed unsignaledJunctions, signalsByEdge map, improved messages, debug-level logging
