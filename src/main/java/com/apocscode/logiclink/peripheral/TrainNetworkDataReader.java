@@ -133,6 +133,15 @@ public class TrainNetworkDataReader {
     private static Field navDistanceField;
     private static Field navCurrentPathField;  // List<Couple<TrackNode>>
     private static Method navIsActiveMethod;
+    private static Field navWaitingForSignalField;  // Couple<UUID> — signal group train is waiting on
+    private static Field navTicksWaitingField;      // int — ticks spent waiting at signal
+
+    // ScheduleEntry — for iterating full schedule destinations
+    private static Field scheduleEntryInstructionField;  // ScheduleInstruction instruction
+    private static Field instructionDataField;           // CompoundTag data (contains "Text" = destination)
+
+    // SignalBoundary — per-side signal group linkage
+    private static Field signalBoundaryGroupsField;  // Couple<UUID> groups
 
     // TrackObserver
     private static Method observerIsActivatedMethod;
@@ -296,6 +305,8 @@ public class TrainNetworkDataReader {
 
             // Count by type
             int junctionCount = 0, noPathCount = 0, conflictCount = 0, pausedCount = 0, doneCount = 0;
+            int invalidDestCount = 0, signalBlockedCount = 0, deadlockCount = 0;
+            int routeUnsignaledCount = 0, unreachableCount = 0;
             for (int i = 0; i < diags.size(); i++) {
                 String type = diags.getCompound(i).getString("type");
                 switch (type) {
@@ -304,6 +315,11 @@ public class TrainNetworkDataReader {
                     case "SIGNAL_CONFLICT" -> conflictCount++;
                     case "TRAIN_PAUSED" -> pausedCount++;
                     case "SCHEDULE_DONE" -> doneCount++;
+                    case "SCHEDULE_INVALID_DEST" -> invalidDestCount++;
+                    case "TRAIN_SIGNAL_BLOCKED" -> signalBlockedCount++;
+                    case "DEADLOCK" -> deadlockCount++;
+                    case "ROUTE_UNSIGNALED" -> routeUnsignaledCount++;
+                    case "STATION_UNREACHABLE" -> unreachableCount++;
                 }
             }
             result.putInt("junctionCount", junctionCount);
@@ -311,6 +327,11 @@ public class TrainNetworkDataReader {
             result.putInt("conflictCount", conflictCount);
             result.putInt("pausedCount", pausedCount);
             result.putInt("doneCount", doneCount);
+            result.putInt("invalidDestCount", invalidDestCount);
+            result.putInt("signalBlockedCount", signalBlockedCount);
+            result.putInt("deadlockCount", deadlockCount);
+            result.putInt("routeUnsignaledCount", routeUnsignaledCount);
+            result.putInt("unreachableCount", unreachableCount);
         } else {
             result.putInt("issueCount", 0);
         }
@@ -839,6 +860,11 @@ public class TrainNetworkDataReader {
                                             seg.putFloat("az", (float) posA.z);
                                             seg.putFloat("bx", (float) posB.x);
                                             seg.putFloat("bz", (float) posB.z);
+                                            // Include node IDs for route analysis
+                                            Integer aId = nodeIdMap.get(nodeKey(posA));
+                                            Integer bId = nodeIdMap.get(nodeKey(posB));
+                                            if (aId != null) seg.putInt("aId", aId);
+                                            if (bId != null) seg.putInt("bId", bId);
                                             pathNodes.add(seg);
                                         }
                                     }
@@ -861,6 +887,26 @@ public class TrainNetworkDataReader {
                                 groups.add(g);
                             }
                             tag.put("occupiedGroups", groups);
+                        }
+                    } catch (Exception ignored) {}
+
+                    // Signal blocking info — which signal group is this train waiting on?
+                    try {
+                        Object nav2 = trainNavigationField.get(train);
+                        if (nav2 != null && navWaitingForSignalField != null) {
+                            Object waitingCouple = navWaitingForSignalField.get(nav2);
+                            if (waitingCouple != null) {
+                                Object waitGroup = coupleGetFirstMethod.invoke(waitingCouple);
+                                if (waitGroup != null) {
+                                    tag.putString("waitingForSignal", waitGroup.toString());
+                                }
+                                if (navTicksWaitingField != null) {
+                                    int ticks = navTicksWaitingField.getInt(nav2);
+                                    if (ticks > 0) {
+                                        tag.putInt("ticksWaitingForSignal", ticks);
+                                    }
+                                }
+                            }
                         }
                     } catch (Exception ignored) {}
 
@@ -889,6 +935,31 @@ public class TrainNetworkDataReader {
                                         tag.putBoolean("scheduleCyclic", scheduleCyclicField.getBoolean(schedule));
                                     }
                                 } catch (Exception ignored2) {}
+
+                                // Extract ALL schedule entry destinations for validation
+                                try {
+                                    if (scheduleEntryInstructionField != null && instructionDataField != null) {
+                                        List<?> allEntries = (List<?>) scheduleEntriesField.get(schedule);
+                                        if (allEntries != null) {
+                                            ListTag schedDests = new ListTag();
+                                            for (int ei = 0; ei < allEntries.size(); ei++) {
+                                                Object entry = allEntries.get(ei);
+                                                Object instr = scheduleEntryInstructionField.get(entry);
+                                                if (instr == null) continue;
+                                                CompoundTag instrData = (CompoundTag) instructionDataField.get(instr);
+                                                if (instrData != null && instrData.contains("Text")) {
+                                                    CompoundTag destTag = new CompoundTag();
+                                                    destTag.putInt("step", ei);
+                                                    destTag.putString("dest", instrData.getString("Text"));
+                                                    schedDests.add(destTag);
+                                                }
+                                            }
+                                            if (!schedDests.isEmpty()) {
+                                                tag.put("scheduleDestinations", schedDests);
+                                            }
+                                        }
+                                    }
+                                } catch (Exception ignored3) {}
                             }
                         }
                     } catch (Exception ignored) {}
@@ -957,6 +1028,12 @@ public class TrainNetworkDataReader {
      * "no path" errors in train schedules. Checks:
      * 1. Junctions (3+ way intersections) with missing signal coverage
      * 2. Trains stuck without navigation (no-path heuristic)
+     * 3. Wrong-type signals at junctions (regular vs chain)
+     * 4. Full schedule validation (ALL destinations checked against known stations)
+     * 5. Signal-blocked train detection (using Navigation.waitingForSignal)
+     * 6. Deadlock detection (mutual signal group blocking)
+     * 7. Route signal coverage (unsignaled junctions along active navigation path)
+     * 8. Network connectivity (BFS reachability between all stations)
      * Produces suggested signal placement coordinates for each issue.
      *
      * Signal type logic (per Create wiki):
@@ -1487,6 +1564,279 @@ public class TrainNetworkDataReader {
             }
         }
 
+        // === Check 4: Full Schedule Validation ===
+        // Check ALL schedule entry destinations against known station names.
+        // Catches misspelled or non-existent destinations BEFORE the train gets stuck.
+        for (int i = 0; i < trains.size(); i++) {
+            CompoundTag train = trains.getCompound(i);
+            if (!train.contains("scheduleDestinations")) continue;
+
+            ListTag dests = train.getList("scheduleDestinations", 10);
+            String trainName = train.getString("name");
+
+            for (int d = 0; d < dests.size(); d++) {
+                CompoundTag destTag = dests.getCompound(d);
+                String dest = destTag.getString("dest");
+                int step = destTag.getInt("step");
+
+                if (dest.isEmpty()) continue;
+
+                // Check if destination matches any known station (supports * wildcard)
+                boolean found = matchesAnyStation(dest, knownStationNames);
+
+                if (!found) {
+                    CompoundTag diag2 = new CompoundTag();
+                    diag2.putString("type", "SCHEDULE_INVALID_DEST");
+                    diag2.putString("severity", "CRIT");
+                    diag2.putString("trainName", trainName);
+                    if (train.contains("x")) {
+                        diag2.putFloat("x", train.getFloat("x"));
+                        diag2.putFloat("y", train.contains("y") ? train.getFloat("y") : 0);
+                        diag2.putFloat("z", train.getFloat("z"));
+                    }
+
+                    // Find closest matching station name for suggestion
+                    String closest = findClosestStation(dest, knownStationNames);
+                    String suggestion = closest != null
+                            ? " — did you mean '" + closest + "'?"
+                            : " — no similar station found";
+
+                    diag2.putString("desc", "Schedule step " + (step + 1) + ": destination '"
+                            + dest + "' matches no station" + suggestion);
+                    diag2.putString("detail", "Train '" + trainName
+                            + "' schedule references a non-existent station. "
+                            + "Check spelling or place a station with this name.");
+
+                    diagnostics.add(diag2);
+                }
+            }
+        }
+
+        // === Check 5: Signal-Blocked Train Detection ===
+        // Directly identify trains waiting at signal boundaries using Navigation.waitingForSignal
+        // instead of the speed=0 heuristic. Includes wait duration.
+        for (int i = 0; i < trains.size(); i++) {
+            CompoundTag train = trains.getCompound(i);
+            if (!train.contains("waitingForSignal")) continue;
+
+            String trainName = train.getString("name");
+            String signalGroup = train.getString("waitingForSignal");
+            int ticksWaiting = train.contains("ticksWaitingForSignal")
+                    ? train.getInt("ticksWaitingForSignal") : 0;
+            float seconds = ticksWaiting / 20.0f;
+
+            // Only flag if waiting for a meaningful duration (> 5 seconds)
+            if (seconds < 5.0f) continue;
+
+            CompoundTag diag2 = new CompoundTag();
+            diag2.putString("type", "TRAIN_SIGNAL_BLOCKED");
+            diag2.putString("severity", seconds > 60 ? "CRIT" : "WARN");
+            diag2.putString("trainName", trainName);
+            if (train.contains("x")) {
+                diag2.putFloat("x", train.getFloat("x"));
+                diag2.putFloat("y", train.contains("y") ? train.getFloat("y") : 0);
+                diag2.putFloat("z", train.getFloat("z"));
+            }
+
+            String timeStr = seconds >= 60
+                    ? String.format("%.0fm %.0fs", Math.floor(seconds / 60), seconds % 60)
+                    : String.format("%.0fs", seconds);
+            String groupShort = signalGroup.length() > 8
+                    ? signalGroup.substring(0, 8) : signalGroup;
+
+            diag2.putString("desc", "Blocked at signal for " + timeStr);
+            diag2.putString("detail", "Train '" + trainName + "' waiting on signal group "
+                    + groupShort + " — track section ahead occupied");
+
+            diagnostics.add(diag2);
+        }
+
+        // === Check 6: Deadlock Detection ===
+        // Detect mutual signal blocking: train A waits on group G1 (occupied by B),
+        // train B waits on group G2 (occupied by A) → deadlock.
+        Map<String, String> trainWaitsOnGroup = new HashMap<>();  // trainId → groupId
+        Map<String, Set<String>> groupOccupiedByTrains = new HashMap<>();  // groupId → trainIds
+
+        for (int i = 0; i < trains.size(); i++) {
+            CompoundTag train = trains.getCompound(i);
+            String trainId = train.contains("id") ? train.getString("id") : "";
+            if (trainId.isEmpty()) continue;
+
+            if (train.contains("waitingForSignal")) {
+                trainWaitsOnGroup.put(trainId, train.getString("waitingForSignal"));
+            }
+
+            if (train.contains("occupiedGroups")) {
+                ListTag groups = train.getList("occupiedGroups", 10);
+                for (int g = 0; g < groups.size(); g++) {
+                    String gId = groups.getCompound(g).getString("g");
+                    groupOccupiedByTrains.computeIfAbsent(gId, k -> new HashSet<>()).add(trainId);
+                }
+            }
+        }
+
+        // Detect cycles
+        Set<String> deadlockedTrains = new HashSet<>();
+        for (Map.Entry<String, String> waiting : trainWaitsOnGroup.entrySet()) {
+            String trainA = waiting.getKey();
+            String groupWaited = waiting.getValue();
+
+            Set<String> occupiers = groupOccupiedByTrains.getOrDefault(groupWaited, Collections.emptySet());
+            for (String trainB : occupiers) {
+                if (trainB.equals(trainA)) continue;
+
+                String groupBWaits = trainWaitsOnGroup.get(trainB);
+                if (groupBWaits == null) continue;
+
+                Set<String> groupBOccupiers = groupOccupiedByTrains.getOrDefault(
+                        groupBWaits, Collections.emptySet());
+                if (groupBOccupiers.contains(trainA)) {
+                    deadlockedTrains.add(trainA);
+                    deadlockedTrains.add(trainB);
+                }
+            }
+        }
+
+        if (!deadlockedTrains.isEmpty()) {
+            for (int i = 0; i < trains.size(); i++) {
+                CompoundTag train = trains.getCompound(i);
+                String trainId = train.contains("id") ? train.getString("id") : "";
+                if (!deadlockedTrains.contains(trainId)) continue;
+
+                CompoundTag diag2 = new CompoundTag();
+                diag2.putString("type", "DEADLOCK");
+                diag2.putString("severity", "CRIT");
+                diag2.putString("trainName", train.getString("name"));
+                if (train.contains("x")) {
+                    diag2.putFloat("x", train.getFloat("x"));
+                    diag2.putFloat("y", train.contains("y") ? train.getFloat("y") : 0);
+                    diag2.putFloat("z", train.getFloat("z"));
+                }
+                diag2.putString("desc", "Deadlock: mutually blocked with another train");
+                diag2.putString("detail", "Two or more trains are each waiting on signal groups "
+                        + "occupied by the other — manual intervention required");
+
+                diagnostics.add(diag2);
+            }
+        }
+
+        // === Check 7: Route Signal Coverage ===
+        // For navigating trains, check if their path passes through unsignaled junctions.
+        // Uses node IDs embedded in path segments for precise junction matching.
+        for (int i = 0; i < trains.size(); i++) {
+            CompoundTag train = trains.getCompound(i);
+            if (!train.getBoolean("navigating") || !train.contains("path")) continue;
+
+            ListTag path = train.getList("path", 10);
+            String trainName = train.getString("name");
+
+            // Collect node IDs along the route from path segment aId/bId fields
+            Set<Integer> routeNodeIds = new LinkedHashSet<>();
+            for (int p = 0; p < path.size(); p++) {
+                CompoundTag seg = path.getCompound(p);
+                if (seg.contains("aId")) routeNodeIds.add(seg.getInt("aId"));
+                if (seg.contains("bId")) routeNodeIds.add(seg.getInt("bId"));
+            }
+
+            // Check each junction along the route for missing signals
+            for (int nodeId : routeNodeIds) {
+                List<int[]> nodeBranches = adjacency.get(nodeId);
+                if (nodeBranches == null || nodeBranches.size() < 3) continue; // not a junction
+
+                int totalBranches = nodeBranches.size();
+                int signaledCount = 0;
+                for (int[] br : nodeBranches) {
+                    String ek = Math.min(nodeId, br[0]) + ":" + Math.max(nodeId, br[0]);
+                    if (signaledEdges.contains(ek)) signaledCount++;
+                }
+
+                if (signaledCount < totalBranches) {
+                    if (nodeId >= nodes.size()) continue;
+                    CompoundTag jNode = nodes.getCompound(nodeId);
+
+                    CompoundTag diag2 = new CompoundTag();
+                    diag2.putString("type", "ROUTE_UNSIGNALED");
+                    diag2.putString("severity", "WARN");
+                    diag2.putString("trainName", trainName);
+                    diag2.putFloat("x", jNode.getFloat("x"));
+                    diag2.putFloat("y", jNode.getFloat("y"));
+                    diag2.putFloat("z", jNode.getFloat("z"));
+                    diag2.putString("desc", "Junction on route of '" + trainName + "' has "
+                            + signaledCount + "/" + totalBranches + " signaled branches");
+                    diag2.putString("detail", "This junction is along the active navigation path"
+                            + " — missing signals may cause path-finding failures");
+
+                    diagnostics.add(diag2);
+                }
+            }
+        }
+
+        // === Check 8: Network Connectivity ===
+        // BFS from each station node to verify all stations are reachable from each other.
+        // Flags disconnected track networks that prevent trains from routing.
+        ListTag stationList2 = mapData.contains("Stations")
+                ? mapData.getList("Stations", 10) : new ListTag();
+        Map<String, Integer> stationToNode = new LinkedHashMap<>();
+
+        for (int i = 0; i < stationList2.size(); i++) {
+            CompoundTag sta = stationList2.getCompound(i);
+            String name = sta.getString("name");
+            float sx = sta.getFloat("x"), sz = sta.getFloat("z");
+
+            // Find nearest node to this station
+            int bestNode = -1;
+            float bestDist = Float.MAX_VALUE;
+            for (int n = 0; n < nodes.size(); n++) {
+                CompoundTag node = nodes.getCompound(n);
+                float ddx = node.getFloat("x") - sx;
+                float ddz = node.getFloat("z") - sz;
+                float d2 = ddx * ddx + ddz * ddz;
+                if (d2 < bestDist) {
+                    bestDist = d2;
+                    bestNode = n;
+                }
+            }
+            if (bestNode >= 0 && bestDist < 2500) { // within ~50 blocks
+                stationToNode.put(name, bestNode);
+            }
+        }
+
+        if (stationToNode.size() >= 2) {
+            // BFS from first station to find all reachable nodes
+            Iterator<Map.Entry<String, Integer>> stIt = stationToNode.entrySet().iterator();
+            Map.Entry<String, Integer> rootEntry = stIt.next();
+            String rootStation = rootEntry.getKey();
+            Set<Integer> reachable = bfsReachable(rootEntry.getValue(), adjacency);
+
+            while (stIt.hasNext()) {
+                Map.Entry<String, Integer> entry = stIt.next();
+                int nodeId = entry.getValue();
+                if (reachable.contains(nodeId)) continue;
+
+                CompoundTag diag2 = new CompoundTag();
+                diag2.putString("type", "STATION_UNREACHABLE");
+                diag2.putString("severity", "WARN");
+
+                // Find station position
+                for (int si = 0; si < stationList2.size(); si++) {
+                    CompoundTag sTag = stationList2.getCompound(si);
+                    if (entry.getKey().equals(sTag.getString("name"))) {
+                        diag2.putFloat("x", sTag.getFloat("x"));
+                        diag2.putFloat("y", sTag.contains("y") ? sTag.getFloat("y") : 0);
+                        diag2.putFloat("z", sTag.getFloat("z"));
+                        break;
+                    }
+                }
+
+                diag2.putString("desc", "Station '" + entry.getKey()
+                        + "' unreachable from '" + rootStation + "'");
+                diag2.putString("detail", "These stations are on disconnected track networks"
+                        + " — no path exists between them");
+
+                diagnostics.add(diag2);
+            }
+        }
+
         // === Debug: dump all diagnostics for troubleshooting ===
         LogicLink.LOGGER.debug("[LogicLink] ===== DIAGNOSTICS DUMP ({} total) =====", diagnostics.size());
         for (int di = 0; di < diagnostics.size(); di++) {
@@ -1536,6 +1886,92 @@ public class TrainNetworkDataReader {
             }
         } catch (Exception ignored) {}
         return "Unknown";
+    }
+
+    // ==================== Schedule & Route Analysis Helpers ====================
+
+    /**
+     * Check if a schedule destination pattern matches any known station name.
+     * Supports Create's wildcard matching (e.g., "Station *" matches "Station 1").
+     */
+    private static boolean matchesAnyStation(String pattern, Set<String> stationNames) {
+        if (stationNames.contains(pattern)) return true;
+
+        // Create uses * as glob wildcard
+        if (pattern.contains("*")) {
+            String regex = "^" + pattern.replace(".", "\\.").replace("*", ".*") + "$";
+            try {
+                for (String name : stationNames) {
+                    if (name.matches(regex)) return true;
+                }
+            } catch (Exception ignored) {}
+        }
+
+        return false;
+    }
+
+    /**
+     * Find the closest matching station name using Levenshtein distance.
+     * Returns null if no station is reasonably close (within 40% of target length).
+     */
+    private static String findClosestStation(String target, Set<String> stationNames) {
+        if (stationNames.isEmpty()) return null;
+
+        String closest = null;
+        int bestDist = Integer.MAX_VALUE;
+        String targetLower = target.toLowerCase();
+
+        for (String name : stationNames) {
+            int dist = levenshteinDistance(targetLower, name.toLowerCase());
+            if (dist < bestDist) {
+                bestDist = dist;
+                closest = name;
+            }
+        }
+
+        // Only suggest if reasonably close
+        return bestDist <= Math.max(3, target.length() * 0.4) ? closest : null;
+    }
+
+    /**
+     * Compute Levenshtein edit distance between two strings.
+     */
+    private static int levenshteinDistance(String a, String b) {
+        int[][] dp = new int[a.length() + 1][b.length() + 1];
+        for (int i = 0; i <= a.length(); i++) dp[i][0] = i;
+        for (int j = 0; j <= b.length(); j++) dp[0][j] = j;
+        for (int i = 1; i <= a.length(); i++) {
+            for (int j = 1; j <= b.length(); j++) {
+                int cost = a.charAt(i - 1) == b.charAt(j - 1) ? 0 : 1;
+                dp[i][j] = Math.min(dp[i - 1][j] + 1,
+                        Math.min(dp[i][j - 1] + 1, dp[i - 1][j - 1] + cost));
+            }
+        }
+        return dp[a.length()][b.length()];
+    }
+
+    /**
+     * BFS to find all nodes reachable from a starting node via the adjacency graph.
+     */
+    private static Set<Integer> bfsReachable(int startNode,
+                                              Map<Integer, List<int[]>> adjacency) {
+        Set<Integer> visited = new HashSet<>();
+        Queue<Integer> queue = new LinkedList<>();
+        queue.add(startNode);
+        visited.add(startNode);
+
+        while (!queue.isEmpty()) {
+            int current = queue.poll();
+            List<int[]> neighbors = adjacency.get(current);
+            if (neighbors == null) continue;
+            for (int[] neighbor : neighbors) {
+                if (visited.add(neighbor[0])) {
+                    queue.add(neighbor[0]);
+                }
+            }
+        }
+
+        return visited;
     }
 
     // ==================== Reflection Initialization ====================
@@ -1709,6 +2145,44 @@ public class TrainNetworkDataReader {
             navIsActiveMethod = navClass.getMethod("isActive");
             navCurrentPathField = navClass.getDeclaredField("currentPath");
             navCurrentPathField.setAccessible(true);
+
+            // Navigation — signal blocking detection
+            try {
+                navWaitingForSignalField = navClass.getDeclaredField("waitingForSignal");
+                navWaitingForSignalField.setAccessible(true);
+            } catch (Exception e) {
+                LogicLink.LOGGER.debug("TrainNetworkDataReader: Navigation.waitingForSignal not found");
+            }
+            try {
+                navTicksWaitingField = navClass.getDeclaredField("ticksWaitingForSignal");
+                navTicksWaitingField.setAccessible(true);
+            } catch (Exception e) {
+                LogicLink.LOGGER.debug("TrainNetworkDataReader: Navigation.ticksWaitingForSignal not found");
+            }
+
+            // === ScheduleEntry — for full schedule iteration ===
+            try {
+                Class<?> entryClass = Class.forName(
+                        "com.simibubi.create.content.trains.schedule.ScheduleEntry");
+                scheduleEntryInstructionField = entryClass.getField("instruction");
+
+                Class<?> instrClass = Class.forName(
+                        "com.simibubi.create.content.trains.schedule.ScheduleInstruction");
+                instructionDataField = instrClass.getDeclaredField("data");
+                instructionDataField.setAccessible(true);
+            } catch (Exception e) {
+                LogicLink.LOGGER.debug("TrainNetworkDataReader: ScheduleEntry/Instruction reflection failed: {}",
+                        e.getMessage());
+            }
+
+            // === SignalBoundary per-side groups ===
+            try {
+                signalBoundaryGroupsField = Class.forName(
+                        "com.simibubi.create.content.trains.signal.SignalBoundary")
+                        .getField("groups");
+            } catch (Exception e) {
+                LogicLink.LOGGER.debug("TrainNetworkDataReader: SignalBoundary.groups not found");
+            }
 
             // === TrackObserver ===
             Class<?> observerClass = Class.forName("com.simibubi.create.content.trains.observer.TrackObserver");
