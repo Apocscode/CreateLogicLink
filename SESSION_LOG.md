@@ -1219,28 +1219,29 @@ Two opposite-facing signals on the same block now render as a single full-block 
 
 ### Commits
 - `6b4eda1` — Fix signal diagnostic contradictions and improve Check 1/Check 3 independence
+- `19b0aa8` — Fix Check1/Check3 diagnostic overlap: separate unsignaled vs wrong-type
 
 ### Summary
 Fixed the core issue where placing a signal as requested by Check 1 (JUNCTION_UNSIGNALED) would cause Check 3 (SIGNAL_CONFLICT) to immediately flag the same area, creating contradictory diagnostics.
 
-**Root cause analysis (via debug logging):**
+**Original root cause analysis (via debug logging):**
 - Check 1 would fire for unsignaled junctions, suppress Check 3 via `unsignaledJunctions` guard
 - User places a signal → Check 1 goes silent (sees signaledCount > 0)
 - Check 3 is no longer suppressed → flags the signal if wrong type
 - Created a hide-then-reveal pattern that confused users
 
-**Fix 1: Check 1 type-aware signal counting**
-Changed Check 1 to only count branches as "properly signaled" if the signal has the correct chain (cross_signal) type on the junction-facing side. Regular signals placed where chain is needed no longer suppress the diagnostic. Added `signalsByEdge` lookup map for efficient per-branch type verification using Couple F/B direction semantics.
+**First attempt (`6b4eda1`): Check 1 type-aware counting**
+Made Check 1 verify chain type — only counted "properly signaled" if signal had cross_signal on junction-facing side. Regular signals didn't count. Removed unsignaledJunctions guard from Check 3.
 
-**Fix 2: Removed unsignaledJunctions guard from Check 3**
-Both checks now run independently. Check 1 flags missing/wrong-type signals, Check 3 flags existing wrong-type signals. No more conflicting hide-then-reveal patterns.
+**Problem with first attempt:** Created a different overlap. When a branch had a wrong-type signal, Check 1 said "place chain signal" (WARN/yellow). User places a chain signal → Check 1 clears, but Check 3 fires for the OLD wrong-type signal → SIGNAL_CONFLICT (CRIT/red). User sees: "I placed it but now it highlights red."
 
-**Fix 3: Improved diagnostic messages**
-- Check 1 description now notes when branches have signals of wrong type (e.g., "2 branch(es) have signals but wrong type — need chain, not regular")
-- Check 3 suggestion: "Break & place Chain Signal block (or right-click to toggle)" instead of generic "Replace with chain signal"
-- Max train diagnostic now shows which train is longest (e.g., "max train: 85b — 'ICE 3'")
+**Final fix (`19b0aa8`): Clean separation of responsibilities**
+- **Check 1**: ONLY flags branches with ZERO signals → "Place chain signal" (WARN). Branches with any signal (even wrong type) are skipped entirely.
+- **Check 3**: Independently flags existing signals with wrong type → "Break & place Chain Signal block (or right-click to toggle)" (CRIT).
+- No overlap possible — each issue is handled by exactly one check.
+- Removed unused `signalsByEdge` map. Added `branchNeighborIds` list for per-branch signal presence checking.
 
 **Debug logging downgraded to debug level** — all per-signal, per-junction, and diagnostics dump logging moved from INFO to DEBUG for production use.
 
 ### Files Changed
-- `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java` — Check 1 type-aware counting, removed unsignaledJunctions, signalsByEdge map, improved messages, debug-level logging
+- `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java` — Check 1/Check 3 separation, removed type-checking from Check 1, per-branch signaled-edge skip, debug-level logging
