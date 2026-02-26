@@ -1010,9 +1010,7 @@ public class TrainNetworkDataReader {
         }
 
         // Build set of edges that have signals on them (by "min:max" node ID key)
-        // Also build a lookup of signals by edge for type verification
         Set<String> signaledEdges = new HashSet<>();
-        Map<String, List<CompoundTag>> signalsByEdge = new HashMap<>();
         for (int i = 0; i < signals.size(); i++) {
             CompoundTag sig = signals.getCompound(i);
             if (sig.contains("edgeA") && sig.contains("edgeB")) {
@@ -1020,16 +1018,15 @@ public class TrainNetworkDataReader {
                 int b = sig.getInt("edgeB");
                 String ek = Math.min(a, b) + ":" + Math.max(a, b);
                 signaledEdges.add(ek);
-                signalsByEdge.computeIfAbsent(ek, k -> new ArrayList<>()).add(sig);
             }
         }
 
-        // === Check 1: Completely unsignaled junctions ===
-        // Only flag junctions where NO branches have signals at all.
-        // Partial coverage (some branches signaled, some not) is intentional in many
-        // layouts — one-way branches, dead-end spurs, etc. We don't suggest specific
-        // signal placements because Create signals are directional and segment-based;
-        // the correct placement depends on traffic flow which we can't determine.
+        // === Check 1: Unsignaled junction branches ===
+        // Flag diverging branches at junctions that have NO signal at all.
+        // Branches that already have a signal (even wrong type) are skipped here —
+        // Check 3 independently handles wrong-type signal detection.
+        // This separation prevents overlap: placing a chain signal on an unsignaled
+        // branch clears Check 1 cleanly without triggering Check 3.
         for (Map.Entry<Integer, List<int[]>> entry : adjacency.entrySet()) {
             List<int[]> branches = entry.getValue();
             if (branches.size() < 3) continue; // not a junction
@@ -1040,39 +1037,6 @@ public class TrainNetworkDataReader {
             float jx = jNode.getFloat("x");
             float jy = jNode.getFloat("y");
             float jz = jNode.getFloat("z");
-
-            // Count branches with proper chain signals facing this junction.
-            // A branch is "properly signaled" only if at least one signal on that edge
-            // has the correct chain (cross_signal) type on the side facing this junction.
-            // Regular signals placed where chain is needed don't count — the junction
-            // still needs protection.
-            int properlySignaledCount = 0;
-            int anySignalCount = 0;
-            for (int[] branch : branches) {
-                String ek = Math.min(jId, branch[0]) + ":" + Math.max(jId, branch[0]);
-                if (!signaledEdges.contains(ek)) continue;
-                anySignalCount++;
-                // Check if any signal on this edge has chain type on the junction-facing side
-                List<CompoundTag> edgeSignals = signalsByEdge.get(ek);
-                if (edgeSignals != null) {
-                    for (CompoundTag s : edgeSignals) {
-                        int sA = s.getInt("edgeA");
-                        // If edgeA == jId, trains from B approach junction → typeB should be chain
-                        // If edgeB == jId, trains from A approach junction → typeF should be chain
-                        String junctionFacingType = (sA == jId)
-                                ? s.getString("typeB")  // B→A direction faces junction
-                                : s.getString("typeF"); // A→B direction faces junction
-                        if ("cross_signal".equals(junctionFacingType)) {
-                            properlySignaledCount++;
-                            break;
-                        }
-                    }
-                }
-            }
-
-            // Only flag if no branches have proper chain signals facing this junction.
-            // Branches with regular signals are still flagged — they don't protect the junction.
-            if (properlySignaledCount > 0) continue;
 
             CompoundTag diag = new CompoundTag();
             diag.putString("type", "JUNCTION_UNSIGNALED");
@@ -1085,6 +1049,7 @@ public class TrainNetworkDataReader {
 
             // Compute normalized direction for each branch (toward junction = entry direction)
             List<float[]> branchDirs = new ArrayList<>(); // [ndx, ndz, dist, nx, ny, nz] per branch
+            List<Integer> branchNeighborIds = new ArrayList<>(); // parallel list: neighbor node ID per branch
             for (int[] branch : branches) {
                 int neighborId = branch[0];
                 if (neighborId >= nodes.size()) continue;
@@ -1098,6 +1063,7 @@ public class TrainNetworkDataReader {
                 float dist = (float) Math.sqrt(ddx * ddx + ddy * ddy + ddz * ddz);
                 if (dist < 0.01f) continue;
                 branchDirs.add(new float[]{ ddx / dist, ddz / dist, dist, nx, ny, nz });
+                branchNeighborIds.add(neighborId);
             }
 
             // Detect collinear branch pairs (through-lines) via dot product.
@@ -1150,6 +1116,12 @@ public class TrainNetworkDataReader {
                 // Skip through-line branches — they don't need signals at T-junctions
                 if (isThrough) continue;
 
+                // Skip branches that already have ANY signal — Check 3 handles wrong-type signals.
+                // This prevents overlap: Check 1 only suggests placing NEW signals on unsignaled branches.
+                int neighborId2 = branchNeighborIds.get(bi);
+                String branchEdgeKey = Math.min(jId, neighborId2) + ":" + Math.max(jId, neighborId2);
+                if (signaledEdges.contains(branchEdgeKey)) continue;
+
                 CompoundTag branchSug = new CompoundTag();
                 branchSug.putInt("sx", Mth.floor(sugX));
                 branchSug.putInt("sy", Mth.floor(sugY));
@@ -1183,19 +1155,15 @@ public class TrainNetworkDataReader {
             }
             diag.put("suggestions", suggestions);
 
-            // Skip diagnostic entirely if no suggestions remain (all branches were through-line)
+            // Skip diagnostic entirely if no suggestions remain (all branches were through-line or already signaled)
             if (suggestions.isEmpty()) continue;
 
-            int divergingCount = branchDirs.size() - throughBranches.size();
-            String wrongTypeNote = anySignalCount > 0
-                    ? " (" + anySignalCount + " branch(es) have signals but wrong type — need chain, not regular)"
-                    : "";
+            int unsignaledDivergingCount = suggestions.size();
             String trainInfo = maxTrainName.isEmpty()
                     ? " (max train: " + (int) maxTrainLength + "b)"
                     : " (max train: " + (int) maxTrainLength + "b — '" + maxTrainName + "')";
-            diag.putString("desc", branchDirs.size() + "-way junction: " + divergingCount
-                    + " diverging branch(es) need chain signals."
-                    + wrongTypeNote
+            diag.putString("desc", branchDirs.size() + "-way junction: " + unsignaledDivergingCount
+                    + " unsignaled diverging branch(es) need chain signals."
                     + trainInfo);
 
             diagnostics.add(diag);
