@@ -2,6 +2,10 @@
 
 A Minecraft NeoForge mod that bridges **Create mod's** logistics system with **CC:Tweaked** (ComputerCraft). Monitor inventory across an entire logistics network, read machine data from sensors, request item deliveries, control redstone wirelessly, drive programmable motors, and manage Create Storage — all from Lua scripts.
 
+## Download
+
+**[Download logiclink-0.1.0.jar](https://github.com/Apocscode/CreateLogicLink/releases/latest)** — drop into your `mods/` folder.
+
 ## Features
 
 - **Logic Link Hub Block** — Full-size peripheral block that connects to Create's logistics network. Query inventory, enumerate gauges/links, and request item deliveries via Lua (14 functions).
