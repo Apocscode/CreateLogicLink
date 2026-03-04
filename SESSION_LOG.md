@@ -1321,3 +1321,21 @@ Created GitHub Release v0.1.0 with `logiclink-0.1.0.jar` (574KB) attached. Added
 ### Changes
 - **GitHub Release v0.1.0**: https://github.com/Apocscode/CreateLogicLink/releases/tag/v0.1.0 -- jar attached
 - **README.md**: Added "Download" section with link to latest release
+
+---
+
+## Session 9c -- 2026-03-04 -- Train Monitor Screenshots
+
+### Commits
+- `50160cc` -- Add Train Monitor screenshots to README
+
+### Summary
+Added 5 Train Monitor screenshots to the repo and embedded them in the README under a new Screenshots section.
+
+### Files Changed
+- `screenshots/TrainsnetworkMon.png` -- Train network monitor overview
+- `screenshots/Trainspage.png` -- Trains page tab
+- `screenshots/Stationspage.png` -- Stations page tab
+- `screenshots/MapsPage.png` -- Map page tab
+- `screenshots/Signalspage.png` -- Signals page tab
+- `README.md` -- Added Screenshots section with 5 Train Monitor images
