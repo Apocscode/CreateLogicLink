@@ -1294,3 +1294,16 @@ BFS from a root station across the adjacency graph. Maps each station to its nea
 
 ### Files Changed
 - `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java` — +474 lines: 5 new checks, 3 new reflection fields, extended train serialization, 4 helper methods
+
+---
+
+## Session 9 -- 2026-03-04 -- README: CC Programs Reference & wget Link
+
+### Commits
+- `bda31d2` -- Add CC:Tweaked Factory Controller reference and wget install link to README
+
+### Summary
+Added a new "CC:Tweaked Factory Controller" section to README.md linking to the companion Lua automation programs repo (Apocscode/Minecraft-computercraft). Includes the V3 wget installer command and a brief feature summary.
+
+### Files Changed
+- `README.md` -- Added CC:Tweaked Factory Controller section with wget install command and repo link
