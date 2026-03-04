@@ -463,6 +463,23 @@ All blocks and items use shaped crafting recipes with Create and vanilla ingredi
 ### Logic Remote & Contraption Remote
 Currently available via creative tab or `/give` command. Crafting recipes coming soon.
 
+## Screenshots
+
+### Train Monitor - Network Overview
+![Train Network Monitor](screenshots/TrainsnetworkMon.png)
+
+### Train Monitor - Trains Page
+![Trains Page](screenshots/Trainspage.png)
+
+### Train Monitor - Stations Page
+![Stations Page](screenshots/Stationspage.png)
+
+### Train Monitor - Map Page
+![Map Page](screenshots/MapsPage.png)
+
+### Train Monitor - Signals Page
+![Signals Page](screenshots/Signalspage.png)
+
 ## Building from Source
 
 ```bash
