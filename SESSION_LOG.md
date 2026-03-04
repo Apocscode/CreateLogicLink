@@ -1307,3 +1307,17 @@ Added a new "CC:Tweaked Factory Controller" section to README.md linking to the 
 
 ### Files Changed
 - `README.md` -- Added CC:Tweaked Factory Controller section with wget install command and repo link
+
+---
+
+## Session 9b -- 2026-03-04 -- GitHub Release v0.1.0
+
+### Commits
+- `7a30aa4` -- Add download link to README for v0.1.0 release
+
+### Summary
+Created GitHub Release v0.1.0 with `logiclink-0.1.0.jar` (574KB) attached. Added a "Download" section to README.md linking to the latest release. Release notes include full feature list, mod requirements, and CC programs wget link.
+
+### Changes
+- **GitHub Release v0.1.0**: https://github.com/Apocscode/CreateLogicLink/releases/tag/v0.1.0 -- jar attached
+- **README.md**: Added "Download" section with link to latest release
