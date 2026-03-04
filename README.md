@@ -544,6 +544,19 @@ src/main/java/com/apocscode/logiclink/
         └── LogicLinkSceneAnimations.java  # 5 animated Ponder scenes
 ```
 
+## CC:Tweaked Factory Controller (Lua Programs)
+
+A complete **CC:Tweaked automation system** built on top of LogicLink for monitoring and controlling Create factories. Tracks inventory levels, controls conveyors via redstone, and provides wireless pocket computer remote access — all driven by LogicLink peripherals.
+
+**Install directly from an in-game CC:Tweaked terminal:**
+```
+wget run https://raw.githubusercontent.com/Apocscode/Minecraft-computercraft/main/v3/installer.lua
+```
+
+Features include real-time inventory dashboards, gauge-based conveyor control, 7-page wireless pocket UI, train network monitoring, and full Redstone Link management from a pocket computer.
+
+Repository: [Apocscode/Minecraft-computercraft](https://github.com/Apocscode/Minecraft-computercraft)
+
 ## Acknowledgments
 
 The **Logic Remote** and **Contraption Remote** controller systems are inspired by and partially ported from [**Create: Tweaked Controllers**](https://github.com/getItemFromBlock/Create-Tweaked-Controllers) by [getItemFromBlock](https://github.com/getItemFromBlock). The gamepad input handling, frequency-based redstone binding, and lectern-mounted controller mechanics originate from that project.
