@@ -1676,11 +1676,14 @@ public class TrainNetworkDataReader {
         }
 
         // Pre-scan: For each junction edge, check if ANY signal on that edge already
-        // has chain on the junction-facing side. If so, other signals on the same
-        // edge are block-section boundaries (intentionally regular) and should NOT
-        // be flagged as conflicts.
-        // Key: "edgeA:edgeB:side" → true if chain exists on that side
-        Set<String> edgeHasChainOnSide = new HashSet<>();
+        // has chain on any side. If so, other signals on the same edge are
+        // block-section boundaries (intentionally regular) and should NOT be
+        // flagged as conflicts.
+        // Direction-agnostic: Create's Couple ordering for edgeLocation vs types
+        // is not guaranteed to be consistent across signals, so we cannot reliably
+        // determine which "side" (F/B) physically faces which direction. Instead,
+        // we check: does this signal have chain on ANY side?
+        Set<String> edgeHasChainAnySide = new HashSet<>();
         for (int i = 0; i < signals.size(); i++) {
             CompoundTag sig = signals.getCompound(i);
             if (!sig.contains("edgeA") || !sig.contains("edgeB")) continue;
@@ -1688,14 +1691,9 @@ public class TrainNetworkDataReader {
             int b = sig.getInt("edgeB");
             String tF = sig.contains("typeF") ? sig.getString("typeF") : "entry_signal";
             String tB = sig.contains("typeB") ? sig.getString("typeB") : "entry_signal";
-            String ek = Math.min(a, b) + ":" + Math.max(a, b);
-            // Side F = direction A→B. If B is junction and F is chain, mark it.
-            if (junctionNodes.contains(b) && tF.equals("cross_signal")) {
-                edgeHasChainOnSide.add(ek + ":F->" + b);
-            }
-            // Side B = direction B→A. If A is junction and B is chain, mark it.
-            if (junctionNodes.contains(a) && tB.equals("cross_signal")) {
-                edgeHasChainOnSide.add(ek + ":B->" + a);
+            if (tF.equals("cross_signal") || tB.equals("cross_signal")) {
+                String ek = Math.min(a, b) + ":" + Math.max(a, b);
+                edgeHasChainAnySide.add(ek);
             }
         }
 
@@ -1732,38 +1730,34 @@ public class TrainNetworkDataReader {
                         i, (int) sx, (int) sy, (int) sz, edgeA, edgeB, typeF, typeB, aIsJunction, bIsJunction);
             }
 
-            // For each side (F and B) of the signal boundary:
-            // - "forward" side faces from edgeA toward edgeB
-            // - "backward" side faces from edgeB toward edgeA
-            // Only flag as conflict if:
-            //   1. This side faces a junction AND is not chain
-            //   2. AND no other signal on this edge has chain on the same side
-            //      (if another signal IS chain, this one is a block-section boundary)
+            // Direction-agnostic signal conflict check.
+            // Create's Couple ordering for types vs edgeLocation can vary per signal
+            // depending on placement direction, so we don't assume F↔A or F↔B mapping.
+            // Instead: check if the signal has chain on at least one side.
+            // If yes — the signal is protecting this junction. No flag.
+            // If no — both sides regular on a junction edge = conflict.
 
             String ek = Math.min(edgeA, edgeB) + ":" + Math.max(edgeA, edgeB);
-
-            boolean fShouldBeChain = bIsJunction;
-            boolean fIsChain = typeF.equals("cross_signal");
-            // Check if another signal on this edge already provides chain for side F→B
-            boolean fHasPartner = edgeHasChainOnSide.contains(ek + ":F->" + edgeB)
-                    || edgeHasChainOnSide.contains(ek + ":B->" + edgeB);
-
-            boolean bShouldBeChain = aIsJunction;
-            boolean bIsChain = typeB.equals("cross_signal");
-            // Check if another signal on this edge already provides chain for side B→A
-            boolean bHasPartner = edgeHasChainOnSide.contains(ek + ":B->" + edgeA)
-                    || edgeHasChainOnSide.contains(ek + ":F->" + edgeA);
+            boolean hasAnyChain = typeF.equals("cross_signal") || typeB.equals("cross_signal");
+            boolean partnerHasChain = edgeHasChainAnySide.contains(ek);
 
             List<String> issues = new ArrayList<>();
 
-            // Only flag if this side needs chain AND no other signal on the edge has chain
-            // for this junction direction. Regular signals further from the junction are
-            // intentional block-section boundaries when a chain signal exists closer.
-            if (onJunctionEdge && fShouldBeChain && !fIsChain && !fHasPartner) {
-                issues.add("Side F: regular signal should be CHAIN (protects junction at node " + edgeB + ")");
-            }
-            if (onJunctionEdge && bShouldBeChain && !bIsChain && !bHasPartner) {
-                issues.add("Side B: regular signal should be CHAIN (protects junction at node " + edgeA + ")");
+            // Only flag if signal has NO chain AND no other signal on this edge has chain.
+            // Signals that are all-regular on a junction edge when another signal on the
+            // same edge IS chain are intentional block-section boundaries.
+            if (onJunctionEdge && !hasAnyChain && !partnerHasChain) {
+                // Build descriptive message with junction locations
+                StringBuilder msg = new StringBuilder();
+                if (aIsJunction && bIsJunction) {
+                    msg.append("regular signal on edge between 2 junctions — needs chain on each junction-facing side");
+                } else if (aIsJunction) {
+                    msg.append("regular signal should be CHAIN (protects junction at node ").append(edgeA).append(")");
+                } else {
+                    msg.append("regular signal should be CHAIN (protects junction at node ").append(edgeB).append(")");
+                }
+                msg.append(". Use wrench to toggle chain on the side facing approaching trains");
+                issues.add(msg.toString());
             }
 
             // Note: "chain on non-junction edge" check removed — Create's graph can have
@@ -1773,7 +1767,7 @@ public class TrainNetworkDataReader {
             if (!issues.isEmpty()) {
                 CompoundTag diag = new CompoundTag();
                 diag.putString("type", "SIGNAL_CONFLICT");
-                diag.putString("severity", fShouldBeChain && !fIsChain || bShouldBeChain && !bIsChain ? "CRIT" : "WARN");
+                diag.putString("severity", "CRIT");
                 diag.putFloat("x", sx);
                 diag.putFloat("y", sy);
                 diag.putFloat("z", sz);
@@ -1810,19 +1804,8 @@ public class TrainNetworkDataReader {
                 }
 
                 // Determine what the correct type should be
-                if (fShouldBeChain && !fIsChain) {
-                    conflictSug.putString("correctType", "chain");
-                    conflictSug.putString("dir", "Break & place Chain Signal block (or right-click to toggle)");
-                } else if (bShouldBeChain && !bIsChain) {
-                    conflictSug.putString("correctType", "chain");
-                    conflictSug.putString("dir", "Break & place Chain Signal block (or right-click to toggle)");
-                } else if (!onJunctionEdge && (fIsChain || bIsChain)) {
-                    conflictSug.putString("correctType", "signal");
-                    conflictSug.putString("dir", "Replace with regular signal");
-                } else {
-                    conflictSug.putString("correctType", "signal");
-                    conflictSug.putString("dir", "Change chain to regular signal");
-                }
+                conflictSug.putString("correctType", "chain");
+                conflictSug.putString("dir", "Use wrench to toggle chain on junction-facing side");
                 suggestions.add(conflictSug);
                 diag.put("suggestions", suggestions);
 
