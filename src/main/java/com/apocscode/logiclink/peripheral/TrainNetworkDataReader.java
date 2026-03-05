@@ -691,6 +691,28 @@ public class TrainNetworkDataReader {
                             }
                         } catch (Exception ignored) {}
 
+                        // Fallback: if block entity position is (0,0,0) but we have
+                        // edge-interpolated mapX/mapZ, use those as the position.
+                        // This happens when the signal's chunk isn't loaded.
+                        if (tag.getFloat("x") == 0 && tag.getFloat("z") == 0
+                                && tag.contains("mapX") && tag.contains("mapZ")) {
+                            tag.putFloat("x", tag.getFloat("mapX"));
+                            tag.putFloat("z", tag.getFloat("mapZ"));
+                            // Y is not available from edge interpolation, estimate from edge nodes
+                            if (tag.contains("edgeA") && tag.contains("edgeB")) {
+                                ListTag nodesList = mapData.contains("Nodes") ? mapData.getList("Nodes", 10) : null;
+                                if (nodesList != null) {
+                                    int eA = tag.getInt("edgeA");
+                                    int eB = tag.getInt("edgeB");
+                                    if (eA < nodesList.size() && eB < nodesList.size()) {
+                                        float yA = nodesList.getCompound(eA).getFloat("y");
+                                        float yB = nodesList.getCompound(eB).getFloat("y");
+                                        tag.putFloat("y", (yA + yB) / 2.0f);
+                                    }
+                                }
+                            }
+                        }
+
                         // Log each signal at INFO level for debugging
                         LogicLink.LOGGER.info("  Signal#{} pos=({},{},{}) typeF='{}' typeB='{}' edgeA={} edgeB={}",
                                 signalList.size(),
@@ -1316,22 +1338,23 @@ public class TrainNetworkDataReader {
             // Per branch: 1 chain signal (close to junction, facing toward junction)
             //             1 regular signal (further out, waiting/queue point)
             ListTag suggestions = new ListTag();
-            LogicLink.LOGGER.debug("[LogicLink] Junction at ({}, {}, {}) with {} branches, {} through-line",
-                    Mth.floor(jx), Mth.floor(jy), Mth.floor(jz),
+            LogicLink.LOGGER.info("[LogicLink] Junction node {} at ({}, {}, {}) with {} branches, {} through-line",
+                    jId, Mth.floor(jx), Mth.floor(jy), Mth.floor(jz),
                     branchDirs.size(), throughBranches.size());
 
             for (int bi = 0; bi < branchDirs.size(); bi++) {
                 float[] bd = branchDirs.get(bi);
                 float ndx = bd[0], ndz = bd[1], dist = bd[2];
                 float nx = bd[3], ny = bd[4], nz = bd[5];
+                int neighborId2 = branchNeighborIds.get(bi);
                 boolean isThrough = throughBranches.contains(bi);
 
                 // Skip through-line branches entirely — they don't need junction signals.
                 // Adding chain signals on through-lines creates chain-only corridors
                 // between adjacent junctions, which breaks Create's pathfinder.
                 if (isThrough) {
-                    LogicLink.LOGGER.debug("[LogicLink]   Branch {} to ({},{},{}), dist={} — through-line, skipped",
-                            bi, (int)nx, (int)ny, (int)nz, String.format("%.1f", dist));
+                    LogicLink.LOGGER.info("[LogicLink]   Branch {} to node {} ({},{},{}), dist={} — through-line, skipped",
+                            bi, neighborId2, (int)nx, (int)ny, (int)nz, String.format("%.1f", dist));
                     continue;
                 }
 
@@ -1348,11 +1371,10 @@ public class TrainNetworkDataReader {
                         ? ""
                         : " [!] Edge " + (int) dist + "b < max train " + (int) maxTrainLength + "b";
 
-                LogicLink.LOGGER.debug("[LogicLink]   Branch {} to ({},{},{}), dist={} — diverging",
-                        bi, (int)nx, (int)ny, (int)nz, String.format("%.1f", dist));
+                LogicLink.LOGGER.info("[LogicLink]   Branch {} to node {} ({},{},{}), dist={} — diverging",
+                        bi, neighborId2, (int)nx, (int)ny, (int)nz, String.format("%.1f", dist));
 
                 // Skip branches that already have ANY signal (within 3 hops)
-                int neighborId2 = branchNeighborIds.get(bi);
                 String branchEdgeKey = Math.min(jId, neighborId2) + ":" + Math.max(jId, neighborId2);
                 boolean alreadySignaled = junctionBranchSignaled.contains(branchEdgeKey);
                 if (alreadySignaled) continue;
@@ -1490,6 +1512,22 @@ public class TrainNetworkDataReader {
                 StringBuilder cause = new StringBuilder();
                 StringBuilder detail = new StringBuilder();
 
+                // Include all schedule destinations for debugging
+                if (train.contains("scheduleDestinations")) {
+                    ListTag dests = train.getList("scheduleDestinations", 10);
+                    if (!dests.isEmpty()) {
+                        StringBuilder destList = new StringBuilder();
+                        for (int di = 0; di < dests.size(); di++) {
+                            CompoundTag d = dests.getCompound(di);
+                            if (destList.length() > 0) destList.append(" → ");
+                            String destName = d.getString("station");
+                            boolean isRegex = d.contains("isRegex") && d.getBoolean("isRegex");
+                            destList.append(isRegex ? "*" + destName + "*" : destName);
+                        }
+                        detail.append("Route: ").append(destList);
+                    }
+                }
+
                 // Check if the train's schedule title hints at a destination
                 if (!schedTitle.isEmpty()) {
                     cause.append("Stuck at step: ").append(schedTitle);
@@ -1602,6 +1640,11 @@ public class TrainNetworkDataReader {
                 if (detail.length() == 0) {
                     detail.append("Check track connections, signal placement, and station name spelling");
                 }
+                // If nearest junction has full signal coverage, suggest manual restart
+                if (detail.toString().contains("Route:") && !detail.toString().contains("NO signals")
+                        && !detail.toString().contains("signaled branches")) {
+                    detail.append("; Try: pick up train and re-place, or toggle schedule off/on");
+                }
 
                 diag.putString("desc", cause.toString());
                 diag.putString("detail", detail.toString());
@@ -1661,7 +1704,15 @@ public class TrainNetworkDataReader {
             float sx = sig.contains("x") ? sig.getFloat("x") : 0;
             float sy = sig.contains("y") ? sig.getFloat("y") : 0;
             float sz = sig.contains("z") ? sig.getFloat("z") : 0;
-            if (sx == 0 && sz == 0) continue; // no valid position
+            // Use mapX/mapZ as fallback if block entity pos is (0,0,0)
+            if (sx == 0 && sz == 0) {
+                if (sig.contains("mapX") && sig.contains("mapZ")) {
+                    sx = sig.getFloat("mapX");
+                    sz = sig.getFloat("mapZ");
+                } else {
+                    continue; // no valid position at all
+                }
+            }
 
             if (onJunctionEdge) {
                 LogicLink.LOGGER.debug("[LogicLink] Check3 Signal#{} @ ({},{},{}) edgeA={} edgeB={} typeF='{}' typeB='{}' aIsJ={} bIsJ={}",

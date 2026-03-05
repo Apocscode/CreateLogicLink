@@ -1,0 +1,150 @@
+﻿[05Mar2026 13:27:39.283] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#3 pos=(30.0,-58.0,225.0) typeF='cross_signal' typeB='entry_signal' edgeA=46 edgeB=9
+[05Mar2026 13:27:39.284] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: Signaled edges set (direct): [5:37, 9:46, 35:37]
+[05Mar2026 13:27:39.284] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: Junction branch signaled (with walk): [5:37, 9:46, 35:37]
+[05Mar2026 13:27:39.285] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: TrainNetworkDataReader: Result -- 53 nodes, 56 edges, 12 curves, 4 stations, 4 signals, 2 trains, 0 observers, 1 diagnostics
+[05Mar2026 13:27:39.285] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Diagnostic #1: type=NO_PATH, severity=CRIT, pos=(-4.0,-59.0,180.0), desc=No navigation path found
+[05Mar2026 13:27:40.732] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#0 pos=(0.0,0.0,0.0) typeF='entry_signal' typeB='entry_signal' edgeA=37 edgeB=5
+[05Mar2026 13:27:40.732] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#1 pos=(-33.0,-58.0,237.0) typeF='cross_signal' typeB='entry_signal' edgeA=35 edgeB=37
+[05Mar2026 13:27:40.732] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#2 pos=(30.0,-58.0,229.0) typeF='entry_signal' typeB='entry_signal' edgeA=46 edgeB=9
+[05Mar2026 13:27:40.732] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#3 pos=(30.0,-58.0,225.0) typeF='cross_signal' typeB='entry_signal' edgeA=46 edgeB=9
+[05Mar2026 13:27:40.733] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: Signaled edges set (direct): [5:37, 9:46, 35:37]
+[05Mar2026 13:27:40.733] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: Junction branch signaled (with walk): [5:37, 9:46, 35:37]
+[05Mar2026 13:27:40.733] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: TrainNetworkDataReader: Result -- 53 nodes, 56 edges, 12 curves, 4 stations, 4 signals, 2 trains, 0 observers, 1 diagnostics
+[05Mar2026 13:27:40.733] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Diagnostic #1: type=NO_PATH, severity=CRIT, pos=(-4.0,-59.0,180.0), desc=No navigation path found
+[05Mar2026 13:27:42.925] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#0 pos=(0.0,0.0,0.0) typeF='entry_signal' typeB='entry_signal' edgeA=37 edgeB=5
+[05Mar2026 13:27:42.925] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#1 pos=(-33.0,-58.0,237.0) typeF='cross_signal' typeB='entry_signal' edgeA=35 edgeB=37
+[05Mar2026 13:27:42.925] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#2 pos=(30.0,-58.0,229.0) typeF='entry_signal' typeB='entry_signal' edgeA=46 edgeB=9
+[05Mar2026 13:27:42.925] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#3 pos=(30.0,-58.0,225.0) typeF='cross_signal' typeB='entry_signal' edgeA=46 edgeB=9
+[05Mar2026 13:27:42.925] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: Signaled edges set (direct): [5:37, 9:46, 35:37]
+[05Mar2026 13:27:42.925] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: Junction branch signaled (with walk): [5:37, 9:46, 35:37]
+[05Mar2026 13:27:42.926] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: TrainNetworkDataReader: Result -- 53 nodes, 56 edges, 12 curves, 4 stations, 4 signals, 2 trains, 0 observers, 1 diagnostics
+[05Mar2026 13:27:42.926] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Diagnostic #1: type=NO_PATH, severity=CRIT, pos=(-4.0,-59.0,180.0), desc=No navigation path found
+[05Mar2026 13:28:12.927] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#0 pos=(-27.0,-58.0,212.0) typeF='entry_signal' typeB='entry_signal' edgeA=3 edgeB=30
+[05Mar2026 13:28:12.927] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#1 pos=(0.0,0.0,0.0) typeF='entry_signal' typeB='entry_signal' edgeA=37 edgeB=5
+[05Mar2026 13:28:12.927] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#2 pos=(-33.0,-58.0,237.0) typeF='cross_signal' typeB='entry_signal' edgeA=35 edgeB=37
+[05Mar2026 13:28:12.927] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#3 pos=(30.0,-58.0,229.0) typeF='entry_signal' typeB='entry_signal' edgeA=46 edgeB=9
+[05Mar2026 13:28:12.927] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#4 pos=(-27.0,-58.0,206.0) typeF='entry_signal' typeB='entry_signal' edgeA=38 edgeB=30
+[05Mar2026 13:28:12.927] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#5 pos=(30.0,-58.0,225.0) typeF='cross_signal' typeB='entry_signal' edgeA=46 edgeB=9
+[05Mar2026 13:28:12.927] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: Signaled edges set (direct): [5:37, 30:38, 9:46, 35:37, 3:30]
+[05Mar2026 13:28:12.927] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: Junction branch signaled (with walk): [5:37, 30:38, 9:46, 35:37, 3:30]
+[05Mar2026 13:28:12.928] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: TrainNetworkDataReader: Result -- 53 nodes, 56 edges, 12 curves, 4 stations, 6 signals, 2 trains, 0 observers, 3 diagnostics
+[05Mar2026 13:28:12.928] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Diagnostic #1: type=NO_PATH, severity=CRIT, pos=(-4.0,-59.0,180.0), desc=No navigation path found
+[05Mar2026 13:28:12.928] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Diagnostic #2: type=SIGNAL_CONFLICT, severity=CRIT, pos=(-27.0,-58.0,212.0), desc=Signal conflict: Side F: regular signal should be CHAIN (protects junction at node 30)
+[05Mar2026 13:28:12.928] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Diagnostic #3: type=SIGNAL_CONFLICT, severity=CRIT, pos=(-27.0,-58.0,206.0), desc=Signal conflict: Side F: regular signal should be CHAIN (protects junction at node 30)
+[05Mar2026 13:28:33.434] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#0 pos=(0.0,0.0,0.0) typeF='entry_signal' typeB='cross_signal' edgeA=26 edgeB=52
+[05Mar2026 13:28:33.434] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#1 pos=(-27.0,-58.0,212.0) typeF='cross_signal' typeB='entry_signal' edgeA=3 edgeB=30
+[05Mar2026 13:28:33.434] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#2 pos=(0.0,0.0,0.0) typeF='entry_signal' typeB='entry_signal' edgeA=37 edgeB=5
+[05Mar2026 13:28:33.434] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#3 pos=(-33.0,-58.0,237.0) typeF='cross_signal' typeB='entry_signal' edgeA=35 edgeB=37
+[05Mar2026 13:28:33.434] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#4 pos=(0.0,0.0,0.0) typeF='entry_signal' typeB='cross_signal' edgeA=30 edgeB=27
+[05Mar2026 13:28:33.434] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#5 pos=(30.0,-58.0,229.0) typeF='entry_signal' typeB='entry_signal' edgeA=46 edgeB=9
+[05Mar2026 13:28:33.434] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#6 pos=(-27.0,-58.0,206.0) typeF='cross_signal' typeB='entry_signal' edgeA=38 edgeB=30
+[05Mar2026 13:28:33.434] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#7 pos=(30.0,-58.0,225.0) typeF='cross_signal' typeB='entry_signal' edgeA=46 edgeB=9
+[05Mar2026 13:28:33.434] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: Signaled edges set (direct): [5:37, 30:38, 27:30, 26:52, 9:46, 35:37, 3:30]
+[05Mar2026 13:28:33.434] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: Junction branch signaled (with walk): [5:37, 30:38, 27:30, 9:46, 26:30, 35:37, 3:30]
+[05Mar2026 13:28:33.435] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: TrainNetworkDataReader: Result -- 53 nodes, 56 edges, 12 curves, 4 stations, 8 signals, 2 trains, 0 observers, 2 diagnostics
+[05Mar2026 13:28:33.435] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Diagnostic #1: type=NO_PATH, severity=CRIT, pos=(-51.0,-59.0,154.0), desc=No navigation path found
+[05Mar2026 13:28:33.435] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Diagnostic #2: type=NO_PATH, severity=CRIT, pos=(-4.0,-59.0,180.0), desc=No navigation path found
+[05Mar2026 13:28:34.033] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#0 pos=(0.0,0.0,0.0) typeF='entry_signal' typeB='cross_signal' edgeA=26 edgeB=52
+[05Mar2026 13:28:34.033] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#1 pos=(-27.0,-58.0,212.0) typeF='cross_signal' typeB='entry_signal' edgeA=3 edgeB=30
+[05Mar2026 13:28:34.033] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#2 pos=(0.0,0.0,0.0) typeF='entry_signal' typeB='entry_signal' edgeA=37 edgeB=5
+[05Mar2026 13:28:34.033] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#3 pos=(-33.0,-58.0,237.0) typeF='cross_signal' typeB='entry_signal' edgeA=35 edgeB=37
+[05Mar2026 13:28:34.033] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#4 pos=(0.0,0.0,0.0) typeF='entry_signal' typeB='cross_signal' edgeA=30 edgeB=27
+[05Mar2026 13:28:34.033] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#5 pos=(30.0,-58.0,229.0) typeF='entry_signal' typeB='entry_signal' edgeA=46 edgeB=9
+[05Mar2026 13:28:34.033] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#6 pos=(-27.0,-58.0,206.0) typeF='cross_signal' typeB='entry_signal' edgeA=38 edgeB=30
+[05Mar2026 13:28:34.033] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#7 pos=(30.0,-58.0,225.0) typeF='cross_signal' typeB='entry_signal' edgeA=46 edgeB=9
+[05Mar2026 13:28:34.034] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: Signaled edges set (direct): [5:37, 30:38, 27:30, 26:52, 9:46, 35:37, 3:30]
+[05Mar2026 13:28:34.034] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: Junction branch signaled (with walk): [5:37, 30:38, 27:30, 9:46, 26:30, 35:37, 3:30]
+[05Mar2026 13:28:34.034] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: TrainNetworkDataReader: Result -- 53 nodes, 56 edges, 12 curves, 4 stations, 8 signals, 2 trains, 0 observers, 2 diagnostics
+[05Mar2026 13:28:34.034] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Diagnostic #1: type=NO_PATH, severity=CRIT, pos=(-51.0,-59.0,154.0), desc=No navigation path found
+[05Mar2026 13:28:34.034] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Diagnostic #2: type=NO_PATH, severity=CRIT, pos=(-4.0,-59.0,180.0), desc=No navigation path found
+[05Mar2026 13:28:41.383] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#0 pos=(0.0,0.0,0.0) typeF='entry_signal' typeB='cross_signal' edgeA=26 edgeB=52
+[05Mar2026 13:28:41.383] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#1 pos=(-27.0,-58.0,212.0) typeF='cross_signal' typeB='entry_signal' edgeA=3 edgeB=30
+[05Mar2026 13:28:41.383] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#2 pos=(0.0,0.0,0.0) typeF='entry_signal' typeB='entry_signal' edgeA=37 edgeB=5
+[05Mar2026 13:28:41.383] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#3 pos=(-33.0,-58.0,237.0) typeF='cross_signal' typeB='entry_signal' edgeA=35 edgeB=37
+[05Mar2026 13:28:41.384] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#4 pos=(0.0,0.0,0.0) typeF='entry_signal' typeB='cross_signal' edgeA=30 edgeB=27
+[05Mar2026 13:28:41.384] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#5 pos=(30.0,-58.0,229.0) typeF='entry_signal' typeB='entry_signal' edgeA=46 edgeB=9
+[05Mar2026 13:28:41.384] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#6 pos=(-27.0,-58.0,206.0) typeF='cross_signal' typeB='entry_signal' edgeA=38 edgeB=30
+[05Mar2026 13:28:41.384] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#7 pos=(30.0,-58.0,225.0) typeF='cross_signal' typeB='entry_signal' edgeA=46 edgeB=9
+[05Mar2026 13:28:41.384] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: Signaled edges set (direct): [5:37, 30:38, 27:30, 26:52, 9:46, 35:37, 3:30]
+[05Mar2026 13:28:41.384] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: Junction branch signaled (with walk): [5:37, 30:38, 27:30, 9:46, 26:30, 35:37, 3:30]
+[05Mar2026 13:28:41.384] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: TrainNetworkDataReader: Result -- 53 nodes, 56 edges, 12 curves, 4 stations, 8 signals, 2 trains, 0 observers, 2 diagnostics
+[05Mar2026 13:28:41.384] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Diagnostic #1: type=NO_PATH, severity=CRIT, pos=(-51.0,-59.0,154.0), desc=No navigation path found
+[05Mar2026 13:28:41.384] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Diagnostic #2: type=NO_PATH, severity=CRIT, pos=(-4.0,-59.0,180.0), desc=No navigation path found
+[05Mar2026 13:28:42.925] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#0 pos=(0.0,0.0,0.0) typeF='entry_signal' typeB='cross_signal' edgeA=26 edgeB=52
+[05Mar2026 13:28:42.925] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#1 pos=(-27.0,-58.0,212.0) typeF='cross_signal' typeB='entry_signal' edgeA=3 edgeB=30
+[05Mar2026 13:28:42.925] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#2 pos=(0.0,0.0,0.0) typeF='entry_signal' typeB='entry_signal' edgeA=37 edgeB=5
+[05Mar2026 13:28:42.925] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#3 pos=(-33.0,-58.0,237.0) typeF='cross_signal' typeB='entry_signal' edgeA=35 edgeB=37
+[05Mar2026 13:28:42.925] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#4 pos=(0.0,0.0,0.0) typeF='entry_signal' typeB='cross_signal' edgeA=30 edgeB=27
+[05Mar2026 13:28:42.925] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#5 pos=(30.0,-58.0,229.0) typeF='entry_signal' typeB='entry_signal' edgeA=46 edgeB=9
+[05Mar2026 13:28:42.926] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#6 pos=(-27.0,-58.0,206.0) typeF='cross_signal' typeB='entry_signal' edgeA=38 edgeB=30
+[05Mar2026 13:28:42.926] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#7 pos=(30.0,-58.0,225.0) typeF='cross_signal' typeB='entry_signal' edgeA=46 edgeB=9
+[05Mar2026 13:28:42.926] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: Signaled edges set (direct): [5:37, 30:38, 27:30, 26:52, 9:46, 35:37, 3:30]
+[05Mar2026 13:28:42.926] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: Junction branch signaled (with walk): [5:37, 30:38, 27:30, 9:46, 26:30, 35:37, 3:30]
+[05Mar2026 13:28:42.926] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: TrainNetworkDataReader: Result -- 53 nodes, 56 edges, 12 curves, 4 stations, 8 signals, 2 trains, 0 observers, 2 diagnostics
+[05Mar2026 13:28:42.926] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Diagnostic #1: type=NO_PATH, severity=CRIT, pos=(-51.0,-59.0,154.0), desc=No navigation path found
+[05Mar2026 13:28:42.926] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Diagnostic #2: type=NO_PATH, severity=CRIT, pos=(-4.0,-59.0,180.0), desc=No navigation path found
+[05Mar2026 13:28:59.334] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#0 pos=(0.0,0.0,0.0) typeF='entry_signal' typeB='cross_signal' edgeA=26 edgeB=52
+[05Mar2026 13:28:59.334] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#1 pos=(-27.0,-58.0,212.0) typeF='cross_signal' typeB='entry_signal' edgeA=3 edgeB=30
+[05Mar2026 13:28:59.334] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#2 pos=(0.0,0.0,0.0) typeF='entry_signal' typeB='entry_signal' edgeA=37 edgeB=5
+[05Mar2026 13:28:59.334] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#3 pos=(-33.0,-58.0,237.0) typeF='cross_signal' typeB='entry_signal' edgeA=35 edgeB=37
+[05Mar2026 13:28:59.334] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#4 pos=(0.0,0.0,0.0) typeF='entry_signal' typeB='cross_signal' edgeA=30 edgeB=27
+[05Mar2026 13:28:59.334] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#5 pos=(30.0,-58.0,229.0) typeF='entry_signal' typeB='entry_signal' edgeA=46 edgeB=9
+[05Mar2026 13:28:59.334] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#6 pos=(-27.0,-58.0,206.0) typeF='cross_signal' typeB='entry_signal' edgeA=38 edgeB=30
+[05Mar2026 13:28:59.334] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#7 pos=(30.0,-58.0,225.0) typeF='cross_signal' typeB='entry_signal' edgeA=46 edgeB=9
+[05Mar2026 13:28:59.334] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: Signaled edges set (direct): [5:37, 30:38, 27:30, 26:52, 9:46, 35:37, 3:30]
+[05Mar2026 13:28:59.334] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: Junction branch signaled (with walk): [5:37, 30:38, 27:30, 9:46, 26:30, 35:37, 3:30]
+[05Mar2026 13:28:59.335] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: TrainNetworkDataReader: Result -- 53 nodes, 56 edges, 12 curves, 4 stations, 8 signals, 2 trains, 0 observers, 2 diagnostics
+[05Mar2026 13:28:59.335] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Diagnostic #1: type=NO_PATH, severity=CRIT, pos=(-51.0,-59.0,154.0), desc=No navigation path found
+[05Mar2026 13:28:59.335] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Diagnostic #2: type=NO_PATH, severity=CRIT, pos=(-4.0,-59.0,180.0), desc=No navigation path found
+[05Mar2026 13:29:00.184] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#0 pos=(0.0,0.0,0.0) typeF='entry_signal' typeB='cross_signal' edgeA=26 edgeB=52
+[05Mar2026 13:29:00.184] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#1 pos=(-27.0,-58.0,212.0) typeF='cross_signal' typeB='entry_signal' edgeA=3 edgeB=30
+[05Mar2026 13:29:00.184] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#2 pos=(0.0,0.0,0.0) typeF='entry_signal' typeB='entry_signal' edgeA=37 edgeB=5
+[05Mar2026 13:29:00.184] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#3 pos=(-33.0,-58.0,237.0) typeF='cross_signal' typeB='entry_signal' edgeA=35 edgeB=37
+[05Mar2026 13:29:00.184] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#4 pos=(0.0,0.0,0.0) typeF='entry_signal' typeB='cross_signal' edgeA=30 edgeB=27
+[05Mar2026 13:29:00.184] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#5 pos=(30.0,-58.0,229.0) typeF='entry_signal' typeB='entry_signal' edgeA=46 edgeB=9
+[05Mar2026 13:29:00.184] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#6 pos=(-27.0,-58.0,206.0) typeF='cross_signal' typeB='entry_signal' edgeA=38 edgeB=30
+[05Mar2026 13:29:00.184] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#7 pos=(30.0,-58.0,225.0) typeF='cross_signal' typeB='entry_signal' edgeA=46 edgeB=9
+[05Mar2026 13:29:00.184] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: Signaled edges set (direct): [5:37, 30:38, 27:30, 26:52, 9:46, 35:37, 3:30]
+[05Mar2026 13:29:00.184] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: Junction branch signaled (with walk): [5:37, 30:38, 27:30, 9:46, 26:30, 35:37, 3:30]
+[05Mar2026 13:29:00.185] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: TrainNetworkDataReader: Result -- 53 nodes, 56 edges, 12 curves, 4 stations, 8 signals, 2 trains, 0 observers, 2 diagnostics
+[05Mar2026 13:29:00.185] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Diagnostic #1: type=NO_PATH, severity=CRIT, pos=(-51.0,-59.0,154.0), desc=No navigation path found
+[05Mar2026 13:29:00.185] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Diagnostic #2: type=NO_PATH, severity=CRIT, pos=(-4.0,-59.0,180.0), desc=No navigation path found
+[05Mar2026 13:29:00.634] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#0 pos=(0.0,0.0,0.0) typeF='entry_signal' typeB='cross_signal' edgeA=26 edgeB=52
+[05Mar2026 13:29:00.634] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#1 pos=(-27.0,-58.0,212.0) typeF='cross_signal' typeB='entry_signal' edgeA=3 edgeB=30
+[05Mar2026 13:29:00.634] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#2 pos=(0.0,0.0,0.0) typeF='entry_signal' typeB='entry_signal' edgeA=37 edgeB=5
+[05Mar2026 13:29:00.634] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#3 pos=(-33.0,-58.0,237.0) typeF='cross_signal' typeB='entry_signal' edgeA=35 edgeB=37
+[05Mar2026 13:29:00.634] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#4 pos=(0.0,0.0,0.0) typeF='entry_signal' typeB='cross_signal' edgeA=30 edgeB=27
+[05Mar2026 13:29:00.634] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#5 pos=(30.0,-58.0,229.0) typeF='entry_signal' typeB='entry_signal' edgeA=46 edgeB=9
+[05Mar2026 13:29:00.634] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#6 pos=(-27.0,-58.0,206.0) typeF='cross_signal' typeB='entry_signal' edgeA=38 edgeB=30
+[05Mar2026 13:29:00.634] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#7 pos=(30.0,-58.0,225.0) typeF='cross_signal' typeB='entry_signal' edgeA=46 edgeB=9
+[05Mar2026 13:29:00.634] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: Signaled edges set (direct): [5:37, 30:38, 27:30, 26:52, 9:46, 35:37, 3:30]
+[05Mar2026 13:29:00.634] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: Junction branch signaled (with walk): [5:37, 30:38, 27:30, 9:46, 26:30, 35:37, 3:30]
+[05Mar2026 13:29:00.635] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: TrainNetworkDataReader: Result -- 53 nodes, 56 edges, 12 curves, 4 stations, 8 signals, 2 trains, 0 observers, 2 diagnostics
+[05Mar2026 13:29:00.635] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Diagnostic #1: type=NO_PATH, severity=CRIT, pos=(-51.0,-59.0,154.0), desc=No navigation path found
+[05Mar2026 13:29:00.635] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Diagnostic #2: type=NO_PATH, severity=CRIT, pos=(-4.0,-59.0,180.0), desc=No navigation path found
+[05Mar2026 13:29:01.033] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#0 pos=(0.0,0.0,0.0) typeF='entry_signal' typeB='cross_signal' edgeA=26 edgeB=52
+[05Mar2026 13:29:01.033] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#1 pos=(-27.0,-58.0,212.0) typeF='cross_signal' typeB='entry_signal' edgeA=3 edgeB=30
+[05Mar2026 13:29:01.033] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#2 pos=(0.0,0.0,0.0) typeF='entry_signal' typeB='entry_signal' edgeA=37 edgeB=5
+[05Mar2026 13:29:01.033] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#3 pos=(-33.0,-58.0,237.0) typeF='cross_signal' typeB='entry_signal' edgeA=35 edgeB=37
+[05Mar2026 13:29:01.033] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#4 pos=(0.0,0.0,0.0) typeF='entry_signal' typeB='cross_signal' edgeA=30 edgeB=27
+[05Mar2026 13:29:01.033] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#5 pos=(30.0,-58.0,229.0) typeF='entry_signal' typeB='entry_signal' edgeA=46 edgeB=9
+[05Mar2026 13:29:01.033] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#6 pos=(-27.0,-58.0,206.0) typeF='cross_signal' typeB='entry_signal' edgeA=38 edgeB=30
+[05Mar2026 13:29:01.033] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#7 pos=(30.0,-58.0,225.0) typeF='cross_signal' typeB='entry_signal' edgeA=46 edgeB=9
+[05Mar2026 13:29:01.034] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: Signaled edges set (direct): [5:37, 30:38, 27:30, 26:52, 9:46, 35:37, 3:30]
+[05Mar2026 13:29:01.034] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: Junction branch signaled (with walk): [5:37, 30:38, 27:30, 9:46, 26:30, 35:37, 3:30]
+[05Mar2026 13:29:01.034] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: TrainNetworkDataReader: Result -- 53 nodes, 56 edges, 12 curves, 4 stations, 8 signals, 2 trains, 0 observers, 2 diagnostics
+[05Mar2026 13:29:01.034] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Diagnostic #1: type=NO_PATH, severity=CRIT, pos=(-51.0,-59.0,154.0), desc=No navigation path found
+[05Mar2026 13:29:01.034] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Diagnostic #2: type=NO_PATH, severity=CRIT, pos=(-4.0,-59.0,180.0), desc=No navigation path found
+[05Mar2026 13:29:12.924] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#0 pos=(0.0,0.0,0.0) typeF='entry_signal' typeB='cross_signal' edgeA=26 edgeB=52
+[05Mar2026 13:29:12.924] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#1 pos=(-27.0,-58.0,212.0) typeF='cross_signal' typeB='entry_signal' edgeA=3 edgeB=30
+[05Mar2026 13:29:12.924] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#2 pos=(0.0,0.0,0.0) typeF='entry_signal' typeB='entry_signal' edgeA=37 edgeB=5
+[05Mar2026 13:29:12.924] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#3 pos=(-33.0,-58.0,237.0) typeF='cross_signal' typeB='entry_signal' edgeA=35 edgeB=37
+[05Mar2026 13:29:12.924] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#4 pos=(0.0,0.0,0.0) typeF='entry_signal' typeB='cross_signal' edgeA=30 edgeB=27
+[05Mar2026 13:29:12.924] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#5 pos=(30.0,-58.0,229.0) typeF='entry_signal' typeB='entry_signal' edgeA=46 edgeB=9
+[05Mar2026 13:29:12.924] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#6 pos=(-27.0,-58.0,206.0) typeF='cross_signal' typeB='entry_signal' edgeA=38 edgeB=30
+[05Mar2026 13:29:12.924] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#7 pos=(30.0,-58.0,225.0) typeF='cross_signal' typeB='entry_signal' edgeA=46 edgeB=9
+[05Mar2026 13:29:12.924] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: Signaled edges set (direct): [5:37, 30:38, 27:30, 26:52, 9:46, 35:37, 3:30]
+[05Mar2026 13:29:12.924] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: Junction branch signaled (with walk): [5:37, 30:38, 27:30, 9:46, 26:30, 35:37, 3:30]
+[05Mar2026 13:29:12.925] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: TrainNetworkDataReader: Result -- 53 nodes, 56 edges, 12 curves, 4 stations, 8 signals, 2 trains, 0 observers, 2 diagnostics
+[05Mar2026 13:29:12.925] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Diagnostic #1: type=NO_PATH, severity=CRIT, pos=(-51.0,-59.0,154.0), desc=No navigation path found
+[05Mar2026 13:29:12.925] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Diagnostic #2: type=NO_PATH, severity=CRIT, pos=(-4.0,-59.0,180.0), desc=No navigation path found
