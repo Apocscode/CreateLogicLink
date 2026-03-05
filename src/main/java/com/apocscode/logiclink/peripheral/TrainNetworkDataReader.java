@@ -1336,7 +1336,9 @@ public class TrainNetworkDataReader {
             // on all entries — treat all branches as diverging.
             // The chain signals ensure a train only enters the crossing if it
             // can fully clear it before the perpendicular train arrives.
+            boolean isCrossing = false;
             if (throughBranches.size() == branchDirs.size() && branchDirs.size() >= 4) {
+                isCrossing = true;
                 LogicLink.LOGGER.info("[LogicLink]   All {} branches through-line — CROSSING, all entries need chain signals",
                         branchDirs.size());
                 throughBranches.clear();
@@ -1366,6 +1368,15 @@ public class TrainNetworkDataReader {
                 // between adjacent junctions, which breaks Create's pathfinder.
                 if (isThrough) {
                     LogicLink.LOGGER.info("[LogicLink]   Branch {} to node {} ({},{},{}), dist={} — through-line, skipped",
+                            bi, neighborId2, (int)nx, (int)ny, (int)nz, String.format("%.1f", dist));
+                    continue;
+                }
+
+                // Skip very short edges (< 2.5 blocks) — these are internal crossing
+                // geometry segments where a signal can't physically be placed.
+                // The actual approach edges are longer; signals go there instead.
+                if (dist < 2.5f) {
+                    LogicLink.LOGGER.info("[LogicLink]   Branch {} to node {} ({},{},{}), dist={} — too short for signal placement, skipped",
                             bi, neighborId2, (int)nx, (int)ny, (int)nz, String.format("%.1f", dist));
                     continue;
                 }
@@ -1450,10 +1461,16 @@ public class TrainNetworkDataReader {
                     ? " (max train: " + (int) maxTrainLength + "b)"
                     : " (max train: " + (int) maxTrainLength + "b — '" + maxTrainName + "')";
             int divergingCount = branchDirs.size() - throughBranches.size();
-            diag.putString("desc", branchDirs.size() + "-way junction: " + unsignaledBranchCount
-                    + " unsignaled diverging branch(es) need chain signals (of "
-                    + divergingCount + " diverging, " + throughBranches.size() / 2 + " through-line)."
-                    + trainInfo);
+            if (isCrossing) {
+                diag.putString("desc", branchDirs.size() + "-way crossing: " + unsignaledBranchCount
+                        + " entries need chain signals to prevent collisions on perpendicular tracks."
+                        + trainInfo);
+            } else {
+                diag.putString("desc", branchDirs.size() + "-way junction: " + unsignaledBranchCount
+                        + " unsignaled diverging branch(es) need chain signals (of "
+                        + divergingCount + " diverging, " + throughBranches.size() / 2 + " through-line)."
+                        + trainInfo);
+            }
 
             diagnostics.add(diag);
         }
@@ -2345,11 +2362,12 @@ public class TrainNetworkDataReader {
                 int jA = adj1.getKey();
 
                 for (int[] branch : adj1.getValue()) {
-                    // Walk from junction A along this branch to find junction B
+                    // Walk from junction A along this branch to find junction B or dead-end
                     int prev = jA;
                     int cur = branch[0];
                     boolean hasChain = false;
                     boolean hasRegular = false;
+                    boolean reachedJunction = false;
                     List<String> pathEdges = new ArrayList<>();
 
                     for (int hop = 0; hop < 10; hop++) {
@@ -2363,6 +2381,7 @@ public class TrainNetworkDataReader {
 
                         // Reached another junction?
                         if (curBranches.size() >= 3) {
+                            reachedJunction = true;
                             int jB = cur;
                             String pairKey = Math.min(jA, jB) + ":" + Math.max(jA, jB);
                             if (!checkedPairs.contains(pairKey) && hasChain && !hasRegular) {
@@ -2406,6 +2425,34 @@ public class TrainNetworkDataReader {
                         if (next < 0) break;
                         prev = cur;
                         cur = next;
+                    }
+
+                    // Dead-end chain corridor: walk ended without reaching another
+                    // junction (hit a dead-end, station terminus, or end of track).
+                    // Chain signals without a regular terminator downstream = NO_PATH.
+                    if (!reachedJunction && hasChain && !hasRegular && !pathEdges.isEmpty()) {
+                        CompoundTag deadEndDiag = new CompoundTag();
+                        deadEndDiag.putString("type", "CHAIN_ONLY_CORRIDOR");
+                        deadEndDiag.putString("severity", "CRIT");
+
+                        // Position at the dead-end node
+                        if (cur < nodes.size()) {
+                            CompoundTag nEnd = nodes.getCompound(cur);
+                            deadEndDiag.putFloat("x", nEnd.getFloat("x"));
+                            deadEndDiag.putFloat("y", nEnd.getFloat("y"));
+                            deadEndDiag.putFloat("z", nEnd.getFloat("z"));
+                        }
+
+                        deadEndDiag.putString("desc", "Chain signal(s) with no regular terminator — "
+                                + "path ends without a stopping point. Trains will report NO_PATH.");
+                        deadEndDiag.putString("detail", "Chain signals on this branch have no "
+                                + "regular (entry) signal downstream. Every chain signal needs a "
+                                + "regular signal as a terminator where trains can stop. Add a "
+                                + "regular signal beyond the chain signal on this path.");
+                        diagnostics.add(deadEndDiag);
+
+                        LogicLink.LOGGER.warn("[LogicLink] CHAIN_ONLY dead-end from junction {} "
+                                + "({} edges, chain but no regular terminator)", jA, pathEdges.size());
                     }
                 }
             }
