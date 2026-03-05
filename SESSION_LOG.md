@@ -1594,3 +1594,32 @@ The actual problem was signals with chain on BOTH sides (signals #7 and #9 in th
 
 ### Files Changed
 - `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java` -- Re-enabled crossing detection, removed Check 3c
+
+---
+
+## Session 10i -- 2026-03-05 -- Signal Diagnostics Polish & Code Review Fixes
+
+### Commits
+- `50c7f57` -- Signal diagnostics polish: short-edge skip, crossing descriptions, dead-end detection
+
+### Summary
+Full code review of all 11+ diagnostic checks identified several bugs. This session fixes the three most impactful issues.
+
+**Bugs Fixed:**
+
+1. **Short-edge signal suggestions (Bug 3)**: 4-way crossings have very short internal edges (1.5 blocks) that are part of the crossing geometry. The system was suggesting chain signals on these impossibly-tight segments. Now skips edges < 2.5 blocks with an explanatory log message.
+
+2. **Crossing description text (Bug 2)**: After `throughBranches.clear()`, the diagnostic description said "4-way junction: 4 diverging, 0 through-line" which was confusing. Now uses distinct "4-way crossing" description explaining the collision prevention purpose.
+
+3. **Check 11 dead-end gap (Bug 4)**: The chain-only corridor walk only detected chain corridors between two junctions. If a chain signal leads to a dead-end (station terminus, end of track) with no regular terminator, it was missed. Now detects dead-end chain corridors too.
+
+**Code Review Assessment:**
+The core signal diagnostic logic is sound for all common cases:
+- Through-line detection correctly skips straight-through T-junction branches
+- Crossing detection correctly treats all 4-way entries as diverging
+- Chain/regular signal suggestions placement is accurate on normal-length edges
+- Check 3/3b catch wrong-type and double-chain signals
+- Check 11 catches chain-only corridors (now including dead-ends)
+
+### Files Changed
+- `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java` -- Short-edge skip, crossing descriptions, dead-end detection
