@@ -43,6 +43,14 @@ public class TrainNetworkDataReader {
     public static final int MAX_TRAINS = 256;
     public static final int MAX_OBSERVERS = 256;
 
+    // ==================== Rescan Change Detection ====================
+    // Snapshot of previous scan for detecting network changes between scans.
+    // When trains/stations/layout change, Check 10 alerts to re-evaluate signals.
+    private static int prevScanTrainCount = -1;
+    private static float prevScanMaxTrainLength = -1;
+    private static int prevScanStationCount = -1;
+    private static int prevScanJunctionCount = -1;
+
     // ==================== Reflection State ====================
     private static boolean reflectionInit = false;
     private static boolean reflectionOK = false;
@@ -323,6 +331,7 @@ public class TrainNetworkDataReader {
             int junctionCount = 0, noPathCount = 0, conflictCount = 0, pausedCount = 0, doneCount = 0;
             int invalidDestCount = 0, signalBlockedCount = 0, deadlockCount = 0;
             int routeUnsignaledCount = 0, unreachableCount = 0, missingRegularCount = 0;
+            int networkChangedCount = 0;
             for (int i = 0; i < diags.size(); i++) {
                 String type = diags.getCompound(i).getString("type");
                 switch (type) {
@@ -337,6 +346,7 @@ public class TrainNetworkDataReader {
                     case "ROUTE_UNSIGNALED" -> routeUnsignaledCount++;
                     case "STATION_UNREACHABLE" -> unreachableCount++;
                     case "MISSING_REGULAR_SIGNAL" -> missingRegularCount++;
+                    case "NETWORK_CHANGED" -> networkChangedCount++;
                 }
             }
             result.putInt("junctionCount", junctionCount);
@@ -350,6 +360,7 @@ public class TrainNetworkDataReader {
             result.putInt("routeUnsignaledCount", routeUnsignaledCount);
             result.putInt("unreachableCount", unreachableCount);
             result.putInt("missingRegularCount", missingRegularCount);
+            result.putInt("networkChangedCount", networkChangedCount);
         } else {
             result.putInt("issueCount", 0);
         }
@@ -754,9 +765,12 @@ public class TrainNetworkDataReader {
         try {
             Map<UUID, Object> trains = (Map<UUID, Object>) gmTrainsField.get(manager);
             if (trains == null) {
+                LogicLink.LOGGER.info("[LogicLink] readAllTrains: gmTrainsField returned null");
                 mapData.put("Trains", trainList);
                 return;
             }
+            LogicLink.LOGGER.info("[LogicLink] readAllTrains: Found {} train objects, dimFilter='{}'",
+                    trains.size(), dimFilter);
 
             for (Object train : trains.values()) {
                 if (trainList.size() >= MAX_TRAINS) break;
@@ -811,26 +825,33 @@ public class TrainNetworkDataReader {
                     LogicLink.LOGGER.debug("[LogicLink] Train '{}': {} carriages, bogeySpacings=[{}], length={}",
                             tName, carriageCount, spacingDebug, (int) trainLength);
 
-                    // Current station
-                    Object curStation = trainCurrentStationField.get(train);
-                    if (curStation != null) {
-                        String stName = (String) stationNameField.get(curStation);
-                        if (stName != null) tag.putString("currentStation", stName);
+                    // Current station — may be a GlobalStation object or a UUID reference
+                    try {
+                        Object curStation = trainCurrentStationField.get(train);
+                        if (curStation != null) {
+                            if (curStation instanceof UUID) {
+                                // Create 1.21.1 stores UUID reference; use toString for now
+                                tag.putString("currentStationId", curStation.toString().substring(0, 8));
+                            } else {
+                                // Direct GlobalStation object
+                                String stName = (String) stationNameField.get(curStation);
+                                if (stName != null) tag.putString("currentStation", stName);
+                            }
+                        }
+                    } catch (Exception e) {
+                        LogicLink.LOGGER.debug("[LogicLink] Train station lookup failed: {}", e.getMessage());
                     }
 
                     // World position — try to get for the target dimension
                     boolean posFound = false;
+                    String trainName = getTrainNameStr(train);
                     if (trainGetPositionInDimMethod != null) {
                         try {
-                            // Get dimensions this train is present in
-                            Object graphRef = trainGraphField.get(train);
-                            // Try generic approach: the train stores a graph reference
-                            // and we can attempt BlockPos from getPresentDimensions
-
                             // Direct approach: iterate known dimension keys
                             Method getPresentDims = train.getClass().getMethod("getPresentDimensions");
                             List<?> dims = (List<?>) getPresentDims.invoke(train);
                             if (dims != null) {
+                                LogicLink.LOGGER.info("[LogicLink] Train '{}': presentDimensions={}", trainName, dims);
                                 for (Object dim : dims) {
                                     @SuppressWarnings("unchecked")
                                     ResourceKey<Level> dimKey = (ResourceKey<Level>) dim;
@@ -843,18 +864,29 @@ public class TrainNetworkDataReader {
                                             tag.putFloat("z", pos.getZ());
                                             tag.putFloat("y", pos.getY());
                                             posFound = true;
+                                            LogicLink.LOGGER.info("[LogicLink] Train '{}': position=({},{},{})",
+                                                    trainName, pos.getX(), pos.getY(), pos.getZ());
                                             break;
+                                        } else {
+                                            LogicLink.LOGGER.info("[LogicLink] Train '{}': getPositionInDimension returned empty for '{}'",
+                                                    trainName, dimFilter);
                                         }
                                     }
                                 }
+                            } else {
+                                LogicLink.LOGGER.info("[LogicLink] Train '{}': getPresentDimensions returned null", trainName);
                             }
-                        } catch (Exception ignored) {}
+                        } catch (NoSuchMethodException e) {
+                            LogicLink.LOGGER.warn("[LogicLink] Train '{}': getPresentDimensions method not found: {}", trainName, e.getMessage());
+                        } catch (Exception e) {
+                            LogicLink.LOGGER.warn("[LogicLink] Train '{}': position lookup failed: {}", trainName, e.getMessage());
+                        }
+                    } else {
+                        LogicLink.LOGGER.info("[LogicLink] Train '{}': trainGetPositionInDimMethod is null, skipping position lookup", trainName);
                     }
 
-                    // If no position found, skip this train (not in this dimension)
-                    if (!posFound && !derailed) {
-                        // Still include derailed trains even without position
-                        if (!derailed) continue;
+                    if (!posFound) {
+                        LogicLink.LOGGER.info("[LogicLink] Train '{}': no position found, including anyway (derailed={})", trainName, derailed);
                     }
 
                     // Navigation info
@@ -863,10 +895,18 @@ public class TrainNetworkDataReader {
                         boolean active = (boolean) navIsActiveMethod.invoke(nav);
                         tag.putBoolean("navigating", active);
                         if (active) {
-                            Object dest = navDestinationField.get(nav);
-                            if (dest != null) {
-                                String destName = (String) stationNameField.get(dest);
-                                if (destName != null) tag.putString("destination", destName);
+                            try {
+                                Object dest = navDestinationField.get(nav);
+                                if (dest != null) {
+                                    if (dest instanceof UUID) {
+                                        tag.putString("destinationId", dest.toString().substring(0, 8));
+                                    } else {
+                                        String destName = (String) stationNameField.get(dest);
+                                        if (destName != null) tag.putString("destination", destName);
+                                    }
+                                }
+                            } catch (Exception e) {
+                                LogicLink.LOGGER.debug("[LogicLink] Nav destination lookup failed: {}", e.getMessage());
                             }
                             double dist = navDistanceField.getDouble(nav);
                             tag.putDouble("distance", dist);
@@ -994,10 +1034,15 @@ public class TrainNetworkDataReader {
                     } catch (Exception ignored) {}
 
                     trainList.add(tag);
-                } catch (Exception ignored) {}
+                } catch (Exception e) {
+                    String tName = "unknown";
+                    try { tName = getTrainNameStr(train); } catch (Exception ignored2) {}
+                    LogicLink.LOGGER.error("[LogicLink] Train '{}' processing FAILED: {} at {}",
+                            tName, e.getMessage(), e.getStackTrace().length > 0 ? e.getStackTrace()[0] : "??");
+                }
             }
         } catch (Exception e) {
-            LogicLink.LOGGER.debug("TrainNetworkDataReader: Failed to read trains: {}", e.getMessage());
+            LogicLink.LOGGER.error("TrainNetworkDataReader: Failed to read trains: {}", e.getMessage(), e);
         }
 
         mapData.put("Trains", trainList);
@@ -1233,29 +1278,43 @@ public class TrainNetworkDataReader {
             }
 
             // Detect collinear branch pairs (through-lines) via dot product.
-            // Two branches with dot < -0.7 are roughly opposite = main through-line.
-            // The remaining branch(es) are diverging and need chain signals.
+            // For ANY junction size (3+way), find all roughly-opposite branch pairs.
+            // Uses greedy matching: most collinear pair claimed first, then next unclaimed.
+            // Through-line branches STILL get signals — chain signals protect junctions
+            // from all entry directions per Create wiki.
             Set<Integer> throughBranches = new HashSet<>();
-            if (branchDirs.size() == 3) {
+            {
                 float[][] dirs = branchDirs.toArray(new float[0][]);
-                float dot01 = dirs[0][0] * dirs[1][0] + dirs[0][1] * dirs[1][1];
-                float dot02 = dirs[0][0] * dirs[2][0] + dirs[0][1] * dirs[2][1];
-                float dot12 = dirs[1][0] * dirs[2][0] + dirs[1][1] * dirs[2][1];
-
-                // Find the most collinear pair (lowest dot product, closest to -1)
-                float minDot = Math.min(dot01, Math.min(dot02, dot12));
-                if (minDot < -0.7f) {
-                    if (dot01 == minDot) { throughBranches.add(0); throughBranches.add(1); }
-                    else if (dot02 == minDot) { throughBranches.add(0); throughBranches.add(2); }
-                    else { throughBranches.add(1); throughBranches.add(2); }
+                List<float[]> pairDots = new ArrayList<>();
+                for (int pi = 0; pi < dirs.length; pi++) {
+                    for (int pj = pi + 1; pj < dirs.length; pj++) {
+                        float dot = dirs[pi][0] * dirs[pj][0] + dirs[pi][1] * dirs[pj][1];
+                        pairDots.add(new float[]{dot, pi, pj});
+                    }
+                }
+                pairDots.sort((a, b) -> Float.compare(a[0], b[0]));
+                Set<Integer> claimed = new HashSet<>();
+                for (float[] pair : pairDots) {
+                    if (pair[0] >= -0.7f) break;
+                    int pi = (int) pair[1];
+                    int pj = (int) pair[2];
+                    if (claimed.contains(pi) || claimed.contains(pj)) continue;
+                    throughBranches.add(pi);
+                    throughBranches.add(pj);
+                    claimed.add(pi);
+                    claimed.add(pj);
                 }
             }
 
-            // Generate suggestions only for diverging branches (not through-line)
+            // Generate signal suggestions for ALL branches (including through-lines).
+            // Per Create wiki: chain signals protect junctions from all entry directions.
+            // Each branch gets up to 3 signals for bidirectional coverage:
+            //   1. Inbound CHAIN — close to junction, facing toward junction (entry protection)
+            //   2. Outbound REGULAR — same area, facing away from junction (exit boundary)
+            //   3. Inbound REGULAR — further out, facing toward junction (waiting/queue point)
             ListTag suggestions = new ListTag();
-            LogicLink.LOGGER.debug("[LogicLink] Junction at ({}, {}, {}) [float: {}, {}, {}] with {} branches, {} through-line branches",
+            LogicLink.LOGGER.debug("[LogicLink] Junction at ({}, {}, {}) with {} branches, {} through-line",
                     Mth.floor(jx), Mth.floor(jy), Mth.floor(jz),
-                    String.format("%.2f", jx), String.format("%.2f", jy), String.format("%.2f", jz),
                     branchDirs.size(), throughBranches.size());
 
             for (int bi = 0; bi < branchDirs.size(); bi++) {
@@ -1274,66 +1333,111 @@ public class TrainNetworkDataReader {
                 float sugY = jy - ((jy - ny) / dist) * offset;
                 float sugZ = jz - ndz * offset;
 
-                LogicLink.LOGGER.debug("[LogicLink]   Branch {} neighbor ({}, {}, {}), dist={}, dir=({}, {}), through={}, sugBlock=({}, {}, {})",
-                        bi, (int)nx, (int)ny, (int)nz, String.format("%.1f", dist),
-                        String.format("%.3f", ndx), String.format("%.3f", ndz),
-                        isThrough, Mth.floor(sugX), Mth.floor(sugY), Mth.floor(sugZ));
+                String cardinal = getCardinalDir(ndx, ndz);
+                String exitCardinal = getCardinalDir(-ndx, -ndz);
+                boolean clearanceOk = dist >= maxTrainLength;
+                String clearanceNote = clearanceOk
+                        ? ""
+                        : " [!] Edge " + (int) dist + "b < max train " + (int) maxTrainLength + "b";
+                String throughNote = isThrough ? " (through-line)" : "";
 
-                // Skip through-line branches — they don't need signals at T-junctions
-                if (isThrough) continue;
+                LogicLink.LOGGER.debug("[LogicLink]   Branch {} to ({},{},{}), dist={}, through={}",
+                        bi, (int)nx, (int)ny, (int)nz, String.format("%.1f", dist), isThrough);
 
-                // Skip branches that already have ANY signal (within 3 hops) — Check 3 handles wrong-type signals.
-                // This prevents overlap: Check 1 only suggests placing NEW signals on unsignaled branches.
+                // Skip branches that already have ANY signal (within 3 hops) —
+                // Check 3 handles wrong-type signals independently.
                 int neighborId2 = branchNeighborIds.get(bi);
                 String branchEdgeKey = Math.min(jId, neighborId2) + ":" + Math.max(jId, neighborId2);
                 boolean alreadySignaled = junctionBranchSignaled.contains(branchEdgeKey);
-                LogicLink.LOGGER.info("  Check1: Junction {} branch {} -> neighbor {}, edgeKey='{}', alreadySignaled={}",
-                        jId, bi, neighborId2, branchEdgeKey, alreadySignaled);
                 if (alreadySignaled) continue;
 
+                int bsx = Mth.floor(sugX), bsy = Mth.floor(sugY), bsz = Mth.floor(sugZ);
+
+                // === Signal 1: Inbound CHAIN — junction entry protection ===
+                // Close to junction, facing toward junction (direction: ndx, ndz).
+                // Prevents train from entering junction if it can't exit.
                 CompoundTag branchSug = new CompoundTag();
-                branchSug.putInt("sx", Mth.floor(sugX));
-                branchSug.putInt("sy", Mth.floor(sugY));
-                branchSug.putInt("sz", Mth.floor(sugZ));
+                branchSug.putInt("sx", bsx);
+                branchSug.putInt("sy", bsy);
+                branchSug.putInt("sz", bsz);
                 branchSug.putString("signalType", "chain");
                 branchSug.putFloat("sdx", ndx);
                 branchSug.putFloat("sdz", ndz);
                 branchSug.putFloat("edgeLength", dist);
                 branchSug.putFloat("maxTrainLength", maxTrainLength);
-                String cardinal = getCardinalDir(ndx, ndz);
-                boolean clearanceOk = dist >= maxTrainLength;
                 branchSug.putBoolean("clearanceWarning", !clearanceOk);
-                String clearanceNote = clearanceOk
-                        ? ""
-                        : " [!] Edge " + (int) dist + "b < max train " + (int) maxTrainLength + "b";
-                branchSug.putString("dir", "Place chain signal — entry from " + cardinal + clearanceNote);
+                branchSug.putBoolean("throughLine", isThrough);
+                branchSug.putString("dir", "Chain signal — entry from " + cardinal + throughNote + clearanceNote);
 
-                // Deduplicate: skip if another suggestion already occupies this block
-                boolean duplicate = false;
-                int bsx = Mth.floor(sugX), bsy = Mth.floor(sugY), bsz = Mth.floor(sugZ);
-                for (int i = 0; i < suggestions.size(); i++) {
-                    CompoundTag existing = suggestions.getCompound(i);
-                    if (existing.getInt("sx") == bsx && existing.getInt("sy") == bsy && existing.getInt("sz") == bsz) {
-                        duplicate = true;
-                        break;
-                    }
-                }
-                if (!duplicate) {
+                if (!isDuplicateSuggestion(suggestions, bsx, bsy, bsz, "chain", ndx, ndz)) {
                     suggestions.add(branchSug);
+                }
+
+                // === Signal 2: Outbound REGULAR — exit block section boundary ===
+                // Same position as chain but facing AWAY from junction (-ndx, -ndz).
+                // Per Create wiki: "Conductors will never cross a Train Signal from
+                // the opposite direction" — each direction needs its own signal.
+                // This creates a two-way signal pair at the junction boundary.
+                CompoundTag exitSug = new CompoundTag();
+                exitSug.putInt("sx", bsx);
+                exitSug.putInt("sy", bsy);
+                exitSug.putInt("sz", bsz);
+                exitSug.putString("signalType", "signal");
+                exitSug.putFloat("sdx", -ndx);
+                exitSug.putFloat("sdz", -ndz);
+                exitSug.putBoolean("throughLine", isThrough);
+                exitSug.putString("dir", "Regular signal — exit toward " + exitCardinal + throughNote);
+
+                if (!isDuplicateSuggestion(suggestions, bsx, bsy, bsz, "signal", -ndx, -ndz)) {
+                    suggestions.add(exitSug);
+                }
+
+                // === Signal 3: Inbound REGULAR — waiting/queuing point ===
+                // Further from junction, facing toward junction (ndx, ndz).
+                // Creates a block section for approaching trains to queue before chain.
+                float regularOffset = offset + Math.max(3.0f, maxTrainLength * 0.5f);
+                if (regularOffset < dist * 0.95f) {
+                    float regX = jx - ndx * regularOffset;
+                    float regY = jy - ((jy - ny) / dist) * regularOffset;
+                    float regZ = jz - ndz * regularOffset;
+                    int rsx = Mth.floor(regX), rsy = Mth.floor(regY), rsz = Mth.floor(regZ);
+
+                    if (!isDuplicateSuggestion(suggestions, rsx, rsy, rsz, "signal", ndx, ndz)) {
+                        CompoundTag regSug = new CompoundTag();
+                        regSug.putInt("sx", rsx);
+                        regSug.putInt("sy", rsy);
+                        regSug.putInt("sz", rsz);
+                        regSug.putString("signalType", "signal");
+                        regSug.putFloat("sdx", ndx);
+                        regSug.putFloat("sdz", ndz);
+                        regSug.putBoolean("throughLine", isThrough);
+                        regSug.putString("dir", "Regular signal — waiting point from " + cardinal + throughNote);
+                        suggestions.add(regSug);
+                    }
                 }
             }
             diag.put("suggestions", suggestions);
 
-            // Skip diagnostic entirely if no suggestions remain (all branches were through-line or already signaled)
+            // Skip diagnostic entirely if no suggestions remain (all branches already signaled)
             if (suggestions.isEmpty()) continue;
 
-            int unsignaledDivergingCount = suggestions.size();
+            // Count unsignaled branches (one chain signal per branch)
+            int unsignaledBranchCount = 0;
+            for (int i = 0; i < suggestions.size(); i++) {
+                if (suggestions.getCompound(i).getString("signalType").equals("chain")) {
+                    unsignaledBranchCount++;
+                }
+            }
             String trainInfo = maxTrainName.isEmpty()
                     ? " (max train: " + (int) maxTrainLength + "b)"
                     : " (max train: " + (int) maxTrainLength + "b — '" + maxTrainName + "')";
-            diag.putString("desc", branchDirs.size() + "-way junction: " + unsignaledDivergingCount
-                    + " unsignaled diverging branch(es) need chain signals."
-                    + trainInfo);
+            int throughCount = throughBranches.size();
+            String throughInfo = throughCount > 0
+                    ? " (" + throughCount / 2 + " through-line pair" + (throughCount > 2 ? "s" : "") + ")"
+                    : "";
+            diag.putString("desc", branchDirs.size() + "-way junction: " + unsignaledBranchCount
+                    + " unsignaled branch(es) need bidirectional signal pairs."
+                    + throughInfo + trainInfo);
 
             diagnostics.add(diag);
         }
@@ -2077,6 +2181,70 @@ public class TrainNetworkDataReader {
             }
         }
 
+        // === Check 10: Network Change Detection (Rescan Alerts) ===
+        // Compare current scan with previous snapshot to detect changes that
+        // may require signal re-evaluation (train length, station, layout changes).
+        {
+            int currentTrainCount = trains.size();
+            float currentMaxLen = maxTrainLength;
+            int currentStationCount = mapData.contains("Stations") ? mapData.getList("Stations", 10).size() : 0;
+            int currentJunctionCount = 0;
+            for (Map.Entry<Integer, List<int[]>> adjEntry : adjacency.entrySet()) {
+                if (adjEntry.getValue().size() >= 3) currentJunctionCount++;
+            }
+
+            if (prevScanTrainCount >= 0) { // not first scan
+                List<String> changes = new ArrayList<>();
+                if (currentTrainCount != prevScanTrainCount) {
+                    changes.add("Trains: " + prevScanTrainCount + " -> " + currentTrainCount);
+                }
+                if (Math.abs(currentMaxLen - prevScanMaxTrainLength) > 0.5f) {
+                    changes.add("Max train length: " + (int) prevScanMaxTrainLength + "b -> " + (int) currentMaxLen + "b");
+                }
+                if (currentStationCount != prevScanStationCount) {
+                    changes.add("Stations: " + prevScanStationCount + " -> " + currentStationCount);
+                }
+                if (currentJunctionCount != prevScanJunctionCount) {
+                    changes.add("Junctions: " + prevScanJunctionCount + " -> " + currentJunctionCount);
+                }
+
+                if (!changes.isEmpty()) {
+                    CompoundTag changeDiag = new CompoundTag();
+                    changeDiag.putString("type", "NETWORK_CHANGED");
+                    // Determine severity based on what changed
+                    String severity = "INFO";
+                    String desc = "Network changes detected — review signal placement";
+                    if (currentMaxLen > prevScanMaxTrainLength + 0.5f) {
+                        severity = "WARN";
+                        desc = "Longer train detected — signal spacing may need updating";
+                    } else if (currentJunctionCount > prevScanJunctionCount) {
+                        severity = "WARN";
+                        desc = "New junctions detected — check signal coverage";
+                    } else if (currentTrainCount > 0 && prevScanTrainCount == 0) {
+                        severity = "WARN";
+                        desc = "Trains added to network — verify signal placement";
+                    }
+                    changeDiag.putString("severity", severity);
+                    changeDiag.putString("desc", desc);
+
+                    StringBuilder detail = new StringBuilder();
+                    for (int ci = 0; ci < changes.size(); ci++) {
+                        if (ci > 0) detail.append("; ");
+                        detail.append(changes.get(ci));
+                    }
+                    changeDiag.putString("detail", detail.toString());
+
+                    diagnostics.add(changeDiag);
+                }
+            }
+
+            // Update snapshot for next scan
+            prevScanTrainCount = currentTrainCount;
+            prevScanMaxTrainLength = currentMaxLen;
+            prevScanStationCount = currentStationCount;
+            prevScanJunctionCount = currentJunctionCount;
+        }
+
         // === Debug: dump all diagnostics for troubleshooting ===
         LogicLink.LOGGER.debug("[LogicLink] ===== DIAGNOSTICS DUMP ({} total) =====", diagnostics.size());
         for (int di = 0; di < diagnostics.size(); di++) {
@@ -2116,6 +2284,27 @@ public class TrainNetworkDataReader {
         if (angle < 247.5) return "NW";
         if (angle < 292.5) return "N";
         return "NE";
+    }
+
+    /**
+     * Check if a signal suggestion already exists at the same position, type, and
+     * similar direction. Two signals at the same position are duplicates only if
+     * they are the same type AND face within 90 degrees of each other.
+     * Opposite-facing signals at the same position are valid (two-way pair).
+     */
+    private static boolean isDuplicateSuggestion(ListTag suggestions, int sx, int sy, int sz,
+                                                  String signalType, float sdx, float sdz) {
+        for (int i = 0; i < suggestions.size(); i++) {
+            CompoundTag existing = suggestions.getCompound(i);
+            if (existing.getInt("sx") == sx && existing.getInt("sy") == sy && existing.getInt("sz") == sz
+                    && existing.getString("signalType").equals(signalType)) {
+                float exDx = existing.contains("sdx") ? existing.getFloat("sdx") : 0;
+                float exDz = existing.contains("sdz") ? existing.getFloat("sdz") : 0;
+                float dot = sdx * exDx + sdz * exDz;
+                if (dot > 0.1f) return true; // same-ish direction = duplicate
+            }
+        }
+        return false;
     }
 
     private static String getTrainNameStr(Object train) {
@@ -2376,7 +2565,28 @@ public class TrainNetworkDataReader {
             try {
                 trainGetPositionInDimMethod = trainClass.getMethod("getPositionInDimension",
                         ResourceKey.class);
-            } catch (Exception ignored) {}
+                LogicLink.LOGGER.info("[LogicLink] Reflection: Train.getPositionInDimension resolved OK");
+            } catch (Exception e) {
+                LogicLink.LOGGER.warn("[LogicLink] Reflection: Train.getPositionInDimension NOT found: {}", e.getMessage());
+                // Try alternative method names that Create might use
+                try {
+                    trainGetPositionInDimMethod = trainClass.getMethod("getBlockPosInDimension",
+                            ResourceKey.class);
+                    LogicLink.LOGGER.info("[LogicLink] Reflection: Train.getBlockPosInDimension resolved as fallback");
+                } catch (Exception e2) {
+                    LogicLink.LOGGER.warn("[LogicLink] Reflection: No position-in-dimension method found at all");
+                    // Log all available methods for debugging
+                    StringBuilder methods = new StringBuilder();
+                    for (Method m : trainClass.getMethods()) {
+                        if (m.getName().toLowerCase().contains("pos") || m.getName().toLowerCase().contains("dim")) {
+                            methods.append(m.getName()).append("(");
+                            for (Class<?> p : m.getParameterTypes()) methods.append(p.getSimpleName()).append(",");
+                            methods.append(") ");
+                        }
+                    }
+                    LogicLink.LOGGER.info("[LogicLink] Train class position/dim methods: {}", methods);
+                }
+            }
 
             // === Navigation ===
             Class<?> navClass = Class.forName("com.simibubi.create.content.trains.entity.Navigation");

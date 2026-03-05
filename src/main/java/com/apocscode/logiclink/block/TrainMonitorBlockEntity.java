@@ -365,12 +365,18 @@ public class TrainMonitorBlockEntity extends BlockEntity implements MenuProvider
                 List<?> carriages = (List<?>) trainCarriagesField.get(train);
                 tag.putInt("carriages", carriages != null ? carriages.size() : 0);
 
-                // Current station
-                Object currentStation = trainCurrentStationField.get(train);
-                if (currentStation != null) {
-                    String stName = (String) stationNameField.get(currentStation);
-                    if (stName != null) tag.putString("currentStation", stName);
-                }
+                // Current station — may be UUID or GlobalStation in Create 1.21.1
+                try {
+                    Object currentStation = trainCurrentStationField.get(train);
+                    if (currentStation != null) {
+                        if (currentStation instanceof UUID) {
+                            tag.putString("currentStationId", currentStation.toString().substring(0, 8));
+                        } else {
+                            String stName = (String) stationNameField.get(currentStation);
+                            if (stName != null) tag.putString("currentStation", stName);
+                        }
+                    }
+                } catch (Exception ignored) {}
 
                 // Navigation
                 Object nav = trainNavigationField.get(train);
@@ -379,11 +385,17 @@ public class TrainMonitorBlockEntity extends BlockEntity implements MenuProvider
                     navigating = (boolean) navIsActiveMethod.invoke(nav);
                     tag.putBoolean("navigating", navigating);
                     if (navigating) {
-                        Object dest = navDestinationField.get(nav);
-                        if (dest != null) {
-                            String destName = (String) stationNameField.get(dest);
-                            if (destName != null) tag.putString("destination", destName);
-                        }
+                        try {
+                            Object dest = navDestinationField.get(nav);
+                            if (dest != null) {
+                                if (dest instanceof UUID) {
+                                    tag.putString("destinationId", dest.toString().substring(0, 8));
+                                } else {
+                                    String destName = (String) stationNameField.get(dest);
+                                    if (destName != null) tag.putString("destination", destName);
+                                }
+                            }
+                        } catch (Exception ignored) {}
                         double dist = navDistanceField.getDouble(nav);
                         tag.putDouble("distance", dist);
                     }
