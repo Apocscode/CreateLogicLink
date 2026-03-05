@@ -1330,10 +1330,23 @@ public class TrainNetworkDataReader {
                 }
             }
 
-            // Signal suggestions: ONLY diverging branches need chain signals.
+            // CROSSING DETECTION: If ALL branches are paired as through-lines,
+            // this is a crossing junction (e.g. two perpendicular tracks crossing).
+            // Crossings need chain signals on ALL entries — trains on one track
+            // can collide with trains on the other. The through-line skip only
+            // makes sense when there's a mix of through and diverging branches
+            // (e.g. T-junctions where the main line goes straight through).
+            if (throughBranches.size() == branchDirs.size() && branchDirs.size() >= 4) {
+                LogicLink.LOGGER.info("[LogicLink]   All {} branches are through-line — treating as CROSSING (all need signals)",
+                        branchDirs.size());
+                throughBranches.clear();
+            }
+
+            // Signal suggestions: diverging branches need chain signals.
             // Through-line branches (straight through the junction) do NOT need
             // chain signals — adding chain on through-lines creates chain→chain
             // corridors between junctions that cause Create NO_PATH errors.
+            // Exception: at crossing junctions (all-through), ALL branches need signals.
             //
             // Per branch: 1 chain signal (close to junction, facing toward junction)
             //             1 regular signal (further out, waiting/queue point)
