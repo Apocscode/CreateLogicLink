@@ -1490,3 +1490,42 @@ Root cause of persistent NO_PATH finally identified and fixed. The through-line 
 
 ### Files Changed
 - `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java` -- Added crossing junction detection after through-line pairing
+
+---
+
+## Session 10f -- 2026-03-05 -- Fix Check 3 SIGNAL_CONFLICT False Positives
+
+### Commits
+- `ac220aa` -- Fix Check 3 SIGNAL_CONFLICT: direction-agnostic chain detection
+- `7651446` -- Remove temp log analysis file
+
+### Summary
+Crossing junction fix (10e) working — junctions 4 and 13 now show "0 through-line" and trains are moving. However, 4 SIGNAL_CONFLICT diagnostics were firing, including false positives on signals that correctly had chain placed.
+
+**The Bug:**
+- Check 3 assumed a fixed mapping between Create's internal Couple ordering (`types.getFirst()/getSecond()`) and the edge node ordering (`edgeLocation.getFirst()/getSecond()`)
+- Used `fShouldBeChain = bIsJunction` (Side F protects junction at edgeB) and `bShouldBeChain = aIsJunction`
+- But Create's Couple ordering for `edgeLocation` is NOT deterministic — it depends on how the edge point was registered/placed, which can vary per signal
+- Result: signals with chain correctly facing the junction were flagged because the code checked the wrong "side"
+
+**Example:**
+- Signal#5 at (-23.5,-60,209.5): typeF=regular, typeB=chain, edgeA=52, edgeB=4(junction)
+- Code said "Side F should be CHAIN (protects junction at node 4)" — but chain IS on Side B targeting junction 4
+- The Couple ordering happened to be reversed for this signal's placement direction
+
+**The Fix:**
+- Replaced per-side F/B direction checks with **direction-agnostic** approach
+- Pre-scan: track which edges have chain on ANY side (not per-direction)
+- Main check: signal has chain on ANY side on junction edge → no conflict. Both sides regular → conflict.
+- Partner check: if another signal on the same edge has chain → this signal is a block-section boundary, no flag
+- Messages now include actionable guidance ("Use wrench to toggle chain on junction-facing side")
+
+**Result:**
+- Signal#5 (chain on one side): no longer falsely flagged ✓
+- Signal#6 (chain on one side, between two junctions): no longer flagged ✓
+- Signal#1 (both regular, junction edge): still correctly flagged ✓
+- Signal#2 (both regular, junction edge): still correctly flagged ✓
+- Reduced from 4 false/disputed conflicts to 2 genuine conflicts
+
+### Files Changed
+- `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java` -- Rewrote Check 3 pre-scan and main logic to be direction-agnostic
