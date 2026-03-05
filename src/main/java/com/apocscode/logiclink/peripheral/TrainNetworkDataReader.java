@@ -331,7 +331,7 @@ public class TrainNetworkDataReader {
             int junctionCount = 0, noPathCount = 0, conflictCount = 0, pausedCount = 0, doneCount = 0;
             int invalidDestCount = 0, signalBlockedCount = 0, deadlockCount = 0;
             int routeUnsignaledCount = 0, unreachableCount = 0, missingRegularCount = 0;
-            int networkChangedCount = 0;
+            int networkChangedCount = 0, chainCorridorCount = 0;
             for (int i = 0; i < diags.size(); i++) {
                 String type = diags.getCompound(i).getString("type");
                 switch (type) {
@@ -347,6 +347,7 @@ public class TrainNetworkDataReader {
                     case "STATION_UNREACHABLE" -> unreachableCount++;
                     case "MISSING_REGULAR_SIGNAL" -> missingRegularCount++;
                     case "NETWORK_CHANGED" -> networkChangedCount++;
+                    case "CHAIN_ONLY_CORRIDOR" -> chainCorridorCount++;
                 }
             }
             result.putInt("junctionCount", junctionCount);
@@ -361,6 +362,7 @@ public class TrainNetworkDataReader {
             result.putInt("unreachableCount", unreachableCount);
             result.putInt("missingRegularCount", missingRegularCount);
             result.putInt("networkChangedCount", networkChangedCount);
+            result.putInt("chainCorridorCount", chainCorridorCount);
         } else {
             result.putInt("issueCount", 0);
         }
@@ -1280,8 +1282,8 @@ public class TrainNetworkDataReader {
             // Detect collinear branch pairs (through-lines) via dot product.
             // For ANY junction size (3+way), find all roughly-opposite branch pairs.
             // Uses greedy matching: most collinear pair claimed first, then next unclaimed.
-            // Through-line branches STILL get signals — chain signals protect junctions
-            // from all entry directions per Create wiki.
+            // Through-line branches do NOT need chain signals — trains flow straight
+            // through without needing junction protection on the main line.
             Set<Integer> throughBranches = new HashSet<>();
             {
                 float[][] dirs = branchDirs.toArray(new float[0][]);
@@ -1306,17 +1308,13 @@ public class TrainNetworkDataReader {
                 }
             }
 
-            // Generate signal suggestions for ALL branches (including through-lines).
-            // Per Create wiki: chain signals protect junctions from all entry directions.
-            // Create signals are TWO-SIDED (F and B). One physical signal block can
-            // have chain on one side and regular on the other. For bidirectional
-            // coverage, place TWO signals on the SAME track block facing opposite
-            // directions (Create calls this a "two-way signal pair").
+            // Signal suggestions: ONLY diverging branches need chain signals.
+            // Through-line branches (straight through the junction) do NOT need
+            // chain signals — adding chain on through-lines creates chain→chain
+            // corridors between junctions that cause Create NO_PATH errors.
             //
-            // Each branch gets up to 2 suggestion entries:
-            //   1. Chain+Regular PAIR on same track — chain faces junction, regular faces away
-            //      (One physical signal block with wrench toggle, or two signals on same track)
-            //   2. Regular signal further out — waiting/queue point for approaching trains
+            // Per branch: 1 chain signal (close to junction, facing toward junction)
+            //             1 regular signal (further out, waiting/queue point)
             ListTag suggestions = new ListTag();
             LogicLink.LOGGER.debug("[LogicLink] Junction at ({}, {}, {}) with {} branches, {} through-line",
                     Mth.floor(jx), Mth.floor(jy), Mth.floor(jz),
@@ -1328,10 +1326,16 @@ public class TrainNetworkDataReader {
                 float nx = bd[3], ny = bd[4], nz = bd[5];
                 boolean isThrough = throughBranches.contains(bi);
 
-                // Place signal far enough from junction for train clearance.
-                // Ideal: at least half the max train length from the junction center,
-                // so trains queued at the signal don't extend back into the junction.
-                // Capped at 80% of edge length (must stay on this branch's track).
+                // Skip through-line branches entirely — they don't need junction signals.
+                // Adding chain signals on through-lines creates chain-only corridors
+                // between adjacent junctions, which breaks Create's pathfinder.
+                if (isThrough) {
+                    LogicLink.LOGGER.debug("[LogicLink]   Branch {} to ({},{},{}), dist={} — through-line, skipped",
+                            bi, (int)nx, (int)ny, (int)nz, String.format("%.1f", dist));
+                    continue;
+                }
+
+                // Place chain signal far enough from junction for train clearance.
                 float idealOffset = Math.max(3.0f, maxTrainLength * 0.5f);
                 float offset = Math.min(idealOffset, dist * 0.8f);
                 float sugX = jx - ndx * offset;
@@ -1339,18 +1343,15 @@ public class TrainNetworkDataReader {
                 float sugZ = jz - ndz * offset;
 
                 String cardinal = getCardinalDir(ndx, ndz);
-                String exitCardinal = getCardinalDir(-ndx, -ndz);
                 boolean clearanceOk = dist >= maxTrainLength;
                 String clearanceNote = clearanceOk
                         ? ""
                         : " [!] Edge " + (int) dist + "b < max train " + (int) maxTrainLength + "b";
-                String throughNote = isThrough ? " (through-line)" : "";
 
-                LogicLink.LOGGER.debug("[LogicLink]   Branch {} to ({},{},{}), dist={}, through={}",
-                        bi, (int)nx, (int)ny, (int)nz, String.format("%.1f", dist), isThrough);
+                LogicLink.LOGGER.debug("[LogicLink]   Branch {} to ({},{},{}), dist={} — diverging",
+                        bi, (int)nx, (int)ny, (int)nz, String.format("%.1f", dist));
 
-                // Skip branches that already have ANY signal (within 3 hops) —
-                // Check 3 handles wrong-type signals independently.
+                // Skip branches that already have ANY signal (within 3 hops)
                 int neighborId2 = branchNeighborIds.get(bi);
                 String branchEdgeKey = Math.min(jId, neighborId2) + ":" + Math.max(jId, neighborId2);
                 boolean alreadySignaled = junctionBranchSignaled.contains(branchEdgeKey);
@@ -1358,12 +1359,9 @@ public class TrainNetworkDataReader {
 
                 int bsx = Mth.floor(sugX), bsy = Mth.floor(sugY), bsz = Mth.floor(sugZ);
 
-                // === Signal 1: Two-way signal PAIR on same track block ===
-                // In Create, signals are two-sided. For a junction boundary:
-                //   - Side facing junction = CHAIN (wrench to toggle)
-                //   - Side facing away = REGULAR (default)
-                // OR place two signals on the same track marker facing opposite directions.
-                // Ghost box shows as CHAIN (the critical type).
+                // === Chain signal on diverging branch entry ===
+                // Prevents train from entering junction if it can't exit.
+                // Place on the diverging branch, facing toward the junction.
                 CompoundTag branchSug = new CompoundTag();
                 branchSug.putInt("sx", bsx);
                 branchSug.putInt("sy", bsy);
@@ -1374,19 +1372,15 @@ public class TrainNetworkDataReader {
                 branchSug.putFloat("edgeLength", dist);
                 branchSug.putFloat("maxTrainLength", maxTrainLength);
                 branchSug.putBoolean("clearanceWarning", !clearanceOk);
-                branchSug.putBoolean("throughLine", isThrough);
-                branchSug.putBoolean("twoWay", true);
-                branchSug.putString("dir", "Two-way signal pair on SAME track: chain from "
-                        + cardinal + ", regular toward " + exitCardinal + throughNote + clearanceNote);
+                branchSug.putString("dir", "Chain signal — diverging entry from " + cardinal + clearanceNote);
 
                 if (!isDuplicateSuggestion(suggestions, bsx, bsy, bsz, "chain", ndx, ndz)) {
                     suggestions.add(branchSug);
                 }
 
-                // === Signal 2: Inbound REGULAR — waiting/queuing point ===
-                // Further from junction, facing toward junction (ndx, ndz).
-                // Creates a block section for approaching trains to queue before chain.
-                // This is a SEPARATE signal position — intentionally regular (not chain).
+                // === Regular signal further out (waiting/queue point) ===
+                // Creates a block section boundary where trains can stop and wait.
+                // This MUST be a regular signal (not chain) to terminate chain look-ahead.
                 float regularOffset = offset + Math.max(3.0f, maxTrainLength * 0.5f);
                 if (regularOffset < dist * 0.95f) {
                     float regX = jx - ndx * regularOffset;
@@ -1402,18 +1396,16 @@ public class TrainNetworkDataReader {
                         regSug.putString("signalType", "signal");
                         regSug.putFloat("sdx", ndx);
                         regSug.putFloat("sdz", ndz);
-                        regSug.putBoolean("throughLine", isThrough);
-                        regSug.putString("dir", "Regular signal — waiting point from " + cardinal + throughNote);
+                        regSug.putString("dir", "Regular signal — waiting point from " + cardinal);
                         suggestions.add(regSug);
                     }
                 }
             }
             diag.put("suggestions", suggestions);
 
-            // Skip diagnostic entirely if no suggestions remain (all branches already signaled)
+            // Skip diagnostic entirely if no suggestions remain
             if (suggestions.isEmpty()) continue;
 
-            // Count unsignaled branches (one chain signal per branch)
             int unsignaledBranchCount = 0;
             for (int i = 0; i < suggestions.size(); i++) {
                 if (suggestions.getCompound(i).getString("signalType").equals("chain")) {
@@ -1423,13 +1415,11 @@ public class TrainNetworkDataReader {
             String trainInfo = maxTrainName.isEmpty()
                     ? " (max train: " + (int) maxTrainLength + "b)"
                     : " (max train: " + (int) maxTrainLength + "b — '" + maxTrainName + "')";
-            int throughCount = throughBranches.size();
-            String throughInfo = throughCount > 0
-                    ? " (" + throughCount / 2 + " through-line pair" + (throughCount > 2 ? "s" : "") + ")"
-                    : "";
+            int divergingCount = branchDirs.size() - throughBranches.size();
             diag.putString("desc", branchDirs.size() + "-way junction: " + unsignaledBranchCount
-                    + " unsignaled branch(es) need bidirectional signal pairs."
-                    + throughInfo + trainInfo);
+                    + " unsignaled diverging branch(es) need chain signals (of "
+                    + divergingCount + " diverging, " + throughBranches.size() / 2 + " through-line)."
+                    + trainInfo);
 
             diagnostics.add(diag);
         }
@@ -2259,6 +2249,85 @@ public class TrainNetworkDataReader {
             prevScanMaxTrainLength = currentMaxLen;
             prevScanStationCount = currentStationCount;
             prevScanJunctionCount = currentJunctionCount;
+        }
+
+        // === Check 11: Chain-Only Corridor Detection ===
+        // If the path between two adjacent junctions has ONLY chain (cross) signals
+        // and ZERO regular (entry) signals, Create's pathfinder cannot find a
+        // terminating block section → trains get NO_PATH.
+        // Chain signals look ahead to the next REGULAR signal as a stopping point.
+        // Without a regular signal somewhere in the chain, they loop infinitely.
+        {
+            Set<String> checkedPairs = new HashSet<>();
+            for (Map.Entry<Integer, List<int[]>> adj1 : adjacency.entrySet()) {
+                if (adj1.getValue().size() < 3) continue; // junction A
+                int jA = adj1.getKey();
+
+                for (int[] branch : adj1.getValue()) {
+                    // Walk from junction A along this branch to find junction B
+                    int prev = jA;
+                    int cur = branch[0];
+                    boolean hasChain = false;
+                    boolean hasRegular = false;
+                    List<String> pathEdges = new ArrayList<>();
+
+                    for (int hop = 0; hop < 10; hop++) {
+                        String ek = Math.min(prev, cur) + ":" + Math.max(prev, cur);
+                        pathEdges.add(ek);
+                        if (chainSignaledEdges.contains(ek)) hasChain = true;
+                        if (regularSignaledEdges.contains(ek)) hasRegular = true;
+
+                        List<int[]> curBranches = adjacency.get(cur);
+                        if (curBranches == null) break;
+
+                        // Reached another junction?
+                        if (curBranches.size() >= 3) {
+                            int jB = cur;
+                            String pairKey = Math.min(jA, jB) + ":" + Math.max(jA, jB);
+                            if (!checkedPairs.contains(pairKey) && hasChain && !hasRegular) {
+                                checkedPairs.add(pairKey);
+
+                                // Chain-only corridor found!
+                                CompoundTag corDiag = new CompoundTag();
+                                corDiag.putString("type", "CHAIN_ONLY_CORRIDOR");
+                                corDiag.putString("severity", "CRIT");
+
+                                // Position at midpoint
+                                if (jA < nodes.size() && jB < nodes.size()) {
+                                    CompoundTag nA = nodes.getCompound(jA);
+                                    CompoundTag nB = nodes.getCompound(jB);
+                                    corDiag.putFloat("x", (nA.getFloat("x") + nB.getFloat("x")) / 2);
+                                    corDiag.putFloat("y", (nA.getFloat("y") + nB.getFloat("y")) / 2);
+                                    corDiag.putFloat("z", (nA.getFloat("z") + nB.getFloat("z")) / 2);
+                                }
+
+                                corDiag.putString("desc", "Chain-only corridor between two junctions — "
+                                        + "no regular signal terminator. Trains will report NO_PATH.");
+                                corDiag.putString("detail", "All signals between these junctions are "
+                                        + "chain (cross) type. Chain signals look ahead for a regular "
+                                        + "signal as a stopping point. Without one, Create's pathfinder "
+                                        + "cannot resolve the route. Convert at least one chain signal "
+                                        + "to regular, or add a regular signal on this segment.");
+                                diagnostics.add(corDiag);
+
+                                LogicLink.LOGGER.warn("[LogicLink] CHAIN_ONLY_CORRIDOR between "
+                                        + "junctions {} and {} ({} edges, all chain, no regular)",
+                                        jA, jB, pathEdges.size());
+                            }
+                            break;
+                        }
+
+                        // Continue walk (straight through 2-way node)
+                        int next = -1;
+                        for (int[] nb : curBranches) {
+                            if (nb[0] != prev) { next = nb[0]; break; }
+                        }
+                        if (next < 0) break;
+                        prev = cur;
+                        cur = next;
+                    }
+                }
+            }
         }
 
         // === Debug: dump all diagnostics for troubleshooting ===
