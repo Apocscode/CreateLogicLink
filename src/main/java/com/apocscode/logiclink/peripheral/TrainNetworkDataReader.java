@@ -256,6 +256,22 @@ public class TrainNetworkDataReader {
                     nodeList.size(), edgeList.size(), curveList.size(),
                     staCount, sigCount, trnCount, obsCount, diagCount);
 
+            // Log each diagnostic detail at INFO level for debugging
+            if (diagCount > 0) {
+                ListTag diagList = mapData.getList("Diagnostics", 10);
+                for (int di = 0; di < diagList.size(); di++) {
+                    CompoundTag d = diagList.getCompound(di);
+                    LogicLink.LOGGER.info("  Diagnostic #{}: type={}, severity={}, pos=({},{},{}), desc={}",
+                            di + 1,
+                            d.getString("type"),
+                            d.getString("severity"),
+                            String.format("%.1f", d.getFloat("x")),
+                            String.format("%.1f", d.getFloat("y")),
+                            String.format("%.1f", d.getFloat("z")),
+                            d.getString("desc"));
+                }
+            }
+
             // Cap warnings
             if (nodeList.size() >= MAX_NODES) {
                 LogicLink.LOGGER.warn("TrainNetworkDataReader: Node cap hit! {} nodes, max is {}. Track topology may be incomplete.", nodeList.size(), MAX_NODES);
@@ -306,7 +322,7 @@ public class TrainNetworkDataReader {
             // Count by type
             int junctionCount = 0, noPathCount = 0, conflictCount = 0, pausedCount = 0, doneCount = 0;
             int invalidDestCount = 0, signalBlockedCount = 0, deadlockCount = 0;
-            int routeUnsignaledCount = 0, unreachableCount = 0;
+            int routeUnsignaledCount = 0, unreachableCount = 0, missingRegularCount = 0;
             for (int i = 0; i < diags.size(); i++) {
                 String type = diags.getCompound(i).getString("type");
                 switch (type) {
@@ -320,6 +336,7 @@ public class TrainNetworkDataReader {
                     case "DEADLOCK" -> deadlockCount++;
                     case "ROUTE_UNSIGNALED" -> routeUnsignaledCount++;
                     case "STATION_UNREACHABLE" -> unreachableCount++;
+                    case "MISSING_REGULAR_SIGNAL" -> missingRegularCount++;
                 }
             }
             result.putInt("junctionCount", junctionCount);
@@ -332,6 +349,7 @@ public class TrainNetworkDataReader {
             result.putInt("deadlockCount", deadlockCount);
             result.putInt("routeUnsignaledCount", routeUnsignaledCount);
             result.putInt("unreachableCount", unreachableCount);
+            result.putInt("missingRegularCount", missingRegularCount);
         } else {
             result.putInt("issueCount", 0);
         }
@@ -659,6 +677,17 @@ public class TrainNetworkDataReader {
                                 }
                             }
                         } catch (Exception ignored) {}
+
+                        // Log each signal at INFO level for debugging
+                        LogicLink.LOGGER.info("  Signal#{} pos=({},{},{}) typeF='{}' typeB='{}' edgeA={} edgeB={}",
+                                signalList.size(),
+                                String.format("%.1f", tag.getFloat("x")),
+                                String.format("%.1f", tag.getFloat("y")),
+                                String.format("%.1f", tag.getFloat("z")),
+                                tag.contains("typeF") ? tag.getString("typeF") : "MISSING",
+                                tag.contains("typeB") ? tag.getString("typeB") : "MISSING",
+                                tag.contains("edgeA") ? tag.getInt("edgeA") : -1,
+                                tag.contains("edgeB") ? tag.getInt("edgeB") : -1);
 
                         signalList.add(tag);
                     } catch (Exception ignored) {}
@@ -1097,6 +1126,66 @@ public class TrainNetworkDataReader {
                 signaledEdges.add(ek);
             }
         }
+        LogicLink.LOGGER.info("Signaled edges set (direct): {}", signaledEdges);
+
+        // Build extended set: for each junction, walk outward along each branch up to 3 hops.
+        // If any edge along that path has a signal, mark the junction branch as "signaled".
+        // This handles Create's intermediate graph nodes between junctions and signal blocks.
+        // Key format: "junctionId:neighborId" — same as what Check 1 looks for.
+        Set<String> junctionBranchSignaled = new HashSet<>();
+        for (Map.Entry<Integer, List<int[]>> entry : adjacency.entrySet()) {
+            List<int[]> branches = entry.getValue();
+            if (branches.size() < 3) continue; // only junctions
+
+            int jId = entry.getKey();
+
+            for (int[] branch : branches) {
+                int neighborId = branch[0];
+                String branchKey = Math.min(jId, neighborId) + ":" + Math.max(jId, neighborId);
+
+                // Check direct edge first
+                if (signaledEdges.contains(branchKey)) {
+                    junctionBranchSignaled.add(branchKey);
+                    continue;
+                }
+
+                // Walk outward from junction along this branch: prev -> current -> next
+                // Stop at other junctions or after 3 hops
+                int prev = jId;
+                int current = neighborId;
+                boolean found = false;
+                for (int hop = 0; hop < 3; hop++) {
+                    List<int[]> currentBranches = adjacency.get(current);
+                    if (currentBranches == null) break;
+
+                    // If current node IS a junction, stop — that's a different junction's domain
+                    if (hop > 0 && currentBranches.size() >= 3) break;
+
+                    // Check if the edge from prev to current has a signal
+                    String ek = Math.min(prev, current) + ":" + Math.max(prev, current);
+                    if (signaledEdges.contains(ek)) {
+                        found = true;
+                        break;
+                    }
+
+                    // Walk to the next node (skip back to prev)
+                    int next = -1;
+                    for (int[] nb : currentBranches) {
+                        if (nb[0] != prev) {
+                            next = nb[0];
+                            break;
+                        }
+                    }
+                    if (next < 0) break;
+                    prev = current;
+                    current = next;
+                }
+                if (found) {
+                    junctionBranchSignaled.add(branchKey);
+                }
+            }
+        }
+        LogicLink.LOGGER.info("Junction branch signaled (with walk): {}", junctionBranchSignaled);
 
         // === Check 1: Unsignaled junction branches ===
         // Flag diverging branches at junctions that have NO signal at all.
@@ -1193,11 +1282,14 @@ public class TrainNetworkDataReader {
                 // Skip through-line branches — they don't need signals at T-junctions
                 if (isThrough) continue;
 
-                // Skip branches that already have ANY signal — Check 3 handles wrong-type signals.
+                // Skip branches that already have ANY signal (within 3 hops) — Check 3 handles wrong-type signals.
                 // This prevents overlap: Check 1 only suggests placing NEW signals on unsignaled branches.
                 int neighborId2 = branchNeighborIds.get(bi);
                 String branchEdgeKey = Math.min(jId, neighborId2) + ":" + Math.max(jId, neighborId2);
-                if (signaledEdges.contains(branchEdgeKey)) continue;
+                boolean alreadySignaled = junctionBranchSignaled.contains(branchEdgeKey);
+                LogicLink.LOGGER.info("  Check1: Junction {} branch {} -> neighbor {}, edgeKey='{}', alreadySignaled={}",
+                        jId, bi, neighborId2, branchEdgeKey, alreadySignaled);
+                if (alreadySignaled) continue;
 
                 CompoundTag branchSug = new CompoundTag();
                 branchSug.putInt("sx", Mth.floor(sugX));
@@ -1834,6 +1926,154 @@ public class TrainNetworkDataReader {
                         + " — no path exists between them");
 
                 diagnostics.add(diag2);
+            }
+        }
+
+        // === Check 9: Missing Regular Signals (Block Section Boundaries) ===
+        // After junctions, trains need regular (entry) signals to define block sections.
+        // For each junction, check if there's a regular signal on the EXIT side of each branch.
+        // "Exit" means the side facing AWAY from the junction — trains leaving the junction
+        // should pass through a regular signal to create a new block section.
+        //
+        // Without these, the entire stretch between junctions is one giant signal block,
+        // meaning only one train can use it at a time.
+        //
+        // Logic: for each junction branch, walk outward. If we find a chain signal but
+        // no regular signal within a reasonable distance, suggest placing one.
+        // Also suggest regular signals on straight (non-junction) segments that have
+        // no signals at all and are longer than a threshold.
+
+        // First: build a set of edges that have regular (entry_signal) signals
+        Set<String> regularSignaledEdges = new HashSet<>();
+        Set<String> chainSignaledEdges = new HashSet<>();
+        for (int i = 0; i < signals.size(); i++) {
+            CompoundTag sig = signals.getCompound(i);
+            if (!sig.contains("edgeA") || !sig.contains("edgeB")) continue;
+            int a = sig.getInt("edgeA");
+            int b = sig.getInt("edgeB");
+            String ek = Math.min(a, b) + ":" + Math.max(a, b);
+            String typeF = sig.contains("typeF") ? sig.getString("typeF") : "entry_signal";
+            String typeB = sig.contains("typeB") ? sig.getString("typeB") : "entry_signal";
+            if (typeF.equals("entry_signal") || typeB.equals("entry_signal")) {
+                regularSignaledEdges.add(ek);
+            }
+            if (typeF.equals("cross_signal") || typeB.equals("cross_signal")) {
+                chainSignaledEdges.add(ek);
+            }
+        }
+
+        // For each junction, check exit sides of branches for regular signals
+        for (Map.Entry<Integer, List<int[]>> entry : adjacency.entrySet()) {
+            List<int[]> branches = entry.getValue();
+            if (branches.size() < 3) continue; // junctions only
+
+            int jId = entry.getKey();
+            if (jId >= nodes.size()) continue;
+            CompoundTag jNode = nodes.getCompound(jId);
+            float jx = jNode.getFloat("x");
+            float jy = jNode.getFloat("y");
+            float jz = jNode.getFloat("z");
+
+            // For each branch, walk outward past the chain signal zone.
+            // If there's a chain signal but no regular signal between this junction
+            // and the next junction (or end of track), suggest placing one.
+            for (int[] branch : branches) {
+                int neighborId = branch[0];
+                if (neighborId >= nodes.size()) continue;
+                CompoundTag neighborNode = nodes.getCompound(neighborId);
+
+                // Walk outward from junction along this branch
+                int prev = jId;
+                int current = neighborId;
+                boolean foundChain = false;
+                boolean foundRegular = false;
+                float walkDist = 0;
+                int lastNodeBeforeNextJunction = neighborId;
+
+                for (int hop = 0; hop < 5; hop++) {
+                    String ek = Math.min(prev, current) + ":" + Math.max(prev, current);
+                    if (chainSignaledEdges.contains(ek)) foundChain = true;
+                    if (regularSignaledEdges.contains(ek)) foundRegular = true;
+
+                    // Accumulate distance
+                    if (prev < nodes.size() && current < nodes.size()) {
+                        CompoundTag pn = nodes.getCompound(prev);
+                        CompoundTag cn = nodes.getCompound(current);
+                        float ddx = cn.getFloat("x") - pn.getFloat("x");
+                        float ddy = cn.getFloat("y") - pn.getFloat("y");
+                        float ddz = cn.getFloat("z") - pn.getFloat("z");
+                        walkDist += (float) Math.sqrt(ddx * ddx + ddy * ddy + ddz * ddz);
+                    }
+
+                    List<int[]> currentBranches = adjacency.get(current);
+                    if (currentBranches == null) break;
+
+                    // Stop at next junction
+                    if (currentBranches.size() >= 3) break;
+
+                    lastNodeBeforeNextJunction = current;
+
+                    // Find next node (not going back)
+                    int next = -1;
+                    for (int[] nb : currentBranches) {
+                        if (nb[0] != prev) {
+                            next = nb[0];
+                            break;
+                        }
+                    }
+                    if (next < 0) break;
+                    prev = current;
+                    current = next;
+                }
+
+                // If there's a chain signal on this branch but no regular signal,
+                // suggest placing a regular signal after the chain signal position
+                // (further from junction, to create a block section boundary)
+                if (foundChain && !foundRegular && walkDist > 6.0f) {
+                    // Suggest placement: past the chain signal, closer to the far end
+                    float ndx = neighborNode.getFloat("x") - jx;
+                    float ndy = neighborNode.getFloat("y") - jy;
+                    float ndz = neighborNode.getFloat("z") - jz;
+                    float dist = (float) Math.sqrt(ndx * ndx + ndy * ndy + ndz * ndz);
+                    if (dist < 0.01f) continue;
+
+                    // Place regular signal further out than where chain signal would be
+                    float chainOffset = Math.min(Math.max(3.0f, maxTrainLength * 0.5f), dist * 0.8f);
+                    float regularOffset = chainOffset + 3.0f; // a few blocks past the chain
+                    if (regularOffset > walkDist * 0.9f) regularOffset = walkDist * 0.7f;
+                    if (regularOffset < chainOffset + 1.0f) continue; // not enough room
+
+                    float sugX = jx + (ndx / dist) * regularOffset;
+                    float sugY = jy + (ndy / dist) * regularOffset;
+                    float sugZ = jz + (ndz / dist) * regularOffset;
+
+                    CompoundTag diag = new CompoundTag();
+                    diag.putString("type", "MISSING_REGULAR_SIGNAL");
+                    diag.putString("severity", "INFO");
+                    diag.putFloat("x", sugX);
+                    diag.putFloat("y", sugY);
+                    diag.putFloat("z", sugZ);
+                    String cardinal = getCardinalDir(ndx / dist, ndz / dist);
+                    diag.putString("desc", "No regular signal after junction exit (" + cardinal
+                            + ") — add one to create a block section boundary");
+                    diag.putString("detail", "Chain signal found but no regular signal between "
+                            + "this junction and the next. Without a regular signal, "
+                            + "the entire segment is one block — only one train can use it.");
+
+                    ListTag suggestions = new ListTag();
+                    CompoundTag sug = new CompoundTag();
+                    sug.putInt("sx", Mth.floor(sugX));
+                    sug.putInt("sy", Mth.floor(sugY));
+                    sug.putInt("sz", Mth.floor(sugZ));
+                    sug.putString("signalType", "signal");
+                    sug.putFloat("sdx", ndx / dist);
+                    sug.putFloat("sdz", ndz / dist);
+                    sug.putString("dir", "Place regular signal — exit toward " + cardinal);
+                    suggestions.add(sug);
+                    diag.put("suggestions", suggestions);
+
+                    diagnostics.add(diag);
+                }
             }
         }
 
