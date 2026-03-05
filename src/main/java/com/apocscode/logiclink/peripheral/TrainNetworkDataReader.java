@@ -1308,10 +1308,15 @@ public class TrainNetworkDataReader {
 
             // Generate signal suggestions for ALL branches (including through-lines).
             // Per Create wiki: chain signals protect junctions from all entry directions.
-            // Each branch gets up to 3 signals for bidirectional coverage:
-            //   1. Inbound CHAIN — close to junction, facing toward junction (entry protection)
-            //   2. Outbound REGULAR — same area, facing away from junction (exit boundary)
-            //   3. Inbound REGULAR — further out, facing toward junction (waiting/queue point)
+            // Create signals are TWO-SIDED (F and B). One physical signal block can
+            // have chain on one side and regular on the other. For bidirectional
+            // coverage, place TWO signals on the SAME track block facing opposite
+            // directions (Create calls this a "two-way signal pair").
+            //
+            // Each branch gets up to 2 suggestion entries:
+            //   1. Chain+Regular PAIR on same track — chain faces junction, regular faces away
+            //      (One physical signal block with wrench toggle, or two signals on same track)
+            //   2. Regular signal further out — waiting/queue point for approaching trains
             ListTag suggestions = new ListTag();
             LogicLink.LOGGER.debug("[LogicLink] Junction at ({}, {}, {}) with {} branches, {} through-line",
                     Mth.floor(jx), Mth.floor(jy), Mth.floor(jz),
@@ -1353,9 +1358,12 @@ public class TrainNetworkDataReader {
 
                 int bsx = Mth.floor(sugX), bsy = Mth.floor(sugY), bsz = Mth.floor(sugZ);
 
-                // === Signal 1: Inbound CHAIN — junction entry protection ===
-                // Close to junction, facing toward junction (direction: ndx, ndz).
-                // Prevents train from entering junction if it can't exit.
+                // === Signal 1: Two-way signal PAIR on same track block ===
+                // In Create, signals are two-sided. For a junction boundary:
+                //   - Side facing junction = CHAIN (wrench to toggle)
+                //   - Side facing away = REGULAR (default)
+                // OR place two signals on the same track marker facing opposite directions.
+                // Ghost box shows as CHAIN (the critical type).
                 CompoundTag branchSug = new CompoundTag();
                 branchSug.putInt("sx", bsx);
                 branchSug.putInt("sy", bsy);
@@ -1367,34 +1375,18 @@ public class TrainNetworkDataReader {
                 branchSug.putFloat("maxTrainLength", maxTrainLength);
                 branchSug.putBoolean("clearanceWarning", !clearanceOk);
                 branchSug.putBoolean("throughLine", isThrough);
-                branchSug.putString("dir", "Chain signal — entry from " + cardinal + throughNote + clearanceNote);
+                branchSug.putBoolean("twoWay", true);
+                branchSug.putString("dir", "Two-way signal pair on SAME track: chain from "
+                        + cardinal + ", regular toward " + exitCardinal + throughNote + clearanceNote);
 
                 if (!isDuplicateSuggestion(suggestions, bsx, bsy, bsz, "chain", ndx, ndz)) {
                     suggestions.add(branchSug);
                 }
 
-                // === Signal 2: Outbound REGULAR — exit block section boundary ===
-                // Same position as chain but facing AWAY from junction (-ndx, -ndz).
-                // Per Create wiki: "Conductors will never cross a Train Signal from
-                // the opposite direction" — each direction needs its own signal.
-                // This creates a two-way signal pair at the junction boundary.
-                CompoundTag exitSug = new CompoundTag();
-                exitSug.putInt("sx", bsx);
-                exitSug.putInt("sy", bsy);
-                exitSug.putInt("sz", bsz);
-                exitSug.putString("signalType", "signal");
-                exitSug.putFloat("sdx", -ndx);
-                exitSug.putFloat("sdz", -ndz);
-                exitSug.putBoolean("throughLine", isThrough);
-                exitSug.putString("dir", "Regular signal — exit toward " + exitCardinal + throughNote);
-
-                if (!isDuplicateSuggestion(suggestions, bsx, bsy, bsz, "signal", -ndx, -ndz)) {
-                    suggestions.add(exitSug);
-                }
-
-                // === Signal 3: Inbound REGULAR — waiting/queuing point ===
+                // === Signal 2: Inbound REGULAR — waiting/queuing point ===
                 // Further from junction, facing toward junction (ndx, ndz).
                 // Creates a block section for approaching trains to queue before chain.
+                // This is a SEPARATE signal position — intentionally regular (not chain).
                 float regularOffset = offset + Math.max(3.0f, maxTrainLength * 0.5f);
                 if (regularOffset < dist * 0.95f) {
                     float regX = jx - ndx * regularOffset;
@@ -1637,6 +1629,30 @@ public class TrainNetworkDataReader {
             }
         }
 
+        // Pre-scan: For each junction edge, check if ANY signal on that edge already
+        // has chain on the junction-facing side. If so, other signals on the same
+        // edge are block-section boundaries (intentionally regular) and should NOT
+        // be flagged as conflicts.
+        // Key: "edgeA:edgeB:side" → true if chain exists on that side
+        Set<String> edgeHasChainOnSide = new HashSet<>();
+        for (int i = 0; i < signals.size(); i++) {
+            CompoundTag sig = signals.getCompound(i);
+            if (!sig.contains("edgeA") || !sig.contains("edgeB")) continue;
+            int a = sig.getInt("edgeA");
+            int b = sig.getInt("edgeB");
+            String tF = sig.contains("typeF") ? sig.getString("typeF") : "entry_signal";
+            String tB = sig.contains("typeB") ? sig.getString("typeB") : "entry_signal";
+            String ek = Math.min(a, b) + ":" + Math.max(a, b);
+            // Side F = direction A→B. If B is junction and F is chain, mark it.
+            if (junctionNodes.contains(b) && tF.equals("cross_signal")) {
+                edgeHasChainOnSide.add(ek + ":F->" + b);
+            }
+            // Side B = direction B→A. If A is junction and B is chain, mark it.
+            if (junctionNodes.contains(a) && tB.equals("cross_signal")) {
+                edgeHasChainOnSide.add(ek + ":B->" + a);
+            }
+        }
+
         for (int i = 0; i < signals.size(); i++) {
             CompoundTag sig = signals.getCompound(i);
             if (!sig.contains("edgeA") || !sig.contains("edgeB")) continue;
@@ -1657,7 +1673,6 @@ public class TrainNetworkDataReader {
             float sz = sig.contains("z") ? sig.getFloat("z") : 0;
             if (sx == 0 && sz == 0) continue; // no valid position
 
-            // Debug: log signal type data for all junction-edge signals
             if (onJunctionEdge) {
                 LogicLink.LOGGER.debug("[LogicLink] Check3 Signal#{} @ ({},{},{}) edgeA={} edgeB={} typeF='{}' typeB='{}' aIsJ={} bIsJ={}",
                         i, (int) sx, (int) sy, (int) sz, edgeA, edgeB, typeF, typeB, aIsJunction, bIsJunction);
@@ -1666,34 +1681,35 @@ public class TrainNetworkDataReader {
             // For each side (F and B) of the signal boundary:
             // - "forward" side faces from edgeA toward edgeB
             // - "backward" side faces from edgeB toward edgeA
-            // If the signal is on a junction entry (approaching junction), it should be chain (cross_signal)
-            // If the signal is NOT on a junction edge, chain is unnecessary/wasteful
+            // Only flag as conflict if:
+            //   1. This side faces a junction AND is not chain
+            //   2. AND no other signal on this edge has chain on the same side
+            //      (if another signal IS chain, this one is a block-section boundary)
 
-            // Side F: direction A→B (train approaching from A side)
-            // If B is a junction, then side F is "entering junction" → should be chain
+            String ek = Math.min(edgeA, edgeB) + ":" + Math.max(edgeA, edgeB);
+
             boolean fShouldBeChain = bIsJunction;
             boolean fIsChain = typeF.equals("cross_signal");
+            // Check if another signal on this edge already provides chain for side F→B
+            boolean fHasPartner = edgeHasChainOnSide.contains(ek + ":F->" + edgeB)
+                    || edgeHasChainOnSide.contains(ek + ":B->" + edgeB);
 
-            // Side B: direction B→A (train approaching from B side)
-            // If A is a junction, then side B is "entering junction" → should be chain
             boolean bShouldBeChain = aIsJunction;
             boolean bIsChain = typeB.equals("cross_signal");
+            // Check if another signal on this edge already provides chain for side B→A
+            boolean bHasPartner = edgeHasChainOnSide.contains(ek + ":B->" + edgeA)
+                    || edgeHasChainOnSide.contains(ek + ":F->" + edgeA);
 
             List<String> issues = new ArrayList<>();
 
-            // Check side F — only flag missing chain, not "unnecessary chain" on junction edges
-            // (chain on the outward-facing side of a junction edge is harmless and normal)
-            if (onJunctionEdge && fShouldBeChain && !fIsChain) {
+            // Only flag if this side needs chain AND no other signal on the edge has chain
+            // for this junction direction. Regular signals further from the junction are
+            // intentional block-section boundaries when a chain signal exists closer.
+            if (onJunctionEdge && fShouldBeChain && !fIsChain && !fHasPartner) {
                 issues.add("Side F: regular signal should be CHAIN (protects junction at node " + edgeB + ")");
-                LogicLink.LOGGER.debug("[LogicLink] Check3 ISSUE: Signal#{} @ ({},{},{}) Side F: typeF='{}' should be cross_signal (edgeB={} is junction)",
-                        i, (int) sx, (int) sy, (int) sz, typeF, edgeB);
             }
-
-            // Check side B
-            if (onJunctionEdge && bShouldBeChain && !bIsChain) {
+            if (onJunctionEdge && bShouldBeChain && !bIsChain && !bHasPartner) {
                 issues.add("Side B: regular signal should be CHAIN (protects junction at node " + edgeA + ")");
-                LogicLink.LOGGER.debug("[LogicLink] Check3 ISSUE: Signal#{} @ ({},{},{}) Side B: typeB='{}' should be cross_signal (edgeA={} is junction)",
-                        i, (int) sx, (int) sy, (int) sz, typeB, edgeA);
             }
 
             // Note: "chain on non-junction edge" check removed — Create's graph can have
