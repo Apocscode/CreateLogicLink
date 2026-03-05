@@ -1375,3 +1375,28 @@ Major signal diagnostic overhaul addressing multiple bugs and a complete redesig
 ### Files Changed
 - `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java` -- Signal redesign, Check 10, isDuplicateSuggestion helper, snapshot fields, scanDiagnosticsOnly update
 - `src/main/java/com/apocscode/logiclink/block/TrainMonitorBlockEntity.java` -- UUID station crash fix
+
+---
+
+## Session 10b -- 2026-03-05 -- Fix Check 3 False Positives + Two-Way Signal Pairs
+
+### Commits
+- `343af6c` -- Fix Check 3 false positives + merge bidirectional into two-way pairs
+
+### Summary
+In-game testing revealed two issues causing false SIGNAL_CONFLICT diagnostics and user confusion:
+
+**Check 3 Fix — False Positives:**
+- Check 3 flagged ALL regular signals on junction edges as needing chain, even when a chain signal already existed closer to the junction on the same edge
+- Added pre-scan phase: builds `edgeHasChainOnSide` set tracking which edges/sides already have chain signals
+- Regular "waiting point" signals further from the junction are now correctly recognized as intentional block-section boundaries
+- Eliminated 4 false SIGNAL_CONFLICT diagnostics from test world
+
+**Check 1 Fix — Two-Way Signal Pairs:**
+- Previously suggested 3 separate signals (inbound chain + outbound regular + inbound regular waiting point)
+- Merged inbound chain + outbound regular into ONE "two-way signal pair" suggestion with `twoWay=true` flag
+- Description now reads: "Two-way signal pair on SAME track: chain from N, regular toward S"
+- Matches Create's actual mechanics: signals are two-sided blocks, place on the same track marker
+
+### Files Changed
+- `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java` -- Check 3 partner detection, Check 1 two-way pair merge
