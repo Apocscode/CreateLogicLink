@@ -1339,3 +1339,39 @@ Added 5 Train Monitor screenshots to the repo and embedded them in the README un
 - `screenshots/MapsPage.png` -- Map page tab
 - `screenshots/Signalspage.png` -- Signals page tab
 - `README.md` -- Added Screenshots section with 5 Train Monitor images
+
+---
+
+## Session 10 -- 2026-03-05 -- Signal Diagnostic Redesign & Train UUID Fix
+
+### Commits
+- `ed1dc7d` -- Walk-based signal recognition + Check 9 MISSING_REGULAR_SIGNAL
+- `9c24d13` -- Comprehensive signal diagnostic redesign
+
+### Summary
+Major signal diagnostic overhaul addressing multiple bugs and a complete redesign for bidirectional signal coverage across all track layouts.
+
+**Bug Fixes:**
+- **0 trains crash**: `Train.currentStation` returns UUID in Create 1.21.1, not GlobalStation. Fixed `instanceof UUID` check in both `TrainNetworkDataReader.java` and `TrainMonitorBlockEntity.java`.
+- **Schedule conflict from signal-only suggestions**: Chain signals alone break Create's pathfinder. Now suggests paired chain+regular signals.
+- **Chain signals not recognized**: Walk-based detection (3 hops) via `junctionBranchSignaled` set handles Create's intermediate graph nodes.
+
+**Signal Redesign (Check 1):**
+- **Bidirectional signals**: Each junction branch now gets 3 signals:
+  1. Inbound CHAIN — entry protection, facing toward junction
+  2. Outbound REGULAR — exit boundary, facing away from junction (two-way pair)
+  3. Inbound REGULAR — waiting/queue point, further from junction
+- **Through-line detection generalized**: Works for ALL junction sizes (3+, 4+, 5+way), not just 3-way. Uses greedy pair matching via dot product.
+- **Through-line branches no longer skipped**: ALL branches get signals per Create wiki ("chain signals protect junctions from all entry directions").
+- **Smart deduplication**: `isDuplicateSuggestion()` checks position + type + direction, allowing two-way signal pairs at same position.
+- **Through-line annotations**: Suggestions tagged with `throughLine` boolean and "(through-line)" in descriptions.
+
+**New Check 10 — NETWORK_CHANGED:**
+- Rescan delta detection compares train count, max train length, station count, junction count between scans.
+- WARN severity for: new junctions (layout change), longer trains (spacing), first trains added.
+- INFO severity for: count changes.
+- Stores snapshot in static fields, compares on subsequent scans.
+
+### Files Changed
+- `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java` -- Signal redesign, Check 10, isDuplicateSuggestion helper, snapshot fields, scanDiagnosticsOnly update
+- `src/main/java/com/apocscode/logiclink/block/TrainMonitorBlockEntity.java` -- UUID station crash fix
