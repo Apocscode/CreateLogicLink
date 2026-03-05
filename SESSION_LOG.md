@@ -1567,3 +1567,30 @@ Session 10e crossing fix was fundamentally wrong and caused the user to add 9 ex
 
 ### Files Changed
 - `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java` -- Reverted crossing detection, added Check 3b and Check 3c
+
+---
+
+## Session 10h -- 2026-03-05 -- Re-enable Crossing Signals (Final Correction)
+
+### Commits
+- `ef6cfc9` -- Re-enable crossing signals + remove Check 3c
+
+### Summary
+Session 10g was wrong. Crossings absolutely need signals — trains on perpendicular tracks will collide without them. This session re-enables crossing detection and removes the incorrect Check 3c.
+
+**Timeline of Crossing Detection Flip-Flops (ending here):**
+1. **Original**: All through-line → skip (no signals at crossings)
+2. **Session 10e**: Clear throughBranches → suggest signals ← CORRECT concept
+3. **Session 10g**: Revert → no signals at crossings ← WRONG, trains collide
+4. **Session 10h**: Re-enable clear throughBranches ← CORRECT, final
+
+**The Real NO_PATH Cause Was Never the Crossing Detection:**
+The actual problem was signals with chain on BOTH sides (signals #7 and #9 in the logs). Double-chain signals have no stopping point in either direction — guaranteed NO_PATH. Check 3b (added in 10g, kept here) catches these.
+
+**Changes:**
+- Re-enabled `throughBranches.clear()` for 4+ way junctions where all branches are through-line
+- Removed Check 3c (excess crossing signal detection) — it incorrectly told users to remove valid crossing signals
+- Kept Check 3b (double-chain detection) — signals with chain on both sides are always wrong
+
+### Files Changed
+- `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java` -- Re-enabled crossing detection, removed Check 3c
