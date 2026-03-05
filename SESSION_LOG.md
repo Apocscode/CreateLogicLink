@@ -1400,3 +1400,29 @@ In-game testing revealed two issues causing false SIGNAL_CONFLICT diagnostics an
 
 ### Files Changed
 - `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java` -- Check 3 partner detection, Check 1 two-way pair merge
+
+## Session 10c -- 2026-03-05 -- Fix Signal Over-Suggestion & Chain-Only Corridor Detection
+
+### Commits
+- `111d522` -- Fix signal over-suggestion: revert through-line signals, add chain-corridor check
+
+### Summary
+In-game testing showed 25 signals on a 53-node network (way too many) and both trains stuck with NO_PATH. Root cause: the Session 10 change to suggest signals on ALL branches including through-lines created chain-only corridors between adjacent junctions. Create's pathfinder needs at least one regular signal as a block section terminator — chain signals look ahead infinitely and fail without one.
+
+**Check 1 Fix — Revert Through-Line Signals:**
+- Through-line branches at T-junctions no longer get signal suggestions
+- Through-line traffic flows straight through junctions without needing chain protection
+- Only diverging branches get chain + regular signal pair suggestions
+- Reduces total suggested signals from ~25 to ~4-8 for a typical 4-junction network
+- Removed `twoWay` flag and `throughLine` tags — simplified back to clear descriptions
+- Added debug logging for through-line vs diverging classification
+
+**Check 11 — New CHAIN_ONLY_CORRIDOR Diagnostic (CRIT):**
+- Walks between all pairs of adjacent junctions
+- If ALL signals on the path are chain (cross_signal) and NONE are regular (entry_signal), flags as CHAIN_ONLY_CORRIDOR
+- Provides clear description: "Convert at least one chain signal to regular, or add a regular signal on this segment"
+- Prevents the exact scenario that caused persistent NO_PATH errors
+- Added `chainCorridorCount` to `scanDiagnosticsOnly` summary stats
+
+### Files Changed
+- `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java` -- Check 1 through-line skip, Check 11 chain-corridor detection, scanDiagnosticsOnly update
