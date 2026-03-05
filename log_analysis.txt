@@ -1,0 +1,300 @@
+﻿[05Mar2026 16:26:50.293] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 1 to node 5 (-16,-60,209), dist=13.5 — diverging
+[05Mar2026 16:26:50.293] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 2 to node 49 (-32,-60,209), dist=2.5 — diverging
+[05Mar2026 16:26:50.293] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 3 to node 23 (-29,-60,224), dist=14.5 — diverging
+[05Mar2026 16:26:50.294] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: TrainNetworkDataReader: Result -- 53 nodes, 56 edges, 12 curves, 4 stations, 17 signals, 2 trains, 0 observers, 2 diagnostics
+[05Mar2026 16:26:50.294] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Diagnostic #1: type=NO_PATH, severity=CRIT, pos=(7.0,-59.0,209.0), desc=No navigation path found
+[05Mar2026 16:26:50.294] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Diagnostic #2: type=NO_PATH, severity=CRIT, pos=(-4.0,-59.0,180.0), desc=No navigation path found
+[05Mar2026 16:26:55.890] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: TrainNetworkDataReader: Found 1 track graphs, dimFilter=minecraft:overworld
+[05Mar2026 16:26:55.890] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#0 pos=(-36.5,-60.0,209.5) typeF='entry_signal' typeB='cross_signal' edgeA=49 edgeB=39
+[05Mar2026 16:26:55.891] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#1 pos=(29.0,-58.0,213.0) typeF='cross_signal' typeB='entry_signal' edgeA=12 edgeB=46
+[05Mar2026 16:26:55.891] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#2 pos=(-29.5,-60.0,208.5) typeF='entry_signal' typeB='cross_signal' edgeA=51 edgeB=13
+[05Mar2026 16:26:55.891] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#3 pos=(19.5,-60.0,209.5) typeF='entry_signal' typeB='cross_signal' edgeA=46 edgeB=38
+[05Mar2026 16:26:55.891] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#4 pos=(31.0,-58.0,206.0) typeF='cross_signal' typeB='entry_signal' edgeA=50 edgeB=46
+[05Mar2026 16:26:55.891] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#5 pos=(-29.5,-60.0,234.5) typeF='entry_signal' typeB='cross_signal' edgeA=0 edgeB=18
+[05Mar2026 16:26:55.891] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#6 pos=(29.0,-58.0,204.0) typeF='entry_signal' typeB='entry_signal' edgeA=22 edgeB=17
+[05Mar2026 16:26:55.891] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#7 pos=(29.0,-58.0,206.0) typeF='cross_signal' typeB='cross_signal' edgeA=22 edgeB=17
+[05Mar2026 16:26:55.891] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#8 pos=(21.5,-60.0,309.5) typeF='entry_signal' typeB='entry_signal' edgeA=32 edgeB=41
+[05Mar2026 16:26:55.891] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#9 pos=(-24.0,-58.0,206.0) typeF='cross_signal' typeB='cross_signal' edgeA=5 edgeB=51
+[05Mar2026 16:26:55.891] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#10 pos=(29.0,-58.0,219.0) typeF='cross_signal' typeB='entry_signal' edgeA=12 edgeB=46
+[05Mar2026 16:26:55.891] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#11 pos=(-31.0,-60.0,237.2) typeF='entry_signal' typeB='cross_signal' edgeA=18 edgeB=42
+[05Mar2026 16:26:55.891] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#12 pos=(-27.0,-58.0,214.0) typeF='cross_signal' typeB='entry_signal' edgeA=23 edgeB=51
+[05Mar2026 16:26:55.891] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#13 pos=(-32.5,-60.0,240.4) typeF='entry_signal' typeB='entry_signal' edgeA=18 edgeB=42
+[05Mar2026 16:26:55.891] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#14 pos=(30.0,-58.0,225.0) typeF='cross_signal' typeB='entry_signal' edgeA=31 edgeB=12
+[05Mar2026 16:26:55.891] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#15 pos=(-29.5,-60.0,207.5) typeF='entry_signal' typeB='cross_signal' edgeA=13 edgeB=43
+[05Mar2026 16:26:55.891] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#16 pos=(30.0,-58.0,229.0) typeF='entry_signal' typeB='entry_signal' edgeA=31 edgeB=12
+[05Mar2026 16:26:55.891] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] readAllTrains: Found 2 train objects, dimFilter='minecraft:overworld'
+[05Mar2026 16:26:55.891] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] Train 'A Train': presentDimensions=[ResourceKey[minecraft:dimension / minecraft:overworld]]
+[05Mar2026 16:26:55.891] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] Train 'A Train': position=(7,-59,209)
+[05Mar2026 16:26:55.891] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] Train 'B Train': presentDimensions=[ResourceKey[minecraft:dimension / minecraft:overworld]]
+[05Mar2026 16:26:55.891] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] Train 'B Train': position=(-4,-59,180)
+[05Mar2026 16:26:55.891] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: Signaled edges set (direct): [46:50, 0:18, 23:51, 39:49, 12:46, 17:22, 5:51, 18:42, 12:31, 13:43, 13:51, 38:46, 32:41]
+[05Mar2026 16:26:55.891] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: Junction branch signaled (with walk): [12:46, 22:46, 46:50, 49:51, 0:18, 5:51, 12:31, 18:42, 23:51, 38:46, 13:51]
+[05Mar2026 16:26:55.891] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] Junction node 12 at (26, -60, 222) with 3 branches, 2 through-line
+[05Mar2026 16:26:55.891] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 0 to node 31 (40,-60,266), dist=46.2 — diverging
+[05Mar2026 16:26:55.891] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 1 to node 14 (26,-60,224), dist=2.0 — through-line, skipped
+[05Mar2026 16:26:55.891] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 2 to node 46 (26,-60,209), dist=12.5 — through-line, skipped
+[05Mar2026 16:26:55.891] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] Junction node 18 at (-30, -60, 234) with 3 branches, 2 through-line
+[05Mar2026 16:26:55.891] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 0 to node 0 (-29,-60,240), dist=6.0 — through-line, skipped
+[05Mar2026 16:26:55.891] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 1 to node 42 (-49,-60,277), dist=47.4 — diverging
+[05Mar2026 16:26:55.891] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 2 to node 23 (-29,-60,224), dist=10.0 — through-line, skipped
+[05Mar2026 16:26:55.891] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   All 4 branches are through-line — treating as CROSSING (all need signals)
+[05Mar2026 16:26:55.891] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] Junction node 46 at (26, -60, 209) with 4 branches, 0 through-line
+[05Mar2026 16:26:55.891] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 0 to node 38 (16,-60,209), dist=10.5 — diverging
+[05Mar2026 16:26:55.892] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 1 to node 50 (32,-60,209), dist=5.5 — diverging
+[05Mar2026 16:26:55.892] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 2 to node 22 (26,-60,208), dist=1.5 — diverging
+[05Mar2026 16:26:55.892] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 3 to node 12 (26,-60,222), dist=12.5 — diverging
+[05Mar2026 16:26:55.892] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   All 4 branches are through-line — treating as CROSSING (all need signals)
+[05Mar2026 16:26:55.892] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] Junction node 51 at (-30, -60, 209) with 4 branches, 0 through-line
+[05Mar2026 16:26:55.892] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 0 to node 13 (-29,-60,208), dist=1.5 — diverging
+[05Mar2026 16:26:55.892] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 1 to node 5 (-16,-60,209), dist=13.5 — diverging
+[05Mar2026 16:26:55.892] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 2 to node 49 (-32,-60,209), dist=2.5 — diverging
+[05Mar2026 16:26:55.892] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 3 to node 23 (-29,-60,224), dist=14.5 — diverging
+[05Mar2026 16:26:55.892] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: TrainNetworkDataReader: Result -- 53 nodes, 56 edges, 12 curves, 4 stations, 17 signals, 2 trains, 0 observers, 2 diagnostics
+[05Mar2026 16:26:55.892] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Diagnostic #1: type=NO_PATH, severity=CRIT, pos=(7.0,-59.0,209.0), desc=No navigation path found
+[05Mar2026 16:26:55.892] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Diagnostic #2: type=NO_PATH, severity=CRIT, pos=(-4.0,-59.0,180.0), desc=No navigation path found
+[05Mar2026 16:27:08.525] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: TrainNetworkDataReader: Found 1 track graphs, dimFilter=minecraft:overworld
+[05Mar2026 16:27:08.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#0 pos=(-36.5,-60.0,209.5) typeF='entry_signal' typeB='cross_signal' edgeA=49 edgeB=39
+[05Mar2026 16:27:08.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#1 pos=(29.0,-58.0,213.0) typeF='cross_signal' typeB='entry_signal' edgeA=12 edgeB=46
+[05Mar2026 16:27:08.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#2 pos=(-29.5,-60.0,208.5) typeF='entry_signal' typeB='cross_signal' edgeA=51 edgeB=13
+[05Mar2026 16:27:08.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#3 pos=(19.5,-60.0,209.5) typeF='entry_signal' typeB='cross_signal' edgeA=46 edgeB=38
+[05Mar2026 16:27:08.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#4 pos=(31.0,-58.0,206.0) typeF='cross_signal' typeB='entry_signal' edgeA=50 edgeB=46
+[05Mar2026 16:27:08.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#5 pos=(-29.5,-60.0,234.5) typeF='entry_signal' typeB='cross_signal' edgeA=0 edgeB=18
+[05Mar2026 16:27:08.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#6 pos=(29.0,-58.0,204.0) typeF='entry_signal' typeB='entry_signal' edgeA=22 edgeB=17
+[05Mar2026 16:27:08.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#7 pos=(29.0,-58.0,206.0) typeF='cross_signal' typeB='cross_signal' edgeA=22 edgeB=17
+[05Mar2026 16:27:08.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#8 pos=(21.5,-60.0,309.5) typeF='entry_signal' typeB='entry_signal' edgeA=32 edgeB=41
+[05Mar2026 16:27:08.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#9 pos=(-24.0,-58.0,206.0) typeF='cross_signal' typeB='cross_signal' edgeA=5 edgeB=51
+[05Mar2026 16:27:08.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#10 pos=(29.0,-58.0,219.0) typeF='cross_signal' typeB='entry_signal' edgeA=12 edgeB=46
+[05Mar2026 16:27:08.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#11 pos=(-31.0,-60.0,237.2) typeF='entry_signal' typeB='cross_signal' edgeA=18 edgeB=42
+[05Mar2026 16:27:08.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#12 pos=(-27.0,-58.0,214.0) typeF='cross_signal' typeB='entry_signal' edgeA=23 edgeB=51
+[05Mar2026 16:27:08.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#13 pos=(-32.5,-60.0,240.4) typeF='entry_signal' typeB='entry_signal' edgeA=18 edgeB=42
+[05Mar2026 16:27:08.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#14 pos=(30.0,-58.0,225.0) typeF='cross_signal' typeB='entry_signal' edgeA=31 edgeB=12
+[05Mar2026 16:27:08.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#15 pos=(-29.5,-60.0,207.5) typeF='entry_signal' typeB='cross_signal' edgeA=13 edgeB=43
+[05Mar2026 16:27:08.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#16 pos=(30.0,-58.0,229.0) typeF='entry_signal' typeB='entry_signal' edgeA=31 edgeB=12
+[05Mar2026 16:27:08.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] readAllTrains: Found 2 train objects, dimFilter='minecraft:overworld'
+[05Mar2026 16:27:08.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] Train 'A Train': presentDimensions=[ResourceKey[minecraft:dimension / minecraft:overworld]]
+[05Mar2026 16:27:08.527] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] Train 'A Train': position=(7,-59,209)
+[05Mar2026 16:27:08.527] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] Train 'B Train': presentDimensions=[ResourceKey[minecraft:dimension / minecraft:overworld]]
+[05Mar2026 16:27:08.527] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] Train 'B Train': position=(-4,-59,180)
+[05Mar2026 16:27:08.527] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: Signaled edges set (direct): [46:50, 0:18, 23:51, 39:49, 12:46, 17:22, 5:51, 18:42, 12:31, 13:43, 13:51, 38:46, 32:41]
+[05Mar2026 16:27:08.527] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: Junction branch signaled (with walk): [12:46, 22:46, 46:50, 49:51, 0:18, 5:51, 12:31, 18:42, 23:51, 38:46, 13:51]
+[05Mar2026 16:27:08.527] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] Junction node 12 at (26, -60, 222) with 3 branches, 2 through-line
+[05Mar2026 16:27:08.527] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 0 to node 31 (40,-60,266), dist=46.2 — diverging
+[05Mar2026 16:27:08.527] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 1 to node 14 (26,-60,224), dist=2.0 — through-line, skipped
+[05Mar2026 16:27:08.527] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 2 to node 46 (26,-60,209), dist=12.5 — through-line, skipped
+[05Mar2026 16:27:08.527] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] Junction node 18 at (-30, -60, 234) with 3 branches, 2 through-line
+[05Mar2026 16:27:08.527] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 0 to node 0 (-29,-60,240), dist=6.0 — through-line, skipped
+[05Mar2026 16:27:08.527] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 1 to node 42 (-49,-60,277), dist=47.4 — diverging
+[05Mar2026 16:27:08.527] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 2 to node 23 (-29,-60,224), dist=10.0 — through-line, skipped
+[05Mar2026 16:27:08.527] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   All 4 branches are through-line — treating as CROSSING (all need signals)
+[05Mar2026 16:27:08.527] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] Junction node 46 at (26, -60, 209) with 4 branches, 0 through-line
+[05Mar2026 16:27:08.527] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 0 to node 38 (16,-60,209), dist=10.5 — diverging
+[05Mar2026 16:27:08.527] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 1 to node 50 (32,-60,209), dist=5.5 — diverging
+[05Mar2026 16:27:08.527] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 2 to node 22 (26,-60,208), dist=1.5 — diverging
+[05Mar2026 16:27:08.527] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 3 to node 12 (26,-60,222), dist=12.5 — diverging
+[05Mar2026 16:27:08.527] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   All 4 branches are through-line — treating as CROSSING (all need signals)
+[05Mar2026 16:27:08.527] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] Junction node 51 at (-30, -60, 209) with 4 branches, 0 through-line
+[05Mar2026 16:27:08.527] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 0 to node 13 (-29,-60,208), dist=1.5 — diverging
+[05Mar2026 16:27:08.527] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 1 to node 5 (-16,-60,209), dist=13.5 — diverging
+[05Mar2026 16:27:08.527] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 2 to node 49 (-32,-60,209), dist=2.5 — diverging
+[05Mar2026 16:27:08.527] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 3 to node 23 (-29,-60,224), dist=14.5 — diverging
+[05Mar2026 16:27:08.527] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: TrainNetworkDataReader: Result -- 53 nodes, 56 edges, 12 curves, 4 stations, 17 signals, 2 trains, 0 observers, 2 diagnostics
+[05Mar2026 16:27:08.527] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Diagnostic #1: type=NO_PATH, severity=CRIT, pos=(7.0,-59.0,209.0), desc=No navigation path found
+[05Mar2026 16:27:08.527] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Diagnostic #2: type=NO_PATH, severity=CRIT, pos=(-4.0,-59.0,180.0), desc=No navigation path found
+[05Mar2026 16:27:38.524] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: TrainNetworkDataReader: Found 1 track graphs, dimFilter=minecraft:overworld
+[05Mar2026 16:27:38.525] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#0 pos=(-36.5,-60.0,209.5) typeF='entry_signal' typeB='cross_signal' edgeA=49 edgeB=39
+[05Mar2026 16:27:38.525] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#1 pos=(29.0,-58.0,213.0) typeF='cross_signal' typeB='entry_signal' edgeA=12 edgeB=46
+[05Mar2026 16:27:38.525] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#2 pos=(-29.5,-60.0,208.5) typeF='entry_signal' typeB='cross_signal' edgeA=51 edgeB=13
+[05Mar2026 16:27:38.525] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#3 pos=(19.5,-60.0,209.5) typeF='entry_signal' typeB='cross_signal' edgeA=46 edgeB=38
+[05Mar2026 16:27:38.525] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#4 pos=(31.0,-58.0,206.0) typeF='cross_signal' typeB='entry_signal' edgeA=50 edgeB=46
+[05Mar2026 16:27:38.525] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#5 pos=(-29.5,-60.0,234.5) typeF='entry_signal' typeB='cross_signal' edgeA=0 edgeB=18
+[05Mar2026 16:27:38.525] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#6 pos=(29.0,-58.0,204.0) typeF='entry_signal' typeB='entry_signal' edgeA=22 edgeB=17
+[05Mar2026 16:27:38.525] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#7 pos=(29.0,-58.0,206.0) typeF='cross_signal' typeB='cross_signal' edgeA=22 edgeB=17
+[05Mar2026 16:27:38.525] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#8 pos=(21.5,-60.0,309.5) typeF='entry_signal' typeB='entry_signal' edgeA=32 edgeB=41
+[05Mar2026 16:27:38.525] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#9 pos=(-24.0,-58.0,206.0) typeF='cross_signal' typeB='cross_signal' edgeA=5 edgeB=51
+[05Mar2026 16:27:38.525] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#10 pos=(29.0,-58.0,219.0) typeF='cross_signal' typeB='entry_signal' edgeA=12 edgeB=46
+[05Mar2026 16:27:38.525] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#11 pos=(-31.0,-60.0,237.2) typeF='entry_signal' typeB='cross_signal' edgeA=18 edgeB=42
+[05Mar2026 16:27:38.525] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#12 pos=(-27.0,-58.0,214.0) typeF='cross_signal' typeB='entry_signal' edgeA=23 edgeB=51
+[05Mar2026 16:27:38.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#13 pos=(-32.5,-60.0,240.4) typeF='entry_signal' typeB='entry_signal' edgeA=18 edgeB=42
+[05Mar2026 16:27:38.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#14 pos=(30.0,-58.0,225.0) typeF='cross_signal' typeB='entry_signal' edgeA=31 edgeB=12
+[05Mar2026 16:27:38.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#15 pos=(-29.5,-60.0,207.5) typeF='entry_signal' typeB='cross_signal' edgeA=13 edgeB=43
+[05Mar2026 16:27:38.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#16 pos=(30.0,-58.0,229.0) typeF='entry_signal' typeB='entry_signal' edgeA=31 edgeB=12
+[05Mar2026 16:27:38.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] readAllTrains: Found 2 train objects, dimFilter='minecraft:overworld'
+[05Mar2026 16:27:38.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] Train 'A Train': presentDimensions=[ResourceKey[minecraft:dimension / minecraft:overworld]]
+[05Mar2026 16:27:38.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] Train 'A Train': position=(7,-59,209)
+[05Mar2026 16:27:38.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] Train 'B Train': presentDimensions=[ResourceKey[minecraft:dimension / minecraft:overworld]]
+[05Mar2026 16:27:38.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] Train 'B Train': position=(-4,-59,180)
+[05Mar2026 16:27:38.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: Signaled edges set (direct): [46:50, 0:18, 23:51, 39:49, 12:46, 17:22, 5:51, 18:42, 12:31, 13:43, 13:51, 38:46, 32:41]
+[05Mar2026 16:27:38.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: Junction branch signaled (with walk): [12:46, 22:46, 46:50, 49:51, 0:18, 5:51, 12:31, 18:42, 23:51, 38:46, 13:51]
+[05Mar2026 16:27:38.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] Junction node 12 at (26, -60, 222) with 3 branches, 2 through-line
+[05Mar2026 16:27:38.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 0 to node 31 (40,-60,266), dist=46.2 — diverging
+[05Mar2026 16:27:38.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 1 to node 14 (26,-60,224), dist=2.0 — through-line, skipped
+[05Mar2026 16:27:38.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 2 to node 46 (26,-60,209), dist=12.5 — through-line, skipped
+[05Mar2026 16:27:38.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] Junction node 18 at (-30, -60, 234) with 3 branches, 2 through-line
+[05Mar2026 16:27:38.527] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 0 to node 0 (-29,-60,240), dist=6.0 — through-line, skipped
+[05Mar2026 16:27:38.527] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 1 to node 42 (-49,-60,277), dist=47.4 — diverging
+[05Mar2026 16:27:38.527] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 2 to node 23 (-29,-60,224), dist=10.0 — through-line, skipped
+[05Mar2026 16:27:38.527] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   All 4 branches are through-line — treating as CROSSING (all need signals)
+[05Mar2026 16:27:38.527] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] Junction node 46 at (26, -60, 209) with 4 branches, 0 through-line
+[05Mar2026 16:27:38.527] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 0 to node 38 (16,-60,209), dist=10.5 — diverging
+[05Mar2026 16:27:38.527] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 1 to node 50 (32,-60,209), dist=5.5 — diverging
+[05Mar2026 16:27:38.527] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 2 to node 22 (26,-60,208), dist=1.5 — diverging
+[05Mar2026 16:27:38.527] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 3 to node 12 (26,-60,222), dist=12.5 — diverging
+[05Mar2026 16:27:38.527] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   All 4 branches are through-line — treating as CROSSING (all need signals)
+[05Mar2026 16:27:38.527] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] Junction node 51 at (-30, -60, 209) with 4 branches, 0 through-line
+[05Mar2026 16:27:38.527] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 0 to node 13 (-29,-60,208), dist=1.5 — diverging
+[05Mar2026 16:27:38.527] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 1 to node 5 (-16,-60,209), dist=13.5 — diverging
+[05Mar2026 16:27:38.527] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 2 to node 49 (-32,-60,209), dist=2.5 — diverging
+[05Mar2026 16:27:38.527] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 3 to node 23 (-29,-60,224), dist=14.5 — diverging
+[05Mar2026 16:27:38.527] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: TrainNetworkDataReader: Result -- 53 nodes, 56 edges, 12 curves, 4 stations, 17 signals, 2 trains, 0 observers, 2 diagnostics
+[05Mar2026 16:27:38.528] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Diagnostic #1: type=NO_PATH, severity=CRIT, pos=(7.0,-59.0,209.0), desc=No navigation path found
+[05Mar2026 16:27:38.528] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Diagnostic #2: type=NO_PATH, severity=CRIT, pos=(-4.0,-59.0,180.0), desc=No navigation path found
+[05Mar2026 16:28:08.524] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: TrainNetworkDataReader: Found 1 track graphs, dimFilter=minecraft:overworld
+[05Mar2026 16:28:08.525] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#0 pos=(-36.5,-60.0,209.5) typeF='entry_signal' typeB='cross_signal' edgeA=49 edgeB=39
+[05Mar2026 16:28:08.525] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#1 pos=(29.0,-58.0,213.0) typeF='cross_signal' typeB='entry_signal' edgeA=12 edgeB=46
+[05Mar2026 16:28:08.525] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#2 pos=(-29.5,-60.0,208.5) typeF='entry_signal' typeB='cross_signal' edgeA=51 edgeB=13
+[05Mar2026 16:28:08.525] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#3 pos=(19.5,-60.0,209.5) typeF='entry_signal' typeB='cross_signal' edgeA=46 edgeB=38
+[05Mar2026 16:28:08.525] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#4 pos=(31.0,-58.0,206.0) typeF='cross_signal' typeB='entry_signal' edgeA=50 edgeB=46
+[05Mar2026 16:28:08.525] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#5 pos=(-27.0,-60.0,234.0) typeF='entry_signal' typeB='cross_signal' edgeA=0 edgeB=18
+[05Mar2026 16:28:08.525] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#6 pos=(29.0,-58.0,204.0) typeF='entry_signal' typeB='entry_signal' edgeA=22 edgeB=17
+[05Mar2026 16:28:08.525] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#7 pos=(29.0,-58.0,206.0) typeF='cross_signal' typeB='cross_signal' edgeA=22 edgeB=17
+[05Mar2026 16:28:08.525] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#8 pos=(21.5,-60.0,309.5) typeF='entry_signal' typeB='entry_signal' edgeA=32 edgeB=41
+[05Mar2026 16:28:08.525] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#9 pos=(-24.0,-58.0,206.0) typeF='cross_signal' typeB='cross_signal' edgeA=5 edgeB=51
+[05Mar2026 16:28:08.525] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#10 pos=(29.0,-58.0,219.0) typeF='cross_signal' typeB='entry_signal' edgeA=12 edgeB=46
+[05Mar2026 16:28:08.525] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#11 pos=(-31.0,-60.0,237.2) typeF='entry_signal' typeB='cross_signal' edgeA=18 edgeB=42
+[05Mar2026 16:28:08.525] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#12 pos=(-27.0,-58.0,214.0) typeF='cross_signal' typeB='entry_signal' edgeA=23 edgeB=51
+[05Mar2026 16:28:08.525] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#13 pos=(-32.5,-60.0,240.4) typeF='entry_signal' typeB='entry_signal' edgeA=18 edgeB=42
+[05Mar2026 16:28:08.525] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#14 pos=(30.0,-58.0,225.0) typeF='cross_signal' typeB='entry_signal' edgeA=31 edgeB=12
+[05Mar2026 16:28:08.525] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#15 pos=(-29.5,-60.0,207.5) typeF='entry_signal' typeB='cross_signal' edgeA=13 edgeB=43
+[05Mar2026 16:28:08.525] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#16 pos=(30.0,-58.0,229.0) typeF='entry_signal' typeB='entry_signal' edgeA=31 edgeB=12
+[05Mar2026 16:28:08.525] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] readAllTrains: Found 2 train objects, dimFilter='minecraft:overworld'
+[05Mar2026 16:28:08.525] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] Train 'A Train': presentDimensions=[ResourceKey[minecraft:dimension / minecraft:overworld]]
+[05Mar2026 16:28:08.525] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] Train 'A Train': position=(7,-59,209)
+[05Mar2026 16:28:08.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] Train 'B Train': presentDimensions=[ResourceKey[minecraft:dimension / minecraft:overworld]]
+[05Mar2026 16:28:08.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] Train 'B Train': position=(-4,-59,180)
+[05Mar2026 16:28:08.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: Signaled edges set (direct): [46:50, 0:18, 23:51, 39:49, 12:46, 17:22, 5:51, 18:42, 12:31, 13:43, 13:51, 38:46, 32:41]
+[05Mar2026 16:28:08.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: Junction branch signaled (with walk): [12:46, 22:46, 46:50, 49:51, 0:18, 5:51, 12:31, 18:42, 23:51, 38:46, 13:51]
+[05Mar2026 16:28:08.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] Junction node 12 at (26, -60, 222) with 3 branches, 2 through-line
+[05Mar2026 16:28:08.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 0 to node 31 (40,-60,266), dist=46.2 — diverging
+[05Mar2026 16:28:08.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 1 to node 14 (26,-60,224), dist=2.0 — through-line, skipped
+[05Mar2026 16:28:08.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 2 to node 46 (26,-60,209), dist=12.5 — through-line, skipped
+[05Mar2026 16:28:08.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] Junction node 18 at (-30, -60, 234) with 3 branches, 2 through-line
+[05Mar2026 16:28:08.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 0 to node 0 (-29,-60,240), dist=6.0 — through-line, skipped
+[05Mar2026 16:28:08.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 1 to node 42 (-49,-60,277), dist=47.4 — diverging
+[05Mar2026 16:28:08.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 2 to node 23 (-29,-60,224), dist=10.0 — through-line, skipped
+[05Mar2026 16:28:08.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   All 4 branches are through-line — treating as CROSSING (all need signals)
+[05Mar2026 16:28:08.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] Junction node 46 at (26, -60, 209) with 4 branches, 0 through-line
+[05Mar2026 16:28:08.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 0 to node 38 (16,-60,209), dist=10.5 — diverging
+[05Mar2026 16:28:08.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 1 to node 50 (32,-60,209), dist=5.5 — diverging
+[05Mar2026 16:28:08.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 2 to node 22 (26,-60,208), dist=1.5 — diverging
+[05Mar2026 16:28:08.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 3 to node 12 (26,-60,222), dist=12.5 — diverging
+[05Mar2026 16:28:08.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   All 4 branches are through-line — treating as CROSSING (all need signals)
+[05Mar2026 16:28:08.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] Junction node 51 at (-30, -60, 209) with 4 branches, 0 through-line
+[05Mar2026 16:28:08.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 0 to node 13 (-29,-60,208), dist=1.5 — diverging
+[05Mar2026 16:28:08.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 1 to node 5 (-16,-60,209), dist=13.5 — diverging
+[05Mar2026 16:28:08.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 2 to node 49 (-32,-60,209), dist=2.5 — diverging
+[05Mar2026 16:28:08.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 3 to node 23 (-29,-60,224), dist=14.5 — diverging
+[05Mar2026 16:28:08.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: TrainNetworkDataReader: Result -- 53 nodes, 56 edges, 12 curves, 4 stations, 17 signals, 2 trains, 0 observers, 2 diagnostics
+[05Mar2026 16:28:08.526] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Diagnostic #1: type=NO_PATH, severity=CRIT, pos=(7.0,-59.0,209.0), desc=No navigation path found
+[05Mar2026 16:28:08.527] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Diagnostic #2: type=NO_PATH, severity=CRIT, pos=(-4.0,-59.0,180.0), desc=No navigation path found
+[05Mar2026 16:28:14.189] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: TrainNetworkDataReader: Found 1 track graphs, dimFilter=minecraft:overworld
+[05Mar2026 16:28:14.190] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#0 pos=(-36.5,-60.0,209.5) typeF='entry_signal' typeB='cross_signal' edgeA=49 edgeB=39
+[05Mar2026 16:28:14.190] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#1 pos=(29.0,-58.0,213.0) typeF='cross_signal' typeB='entry_signal' edgeA=12 edgeB=46
+[05Mar2026 16:28:14.190] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#2 pos=(-29.5,-60.0,208.5) typeF='entry_signal' typeB='cross_signal' edgeA=51 edgeB=13
+[05Mar2026 16:28:14.190] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#3 pos=(19.5,-60.0,209.5) typeF='entry_signal' typeB='cross_signal' edgeA=46 edgeB=38
+[05Mar2026 16:28:14.190] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#4 pos=(31.0,-58.0,206.0) typeF='cross_signal' typeB='entry_signal' edgeA=50 edgeB=46
+[05Mar2026 16:28:14.190] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#5 pos=(-27.0,-60.0,234.0) typeF='cross_signal' typeB='cross_signal' edgeA=0 edgeB=18
+[05Mar2026 16:28:14.190] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#6 pos=(29.0,-58.0,204.0) typeF='entry_signal' typeB='entry_signal' edgeA=22 edgeB=17
+[05Mar2026 16:28:14.190] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#7 pos=(29.0,-58.0,206.0) typeF='cross_signal' typeB='cross_signal' edgeA=22 edgeB=17
+[05Mar2026 16:28:14.190] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#8 pos=(21.5,-60.0,309.5) typeF='entry_signal' typeB='entry_signal' edgeA=32 edgeB=41
+[05Mar2026 16:28:14.191] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#9 pos=(-24.0,-58.0,206.0) typeF='cross_signal' typeB='cross_signal' edgeA=5 edgeB=51
+[05Mar2026 16:28:14.191] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#10 pos=(29.0,-58.0,219.0) typeF='cross_signal' typeB='entry_signal' edgeA=12 edgeB=46
+[05Mar2026 16:28:14.191] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#11 pos=(-31.0,-60.0,237.2) typeF='entry_signal' typeB='cross_signal' edgeA=18 edgeB=42
+[05Mar2026 16:28:14.191] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#12 pos=(-27.0,-58.0,214.0) typeF='cross_signal' typeB='entry_signal' edgeA=23 edgeB=51
+[05Mar2026 16:28:14.191] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#13 pos=(-32.5,-60.0,240.4) typeF='entry_signal' typeB='entry_signal' edgeA=18 edgeB=42
+[05Mar2026 16:28:14.191] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#14 pos=(30.0,-58.0,225.0) typeF='cross_signal' typeB='entry_signal' edgeA=31 edgeB=12
+[05Mar2026 16:28:14.191] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#15 pos=(-29.5,-60.0,207.5) typeF='entry_signal' typeB='cross_signal' edgeA=13 edgeB=43
+[05Mar2026 16:28:14.191] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#16 pos=(30.0,-58.0,229.0) typeF='entry_signal' typeB='entry_signal' edgeA=31 edgeB=12
+[05Mar2026 16:28:14.191] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] readAllTrains: Found 2 train objects, dimFilter='minecraft:overworld'
+[05Mar2026 16:28:14.191] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] Train 'A Train': presentDimensions=[ResourceKey[minecraft:dimension / minecraft:overworld]]
+[05Mar2026 16:28:14.191] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] Train 'A Train': position=(7,-59,209)
+[05Mar2026 16:28:14.191] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] Train 'B Train': presentDimensions=[ResourceKey[minecraft:dimension / minecraft:overworld]]
+[05Mar2026 16:28:14.191] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] Train 'B Train': position=(-4,-59,180)
+[05Mar2026 16:28:14.191] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: Signaled edges set (direct): [46:50, 0:18, 23:51, 39:49, 12:46, 17:22, 5:51, 18:42, 12:31, 13:43, 13:51, 38:46, 32:41]
+[05Mar2026 16:28:14.191] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: Junction branch signaled (with walk): [12:46, 22:46, 46:50, 49:51, 0:18, 5:51, 12:31, 18:42, 23:51, 38:46, 13:51]
+[05Mar2026 16:28:14.191] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] Junction node 12 at (26, -60, 222) with 3 branches, 2 through-line
+[05Mar2026 16:28:14.191] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 0 to node 31 (40,-60,266), dist=46.2 — diverging
+[05Mar2026 16:28:14.191] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 1 to node 14 (26,-60,224), dist=2.0 — through-line, skipped
+[05Mar2026 16:28:14.191] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 2 to node 46 (26,-60,209), dist=12.5 — through-line, skipped
+[05Mar2026 16:28:14.191] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] Junction node 18 at (-30, -60, 234) with 3 branches, 2 through-line
+[05Mar2026 16:28:14.192] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 0 to node 0 (-29,-60,240), dist=6.0 — through-line, skipped
+[05Mar2026 16:28:14.192] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 1 to node 42 (-49,-60,277), dist=47.4 — diverging
+[05Mar2026 16:28:14.192] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 2 to node 23 (-29,-60,224), dist=10.0 — through-line, skipped
+[05Mar2026 16:28:14.192] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   All 4 branches are through-line — treating as CROSSING (all need signals)
+[05Mar2026 16:28:14.192] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] Junction node 46 at (26, -60, 209) with 4 branches, 0 through-line
+[05Mar2026 16:28:14.192] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 0 to node 38 (16,-60,209), dist=10.5 — diverging
+[05Mar2026 16:28:14.192] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 1 to node 50 (32,-60,209), dist=5.5 — diverging
+[05Mar2026 16:28:14.192] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 2 to node 22 (26,-60,208), dist=1.5 — diverging
+[05Mar2026 16:28:14.192] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 3 to node 12 (26,-60,222), dist=12.5 — diverging
+[05Mar2026 16:28:14.192] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   All 4 branches are through-line — treating as CROSSING (all need signals)
+[05Mar2026 16:28:14.192] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] Junction node 51 at (-30, -60, 209) with 4 branches, 0 through-line
+[05Mar2026 16:28:14.192] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 0 to node 13 (-29,-60,208), dist=1.5 — diverging
+[05Mar2026 16:28:14.192] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 1 to node 5 (-16,-60,209), dist=13.5 — diverging
+[05Mar2026 16:28:14.192] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 2 to node 49 (-32,-60,209), dist=2.5 — diverging
+[05Mar2026 16:28:14.192] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 3 to node 23 (-29,-60,224), dist=14.5 — diverging
+[05Mar2026 16:28:14.193] [Server thread/WARN] [com.apocscode.logiclink.LogicLink/]: [LogicLink] CHAIN_ONLY_CORRIDOR between junctions 12 and 18 (9 edges, all chain, no regular)
+[05Mar2026 16:28:14.193] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: TrainNetworkDataReader: Result -- 53 nodes, 56 edges, 12 curves, 4 stations, 17 signals, 2 trains, 0 observers, 4 diagnostics
+[05Mar2026 16:28:14.193] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Diagnostic #1: type=NO_PATH, severity=CRIT, pos=(7.0,-59.0,209.0), desc=No navigation path found
+[05Mar2026 16:28:14.193] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Diagnostic #2: type=NO_PATH, severity=CRIT, pos=(-4.0,-59.0,180.0), desc=No navigation path found
+[05Mar2026 16:28:14.193] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Diagnostic #3: type=MISSING_REGULAR_SIGNAL, severity=INFO, pos=(-29.5,-60.0,241.0), desc=No regular signal after junction exit (S) — add one to create a block section boundary
+[05Mar2026 16:28:14.193] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Diagnostic #4: type=CHAIN_ONLY_CORRIDOR, severity=CRIT, pos=(-1.5,-60.0,228.0), desc=Chain-only corridor between two junctions — no regular signal terminator. Trains will report NO_PATH.
+[05Mar2026 16:28:14.688] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: TrainNetworkDataReader: Found 1 track graphs, dimFilter=minecraft:overworld
+[05Mar2026 16:28:14.689] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#0 pos=(-36.5,-60.0,209.5) typeF='entry_signal' typeB='cross_signal' edgeA=49 edgeB=39
+[05Mar2026 16:28:14.689] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#1 pos=(29.0,-58.0,213.0) typeF='cross_signal' typeB='entry_signal' edgeA=12 edgeB=46
+[05Mar2026 16:28:14.689] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#2 pos=(-29.5,-60.0,208.5) typeF='entry_signal' typeB='cross_signal' edgeA=51 edgeB=13
+[05Mar2026 16:28:14.689] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#3 pos=(19.5,-60.0,209.5) typeF='entry_signal' typeB='cross_signal' edgeA=46 edgeB=38
+[05Mar2026 16:28:14.689] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#4 pos=(31.0,-58.0,206.0) typeF='cross_signal' typeB='entry_signal' edgeA=50 edgeB=46
+[05Mar2026 16:28:14.689] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#5 pos=(-27.0,-60.0,234.0) typeF='cross_signal' typeB='cross_signal' edgeA=0 edgeB=18
+[05Mar2026 16:28:14.689] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#6 pos=(29.0,-58.0,204.0) typeF='entry_signal' typeB='entry_signal' edgeA=22 edgeB=17
+[05Mar2026 16:28:14.689] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#7 pos=(29.0,-58.0,206.0) typeF='cross_signal' typeB='cross_signal' edgeA=22 edgeB=17
+[05Mar2026 16:28:14.689] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#8 pos=(21.5,-60.0,309.5) typeF='entry_signal' typeB='entry_signal' edgeA=32 edgeB=41
+[05Mar2026 16:28:14.689] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#9 pos=(-24.0,-58.0,206.0) typeF='cross_signal' typeB='cross_signal' edgeA=5 edgeB=51
+[05Mar2026 16:28:14.689] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#10 pos=(29.0,-58.0,219.0) typeF='cross_signal' typeB='entry_signal' edgeA=12 edgeB=46
+[05Mar2026 16:28:14.689] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#11 pos=(-31.0,-60.0,237.2) typeF='entry_signal' typeB='cross_signal' edgeA=18 edgeB=42
+[05Mar2026 16:28:14.689] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#12 pos=(-27.0,-58.0,214.0) typeF='cross_signal' typeB='entry_signal' edgeA=23 edgeB=51
+[05Mar2026 16:28:14.690] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#13 pos=(-32.5,-60.0,240.4) typeF='entry_signal' typeB='entry_signal' edgeA=18 edgeB=42
+[05Mar2026 16:28:14.690] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#14 pos=(30.0,-58.0,225.0) typeF='cross_signal' typeB='entry_signal' edgeA=31 edgeB=12
+[05Mar2026 16:28:14.690] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#15 pos=(-29.5,-60.0,207.5) typeF='entry_signal' typeB='cross_signal' edgeA=13 edgeB=43
+[05Mar2026 16:28:14.690] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Signal#16 pos=(30.0,-58.0,229.0) typeF='entry_signal' typeB='entry_signal' edgeA=31 edgeB=12
+[05Mar2026 16:28:14.690] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] readAllTrains: Found 2 train objects, dimFilter='minecraft:overworld'
+[05Mar2026 16:28:14.690] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] Train 'A Train': presentDimensions=[ResourceKey[minecraft:dimension / minecraft:overworld]]
+[05Mar2026 16:28:14.690] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] Train 'A Train': position=(7,-59,209)
+[05Mar2026 16:28:14.690] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] Train 'B Train': presentDimensions=[ResourceKey[minecraft:dimension / minecraft:overworld]]
+[05Mar2026 16:28:14.690] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] Train 'B Train': position=(-4,-59,180)
+[05Mar2026 16:28:14.690] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: Signaled edges set (direct): [46:50, 0:18, 23:51, 39:49, 12:46, 17:22, 5:51, 18:42, 12:31, 13:43, 13:51, 38:46, 32:41]
+[05Mar2026 16:28:14.690] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: Junction branch signaled (with walk): [12:46, 22:46, 46:50, 49:51, 0:18, 5:51, 12:31, 18:42, 23:51, 38:46, 13:51]
+[05Mar2026 16:28:14.690] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] Junction node 12 at (26, -60, 222) with 3 branches, 2 through-line
+[05Mar2026 16:28:14.690] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 0 to node 31 (40,-60,266), dist=46.2 — diverging
+[05Mar2026 16:28:14.690] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 1 to node 14 (26,-60,224), dist=2.0 — through-line, skipped
+[05Mar2026 16:28:14.690] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 2 to node 46 (26,-60,209), dist=12.5 — through-line, skipped
+[05Mar2026 16:28:14.690] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] Junction node 18 at (-30, -60, 234) with 3 branches, 2 through-line
+[05Mar2026 16:28:14.690] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 0 to node 0 (-29,-60,240), dist=6.0 — through-line, skipped
+[05Mar2026 16:28:14.690] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 1 to node 42 (-49,-60,277), dist=47.4 — diverging
+[05Mar2026 16:28:14.690] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 2 to node 23 (-29,-60,224), dist=10.0 — through-line, skipped
+[05Mar2026 16:28:14.690] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   All 4 branches are through-line — treating as CROSSING (all need signals)
+[05Mar2026 16:28:14.690] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] Junction node 46 at (26, -60, 209) with 4 branches, 0 through-line
+[05Mar2026 16:28:14.690] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 0 to node 38 (16,-60,209), dist=10.5 — diverging
+[05Mar2026 16:28:14.690] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 1 to node 50 (32,-60,209), dist=5.5 — diverging
+[05Mar2026 16:28:14.690] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 2 to node 22 (26,-60,208), dist=1.5 — diverging
+[05Mar2026 16:28:14.690] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 3 to node 12 (26,-60,222), dist=12.5 — diverging
+[05Mar2026 16:28:14.690] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   All 4 branches are through-line — treating as CROSSING (all need signals)
+[05Mar2026 16:28:14.690] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink] Junction node 51 at (-30, -60, 209) with 4 branches, 0 through-line
+[05Mar2026 16:28:14.690] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 0 to node 13 (-29,-60,208), dist=1.5 — diverging
+[05Mar2026 16:28:14.690] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 1 to node 5 (-16,-60,209), dist=13.5 — diverging
+[05Mar2026 16:28:14.690] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 2 to node 49 (-32,-60,209), dist=2.5 — diverging
+[05Mar2026 16:28:14.690] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: [LogicLink]   Branch 3 to node 23 (-29,-60,224), dist=14.5 — diverging
+[05Mar2026 16:28:14.691] [Server thread/WARN] [com.apocscode.logiclink.LogicLink/]: [LogicLink] CHAIN_ONLY_CORRIDOR between junctions 12 and 18 (9 edges, all chain, no regular)
+[05Mar2026 16:28:14.691] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]: TrainNetworkDataReader: Result -- 53 nodes, 56 edges, 12 curves, 4 stations, 17 signals, 2 trains, 0 observers, 4 diagnostics
+[05Mar2026 16:28:14.691] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Diagnostic #1: type=NO_PATH, severity=CRIT, pos=(7.0,-59.0,209.0), desc=No navigation path found
+[05Mar2026 16:28:14.691] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Diagnostic #2: type=NO_PATH, severity=CRIT, pos=(-4.0,-59.0,180.0), desc=No navigation path found
+[05Mar2026 16:28:14.691] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Diagnostic #3: type=MISSING_REGULAR_SIGNAL, severity=INFO, pos=(-29.5,-60.0,241.0), desc=No regular signal after junction exit (S) — add one to create a block section boundary
+[05Mar2026 16:28:14.691] [Server thread/INFO] [com.apocscode.logiclink.LogicLink/]:   Diagnostic #4: type=CHAIN_ONLY_CORRIDOR, severity=CRIT, pos=(-1.5,-60.0,228.0), desc=Chain-only corridor between two junctions — no regular signal terminator. Trains will report NO_PATH.
