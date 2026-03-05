@@ -1426,3 +1426,36 @@ In-game testing showed 25 signals on a 53-node network (way too many) and both t
 
 ### Files Changed
 - `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java` -- Check 1 through-line skip, Check 11 chain-corridor detection, scanDiagnosticsOnly update
+
+## Session 10d -- 2026-03-05 -- Signal Diagnostic Logging & (0,0,0) Position Fix
+
+### Commits
+- `cad9ecf` -- Improve signal diagnostics: pos fallback, INFO logging, NO_PATH detail
+- `9561576` -- Remove temp log dump file
+
+### Summary
+In-game testing with 8 signals showed both trains still reporting NO_PATH. Log analysis revealed three issues limiting our ability to diagnose:
+
+**Signal Position (0,0,0) Fallback:**
+- 3 of 8 signals had `pos=(0,0,0)` because their chunks weren't loaded (block entity inaccessible)
+- Check 3 (SIGNAL_CONFLICT) has `if (sx == 0 && sz == 0) continue` — skipping these entirely
+- Now falls back to `mapX`/`mapZ` from Create's edge interpolation data when block entity position is missing
+- Y coordinate estimated from averaging the two edge endpoint node Y values
+- Previously invisible signals now properly checked for type conflicts
+
+**Junction Classification Logging:**
+- Through-line vs diverging branch classification upgraded from DEBUG to INFO level
+- Now shows in game logs: junction node ID, branch neighbor node IDs, and through-line/diverging status
+- Essential for understanding why signals are/aren't being suggested at each branch
+
+**NO_PATH Diagnostic Detail:**
+- Now includes full schedule route with all destination station names
+- Shows the exact path the train is trying to navigate (e.g., "Route: Station A → Station B")
+- When signals look correct but train is stuck, suggests: "pick up train and re-place, or toggle schedule off/on"
+- Create doesn't auto-recalculate paths for already-stuck trains — manual intervention needed
+
+### Key Analysis
+Adding signals around junction 30 (edges 3:30, 30:38, 30:27, 26:52) went from 1 NO_PATH to 2 NO_PATH — the new signals actively broke A Train. All 4 new signals had chain facing the junction. The chain-only corridor check didn't fire because each signal also has a regular side (entry_signal on the other side), but the regular faces AWAY from the junction — trains approaching from the opposite direction see chain→junction→chain with no directional regular terminator.
+
+### Files Changed
+- `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java` -- Signal position fallback, INFO logging, NO_PATH schedule route detail
