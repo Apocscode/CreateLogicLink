@@ -1459,3 +1459,34 @@ Adding signals around junction 30 (edges 3:30, 30:38, 30:27, 26:52) went from 1 
 
 ### Files Changed
 - `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java` -- Signal position fallback, INFO logging, NO_PATH schedule route detail
+
+---
+
+## Session 10e -- 2026-03-05 -- Fix 4-Way Crossing Junction Classification
+
+### Commits
+- `458478f` -- Fix 4-way crossing junctions: all-through-line branches treated as crossing
+- `8c06996` -- Remove temp log analysis file
+
+### Summary
+Root cause of persistent NO_PATH finally identified and fixed. The through-line detection algorithm was fundamentally broken for 4-way crossing junctions in dual-track layouts.
+
+**The Bug:**
+- Junction 28 at (-30,-60,209): 4 branches, ALL 4 classified as through-line (0 diverging)
+- Junction 36 at (26,-60,209): 4 branches, ALL 4 classified as through-line (0 diverging)
+- The greedy dot-product pairing found two perpendicular through-line pairs (X-axis pair + Z-axis pair) consuming all 4 branches
+- `if (isThrough) continue;` then skipped ALL branches → zero signals suggested for real crossings
+- Trains couldn't navigate because Create needs signals at crossings to resolve conflicting paths
+
+**The Fix:**
+- Added crossing detection after through-line pairing: when `throughBranches.size() == branchDirs.size()` AND `branchDirs.size() >= 4`, this is a CROSSING junction (two perpendicular tracks intersecting)
+- Crossings need chain signals on ALL entries — cleared `throughBranches` so every branch gets signal suggestions
+- Through-line skip now only applies when there's a genuine mix of through and diverging branches (T-junctions where main line goes straight through but side branch needs a signal)
+
+**Why T-junctions Were Fine:**
+- Junction 11 (3-way): 2 through-line + 1 diverging — correctly skipped through pair, signaled diverging branch
+- Junction 22 (3-way): 2 through-line + 1 diverging — same correct behavior
+- Only 4-way crossings had ALL branches consumed as through-lines
+
+### Files Changed
+- `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java` -- Added crossing junction detection after through-line pairing
