@@ -1623,3 +1623,47 @@ The core signal diagnostic logic is sound for all common cases:
 
 ### Files Changed
 - `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java` -- Short-edge skip, crossing descriptions, dead-end detection
+
+---
+
+## Session 10j -- 2026-03-05 -- CRITICAL FIX: Crossings Don't Need Signals
+
+### Commits
+- `1675d7a` -- CRITICAL FIX: Crossings don't need signals — remove throughBranches.clear()
+
+### Summary
+**Root cause of persistent NO_PATH finally found.** Both trains stuck with NO_PATH despite 17 placed signals.
+
+**The Problem:**
+In Create, a 4-way crossing (two straight tracks crossing each other) is NOT a junction. It's a crossing. Create handles crossing collision prevention **internally** via its occupation system. No signals are needed.
+
+Our `throughBranches.clear()` code was treating crossings like junctions and telling the user to add chain signals on all 4 entries. This was **actively harmful** because:
+1. Crossing geometry creates short internal edges (~1.5 blocks)
+2. Chain signals require regular signal terminators on ALL exit paths
+3. Short internal edges can't hold signal pairs → incomplete coverage
+4. Chain signals at crossing entries can't resolve → permanent RED → **NO_PATH**
+
+The south exits of both crossings (nodes 29 and 25 with 1.5-block edges) had no regular terminators. Chain signals entering the crossings couldn't resolve when the route needed the south exit.
+
+**The Key Create Distinction:**
+- **Junction** (T/Y): tracks merge/split → chain signals NEEDED on diverging branches
+- **Crossing** (4-way all-through): tracks pass through each other → NO signals needed → Create handles it
+
+**Timeline of Crossing Detection (resolved):**
+1. **Original**: All through-line → skip (correct!)
+2. **Session 10e**: `throughBranches.clear()` → suggest signals (WRONG — causes NO_PATH)
+3. **Session 10g**: Revert → no signals at crossings (CORRECT but reverted again)
+4. **Session 10h**: Re-enable clear throughBranches (WRONG again — NO_PATH persists)
+5. **Session 10j**: Final revert — crossings NEVER need signals (CORRECT, final answer)
+
+**Changes:**
+- REMOVED `throughBranches.clear()` — crossings keep through-line classification
+- REMOVED short-edge skip (only existed for crossing branches)
+- Added Check 12 CROSSING_SIGNAL: detects existing chain signals at crossing junctions and warns users to REMOVE them
+- Clear log message explaining Create handles crossings internally
+
+**User Action Required:**
+Remove ALL chain signals near the two 4-way crossings (nodes 17 and 24). The original 5 signals at the T-junctions were correct. The 12 additional crossing signals are causing NO_PATH.
+
+### Files Changed
+- `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java` -- Remove crossing signal suggestions, add Check 12 crossing signal detection
