@@ -1529,3 +1529,41 @@ Crossing junction fix (10e) working — junctions 4 and 13 now show "0 through-l
 
 ### Files Changed
 - `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java` -- Rewrote Check 3 pre-scan and main logic to be direction-agnostic
+
+---
+
+## Session 10g -- 2026-03-05 -- Revert Crossing Detection + Double-Chain/Excess Signal Checks
+
+### Commits
+- `32bf7b1` -- Revert crossing junction detection + add double-chain/excess signal checks
+- `41c3ffe` -- Remove temp log file
+
+### Summary
+Session 10e crossing fix was fundamentally wrong and caused the user to add 9 extra signals (8→17), breaking both trains with NO_PATH. **Reverted and added new detection checks.**
+
+**Root Cause of Failure:**
+- Session 10e cleared `throughBranches` for 4-way crossings, treating all branches as diverging needing chain signals
+- User followed LogicLink's suggestions and added chain signals on all 4 entries to both crossing junctions (46 and 51)
+- This created **chain-only corridors** between the two crossings — chain→crossing→chain→crossing→chain with no regular signal terminator
+- Create rule: every chain signal needs a regular signal downstream as a stopping point. Without one → NO_PATH
+- Two signals (#7 and #9) ended up with chain on BOTH sides — absolutely fatal (no stopping point in either direction)
+
+**Why Crossings Don't Need Signals:**
+- In a dual-track layout, 4-way crossings are just two straight tracks crossing each other
+- Trains pass straight through on their own track without switching
+- The original through-line detection was CORRECT: 2 perpendicular through-line pairs → all through-line → no signals needed
+- Adding signals only creates problems — chain-only corridors between adjacent crossings
+
+**Reverted:** Removed `throughBranches.clear()` for all-through junctions. Now logs "simple crossing, no signals needed" instead.
+
+**New Checks Added:**
+- **Check 3b (DOUBLE_CHAIN):** Detects signals with chain on BOTH sides — always wrong, guaranteed NO_PATH. Message: "Use wrench to set one side to regular, or remove this signal."
+- **Check 3c (EXCESS_CROSSING_SIGNAL):** Detects chain signals on edges touching through-line crossing junctions. Message: "Remove this signal — trains pass straight through crossings."
+
+**Action Required by User:**
+- Remove signals at the two crossing junctions (nodes at (-30,-60,209) and (26,-60,209))
+- Keep only the signals at T-junctions and on the main line
+- Pick up and re-place trains after removing signals
+
+### Files Changed
+- `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java` -- Reverted crossing detection, added Check 3b and Check 3c
