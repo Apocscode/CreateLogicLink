@@ -1331,14 +1331,15 @@ public class TrainNetworkDataReader {
             }
 
             // 4-WAY CROSSING: If ALL branches are paired as through-lines,
-            // this is a simple track crossing (two straight tracks intersecting).
-            // Through-trains just pass straight through without switching tracks.
-            // NO signals are needed at simple crossings — adding chain signals
-            // here creates chain-only corridors between adjacent junctions that
-            // cause Create NO_PATH errors. Keep through-line classification.
+            // this is a track crossing (two tracks intersecting). Trains on
+            // perpendicular tracks CAN collide, so crossings need chain signals
+            // on all entries — treat all branches as diverging.
+            // The chain signals ensure a train only enters the crossing if it
+            // can fully clear it before the perpendicular train arrives.
             if (throughBranches.size() == branchDirs.size() && branchDirs.size() >= 4) {
-                LogicLink.LOGGER.info("[LogicLink]   All {} branches are through-line — simple crossing, no signals needed",
+                LogicLink.LOGGER.info("[LogicLink]   All {} branches through-line — CROSSING, all entries need chain signals",
                         branchDirs.size());
+                throughBranches.clear();
             }
 
             // Signal suggestions: diverging branches need chain signals.
@@ -1843,85 +1844,6 @@ public class TrainNetworkDataReader {
 
                 LogicLink.LOGGER.warn("[LogicLink] Double-chain signal at ({},{},{}) — both sides chain, will cause NO_PATH",
                         (int) sx, (int) sy, (int) sz);
-            }
-        }
-
-        // === Check 3c: Excess Signals at Through-Line Crossings ===
-        // Detect chain signals on edges of through-line crossings (4-way junctions
-        // where all branches are through-line). These signals shouldn't be there —
-        // trains pass straight through crossings without needing junction protection.
-        // These signals create chain-only corridors that cause NO_PATH.
-        {
-            // Build set of through-line crossing junction node IDs
-            Set<Integer> crossingJunctions = new HashSet<>();
-            for (Map.Entry<Integer, List<int[]>> entry : adjacency.entrySet()) {
-                if (entry.getValue().size() < 4) continue;
-                int jId = entry.getKey();
-                if (jId >= nodes.size()) continue;
-
-                // Detect through-lines for this junction
-                CompoundTag jNode = nodes.getCompound(jId);
-                float jx = jNode.getFloat("x"), jy = jNode.getFloat("y"), jz = jNode.getFloat("z");
-                List<float[]> dirs = new ArrayList<>();
-                for (int[] nb : entry.getValue()) {
-                    int nId = nb[0];
-                    if (nId >= nodes.size()) continue;
-                    CompoundTag nNode = nodes.getCompound(nId);
-                    float dx = jx - nNode.getFloat("x");
-                    float dz = jz - nNode.getFloat("z");
-                    float dist = (float) Math.sqrt(dx * dx + dz * dz);
-                    if (dist < 0.01f) continue;
-                    dirs.add(new float[]{dx / dist, dz / dist});
-                }
-                // Count through-line pairs
-                int pairedCount = 0;
-                boolean[] used = new boolean[dirs.size()];
-                for (int a = 0; a < dirs.size(); a++) {
-                    for (int b2 = a + 1; b2 < dirs.size(); b2++) {
-                        if (used[a] || used[b2]) continue;
-                        float dot = dirs.get(a)[0] * dirs.get(b2)[0] + dirs.get(a)[1] * dirs.get(b2)[1];
-                        if (dot < -0.7f) { used[a] = true; used[b2] = true; pairedCount += 2; }
-                    }
-                }
-                if (pairedCount == dirs.size() && dirs.size() >= 4) {
-                    crossingJunctions.add(jId);
-                }
-            }
-
-            // Check signals on edges touching crossing junctions
-            for (int i = 0; i < signals.size(); i++) {
-                CompoundTag sig = signals.getCompound(i);
-                if (!sig.contains("edgeA") || !sig.contains("edgeB")) continue;
-                int a = sig.getInt("edgeA");
-                int b = sig.getInt("edgeB");
-                String typeF = sig.contains("typeF") ? sig.getString("typeF") : "entry_signal";
-                String typeB = sig.contains("typeB") ? sig.getString("typeB") : "entry_signal";
-                boolean hasChain = typeF.equals("cross_signal") || typeB.equals("cross_signal");
-
-                if (hasChain && (crossingJunctions.contains(a) || crossingJunctions.contains(b))) {
-                    float sx = sig.contains("x") ? sig.getFloat("x") : 0;
-                    float sy = sig.contains("y") ? sig.getFloat("y") : 0;
-                    float sz = sig.contains("z") ? sig.getFloat("z") : 0;
-                    if (sx == 0 && sz == 0 && sig.contains("mapX") && sig.contains("mapZ")) {
-                        sx = sig.getFloat("mapX");
-                        sz = sig.getFloat("mapZ");
-                    }
-
-                    int crossingNode = crossingJunctions.contains(a) ? a : b;
-                    CompoundTag diag = new CompoundTag();
-                    diag.putString("type", "SIGNAL_CONFLICT");
-                    diag.putString("severity", "WARN");
-                    diag.putFloat("x", sx);
-                    diag.putFloat("y", sy);
-                    diag.putFloat("z", sz);
-                    diag.putString("desc", "Unnecessary chain signal at through-line crossing (node "
-                            + crossingNode + "). Trains pass straight through crossings — signals "
-                            + "here create chain corridors that cause NO_PATH. Remove this signal.");
-                    diagnostics.add(diag);
-
-                    LogicLink.LOGGER.warn("[LogicLink] Excess signal at crossing junction {} — signal at ({},{},{}) should be removed",
-                            crossingNode, (int) sx, (int) sy, (int) sz);
-                }
             }
         }
 
