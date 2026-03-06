@@ -1718,3 +1718,49 @@ exit path. One missing signal on one exit = all chains at that crossing go RED.
 
 ### Files Changed
 - `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java` -- Fix coordinate sign, fix edge key matching
+
+---
+
+## Session 10m -- 2026-03-06 -- FIX: Regular signals at crossings instead of chain
+
+### Commits
+- `b2fbae9` -- fix: use regular signals at crossings instead of chain
+
+### Summary
+With 21 signals placed and all junction branches detected as covered, trains STILL had
+NO_PATH. The root cause: **chain signals at crossings are fundamentally incompatible
+with T-junction through-lines.**
+
+**The Chain Resolution Failure:**
+Chain signals look ahead through ALL exit paths for a regular (entry_signal) terminator.
+At crossing node 4, the exit toward T-junction 26 hits a chain signal (typeB=cross on
+edge 4→26). That chain traverses through the T-junction's through-line exit (26→24),
+which has NO signal at all. Chain can't find a regular terminator → permanently RED.
+This cascades: ALL chains approaching crossing 4 go RED because one exit path fails.
+Same at crossing 52.
+
+**The Fix — Use Regular Signals at Crossings:**
+Regular signals (entry_signal) create block boundaries without chain look-ahead complexity:
+- Block turns occupied when a train enters the crossing
+- Other trains see RED and stop (block protection)
+- No chain resolution needed, no through-line terminator issues
+- Same collision prevention, zero pathfinding problems
+
+**Key Insight (Factorio analogy):**
+In Factorio, 4-way intersections use chain+regular. But Create's bidirectional signals
+and the interaction with T-junction through-lines make chain signals at crossings
+unresolvable. Regular signals provide equivalent protection for perpendicular traffic.
+
+**Changes:**
+- Crossing branches now suggest `signal` (regular/entry_signal) instead of `chain`
+- Skip second regular signal for crossings (one regular per arm is sufficient)
+- T-junctions still use chain signals on diverging branches (correct)
+- Updated description and unsignaled count for crossing signal type
+
+**User Action Required:**
+Remove ALL chain signals near both crossings. Place regular signals only — one on
+each of the 4 approach arms per crossing (8 total for 2 crossings). Keep the
+existing T-junction chain+regular signals as they are.
+
+### Files Changed
+- `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java` -- Regular signals at crossings
