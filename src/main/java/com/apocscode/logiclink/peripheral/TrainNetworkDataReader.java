@@ -1408,9 +1408,10 @@ public class TrainNetworkDataReader {
                 float endDist = (float) Math.sqrt(endx * endx + endz * endz);
                 float edx = endDist > 0.01f ? endx / endDist : ndx;
                 float edz = endDist > 0.01f ? endz / endDist : ndz;
-                float sugX = jx - edx * offset;
-                float sugY = jy - ((jy - effNy) / Math.max(0.01f, endDist)) * offset;
-                float sugZ = jz - edz * offset;
+                // Signal placed BETWEEN junction and neighbor (toward neighbor)
+                float sugX = jx + edx * offset;
+                float sugY = jy + ((effNy - jy) / Math.max(0.01f, endDist)) * offset;
+                float sugZ = jz + edz * offset;
 
                 String cardinal = getCardinalDir(edx, edz);
                 boolean clearanceOk = effectiveDist >= maxTrainLength;
@@ -1423,8 +1424,9 @@ public class TrainNetworkDataReader {
 
                 // Skip branches that already have ANY signal (within 3 hops)
                 String branchEdgeKey = Math.min(jId, neighborId2) + ":" + Math.max(jId, neighborId2);
+                // Use the REAL intermediate edge (neighborId2→effNeighborId) not phantom jId→effNeighborId
                 String effEdgeKey = (effNeighborId != neighborId2)
-                        ? Math.min(jId, effNeighborId) + ":" + Math.max(jId, effNeighborId)
+                        ? Math.min(neighborId2, effNeighborId) + ":" + Math.max(neighborId2, effNeighborId)
                         : branchEdgeKey;
                 boolean alreadySignaled = junctionBranchSignaled.contains(branchEdgeKey)
                         || junctionBranchSignaled.contains(effEdgeKey);
@@ -1456,9 +1458,9 @@ public class TrainNetworkDataReader {
                 // This MUST be a regular signal (not chain) to terminate chain look-ahead.
                 float regularOffset = offset + Math.max(3.0f, maxTrainLength * 0.5f);
                 if (regularOffset < effectiveDist * 0.95f) {
-                    float regX = jx - edx * regularOffset;
-                    float regY = jy - ((jy - effNy) / Math.max(0.01f, endDist)) * regularOffset;
-                    float regZ = jz - edz * regularOffset;
+                    float regX = jx + edx * regularOffset;
+                    float regY = jy + ((effNy - jy) / Math.max(0.01f, endDist)) * regularOffset;
+                    float regZ = jz + edz * regularOffset;
                     int rsx = Mth.floor(regX), rsy = Mth.floor(regY), rsz = Mth.floor(regZ);
 
                     if (!isDuplicateSuggestion(suggestions, rsx, rsy, rsz, "signal", edx, edz)) {
