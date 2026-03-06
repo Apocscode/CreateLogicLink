@@ -1680,3 +1680,41 @@ Use the combined distance and direction for signal placement on a viable locatio
 
 ### Files Changed
 - `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java` -- Crossing signal fix with short-edge walk-through
+
+---
+
+## Session 10l -- 2026-03-06 -- FIX: Signal coordinate sign error + edge key matching
+
+### Commits
+- `19faa07` -- fix: correct signal coordinate direction and edge key matching
+
+### Summary
+Found **three bugs** causing persistent NO_PATH despite user placing 13 signals:
+
+**Bug 1 — Sign Error (critical):**
+ALL signal suggestion coordinates were placed on the **wrong side** of junctions.
+The formula `jx - edx * offset` moves AWAY from the neighbor because `edx` points
+FROM junction TO neighbor. Fixed to `jx + edx * offset` to place signals between
+the junction and the approach track (toward the neighbor). This affected both chain
+and regular signal suggestions for every junction in the network.
+
+**Bug 2 — Edge Key Mismatch:**
+`effEdgeKey` used `jId:effNeighborId` (e.g., "10:34") which is a phantom edge that
+doesn't exist in the graph. Changed to `neighborId2:effNeighborId` (e.g., "43:34")
+which matches the REAL intermediate edge where Create registers the placed signal.
+
+**Bug 3 — Cascade Failure (consequence of Bug 1):**
+The sign error caused user's placed signals to land on wrong edges. Two crossing
+branches (10→43 and 50→38) remained unsignaled. Chain signals on the other 3
+crossing branches couldn't find regular terminators on those unsignaled exits →
+ALL 6 crossing chain signals permanently RED → cascaded to 2 T-junction chain
+signals → 8 total RED chain signals → entire central network dead → NO_PATH
+for both trains.
+
+**Factorio Signal Rule Applied:**
+"Chain signal BEFORE every intersection, regular signal AFTER every intersection."
+Create uses the same system. A chain must have a regular terminator on EVERY possible
+exit path. One missing signal on one exit = all chains at that crossing go RED.
+
+### Files Changed
+- `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java` -- Fix coordinate sign, fix edge key matching
