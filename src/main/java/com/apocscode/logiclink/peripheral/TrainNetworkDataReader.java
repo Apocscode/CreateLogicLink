@@ -1331,17 +1331,16 @@ public class TrainNetworkDataReader {
             }
 
             // 4-WAY CROSSING: If ALL branches are paired as through-lines,
-            // this is a simple track crossing (two straight tracks intersecting).
-            // Create handles crossing collision prevention internally via its
-            // occupation system — NO signals are needed at crossings.
-            // Adding chain signals at crossings BREAKS pathfinding because:
-            //   1. Short internal edges (1.5 blocks) can't hold signal pairs
-            //   2. Chain signals need regular terminators on ALL exit paths
-            //   3. Missing terminators on short exits → chain can't resolve → NO_PATH
-            // Keep all branches as through-line so no signals are suggested.
+            // this is a track crossing (two straight tracks intersecting).
+            // Crossings NEED chain signals on every approach — without them,
+            // two trains from perpendicular tracks will collide.
+            // Clear all through-line pairings so every branch gets signals.
+            // Short internal edges are handled below by walking outward to
+            // find the real approach edge for signal placement.
             boolean isCrossing = (throughBranches.size() == branchDirs.size() && branchDirs.size() >= 4);
             if (isCrossing) {
-                LogicLink.LOGGER.info("[LogicLink]   All {} branches through-line — simple crossing, Create handles collision internally. No signals needed.",
+                throughBranches.clear();
+                LogicLink.LOGGER.info("[LogicLink]   All {} branches through-line — 4-way crossing, clearing to suggest signals on all approaches",
                         branchDirs.size());
             }
 
@@ -1364,36 +1363,71 @@ public class TrainNetworkDataReader {
                 int neighborId2 = branchNeighborIds.get(bi);
                 boolean isThrough = throughBranches.contains(bi);
 
-                // Skip through-line branches entirely — they don't need junction signals.
+                // Skip through-line branches — they don't need junction signals.
                 // Adding chain signals on through-lines creates chain-only corridors
                 // between adjacent junctions, which breaks Create's pathfinder.
-                // For 4-way crossings: ALL branches are through-line, so all are skipped.
-                // Create handles crossing collisions internally — no signals needed.
                 if (isThrough) {
                     LogicLink.LOGGER.info("[LogicLink]   Branch {} to node {} ({},{},{}), dist={} — through-line, skipped",
                             bi, neighborId2, (int)nx, (int)ny, (int)nz, String.format("%.1f", dist));
                     continue;
                 }
 
+                // --- Short-edge walk: if edge < 3 blocks and neighbor is a 2-way
+                // intermediate node, walk outward to find the real approach edge.
+                // This handles crossing geometry where internal edges are tiny (1.5b).
+                float effectiveDist = dist;
+                float effNx = nx, effNy = ny, effNz = nz;
+                int effNeighborId = neighborId2;
+                if (dist < 3.0f) {
+                    List<int[]> neighborBranches = adjacency.get(neighborId2);
+                    if (neighborBranches != null && neighborBranches.size() == 2) {
+                        for (int[] nb : neighborBranches) {
+                            if (nb[0] == jId) continue;
+                            int contId = nb[0];
+                            if (contId >= nodes.size()) continue;
+                            CompoundTag contNode = nodes.getCompound(contId);
+                            float cnx = contNode.getFloat("x"), cny = contNode.getFloat("y"), cnz = contNode.getFloat("z");
+                            float cdx2 = cnx - nx, cdy2 = cny - ny, cdz2 = cnz - nz;
+                            float contDist = (float) Math.sqrt(cdx2 * cdx2 + cdy2 * cdy2 + cdz2 * cdz2);
+                            effectiveDist = dist + contDist;
+                            effNx = cnx; effNy = cny; effNz = cnz;
+                            effNeighborId = contId;
+                            LogicLink.LOGGER.info("[LogicLink]     Short edge {}b — walked through node {} to node {}, effective dist={}b",
+                                    String.format("%.1f", dist), neighborId2, contId, String.format("%.1f", effectiveDist));
+                            break;
+                        }
+                    }
+                }
+
                 // Place chain signal far enough from junction for train clearance.
                 float idealOffset = Math.max(3.0f, maxTrainLength * 0.5f);
-                float offset = Math.min(idealOffset, dist * 0.8f);
-                float sugX = jx - ndx * offset;
-                float sugY = jy - ((jy - ny) / dist) * offset;
-                float sugZ = jz - ndz * offset;
+                float offset = Math.min(idealOffset, effectiveDist * 0.8f);
+                // Direction from junction to effective neighbor
+                float endx = effNx - jx;
+                float endz = effNz - jz;
+                float endDist = (float) Math.sqrt(endx * endx + endz * endz);
+                float edx = endDist > 0.01f ? endx / endDist : ndx;
+                float edz = endDist > 0.01f ? endz / endDist : ndz;
+                float sugX = jx - edx * offset;
+                float sugY = jy - ((jy - effNy) / Math.max(0.01f, endDist)) * offset;
+                float sugZ = jz - edz * offset;
 
-                String cardinal = getCardinalDir(ndx, ndz);
-                boolean clearanceOk = dist >= maxTrainLength;
+                String cardinal = getCardinalDir(edx, edz);
+                boolean clearanceOk = effectiveDist >= maxTrainLength;
                 String clearanceNote = clearanceOk
                         ? ""
-                        : " [!] Edge " + (int) dist + "b < max train " + (int) maxTrainLength + "b";
+                        : " [!] Edge " + (int) effectiveDist + "b < max train " + (int) maxTrainLength + "b";
 
                 LogicLink.LOGGER.info("[LogicLink]   Branch {} to node {} ({},{},{}), dist={} — diverging",
                         bi, neighborId2, (int)nx, (int)ny, (int)nz, String.format("%.1f", dist));
 
                 // Skip branches that already have ANY signal (within 3 hops)
                 String branchEdgeKey = Math.min(jId, neighborId2) + ":" + Math.max(jId, neighborId2);
-                boolean alreadySignaled = junctionBranchSignaled.contains(branchEdgeKey);
+                String effEdgeKey = (effNeighborId != neighborId2)
+                        ? Math.min(jId, effNeighborId) + ":" + Math.max(jId, effNeighborId)
+                        : branchEdgeKey;
+                boolean alreadySignaled = junctionBranchSignaled.contains(branchEdgeKey)
+                        || junctionBranchSignaled.contains(effEdgeKey);
                 if (alreadySignaled) continue;
 
                 int bsx = Mth.floor(sugX), bsy = Mth.floor(sugY), bsz = Mth.floor(sugZ);
@@ -1406,14 +1440,14 @@ public class TrainNetworkDataReader {
                 branchSug.putInt("sy", bsy);
                 branchSug.putInt("sz", bsz);
                 branchSug.putString("signalType", "chain");
-                branchSug.putFloat("sdx", ndx);
-                branchSug.putFloat("sdz", ndz);
-                branchSug.putFloat("edgeLength", dist);
+                branchSug.putFloat("sdx", edx);
+                branchSug.putFloat("sdz", edz);
+                branchSug.putFloat("edgeLength", effectiveDist);
                 branchSug.putFloat("maxTrainLength", maxTrainLength);
                 branchSug.putBoolean("clearanceWarning", !clearanceOk);
                 branchSug.putString("dir", "Chain signal — diverging entry from " + cardinal + clearanceNote);
 
-                if (!isDuplicateSuggestion(suggestions, bsx, bsy, bsz, "chain", ndx, ndz)) {
+                if (!isDuplicateSuggestion(suggestions, bsx, bsy, bsz, "chain", edx, edz)) {
                     suggestions.add(branchSug);
                 }
 
@@ -1421,20 +1455,20 @@ public class TrainNetworkDataReader {
                 // Creates a block section boundary where trains can stop and wait.
                 // This MUST be a regular signal (not chain) to terminate chain look-ahead.
                 float regularOffset = offset + Math.max(3.0f, maxTrainLength * 0.5f);
-                if (regularOffset < dist * 0.95f) {
-                    float regX = jx - ndx * regularOffset;
-                    float regY = jy - ((jy - ny) / dist) * regularOffset;
-                    float regZ = jz - ndz * regularOffset;
+                if (regularOffset < effectiveDist * 0.95f) {
+                    float regX = jx - edx * regularOffset;
+                    float regY = jy - ((jy - effNy) / Math.max(0.01f, endDist)) * regularOffset;
+                    float regZ = jz - edz * regularOffset;
                     int rsx = Mth.floor(regX), rsy = Mth.floor(regY), rsz = Mth.floor(regZ);
 
-                    if (!isDuplicateSuggestion(suggestions, rsx, rsy, rsz, "signal", ndx, ndz)) {
+                    if (!isDuplicateSuggestion(suggestions, rsx, rsy, rsz, "signal", edx, edz)) {
                         CompoundTag regSug = new CompoundTag();
                         regSug.putInt("sx", rsx);
                         regSug.putInt("sy", rsy);
                         regSug.putInt("sz", rsz);
                         regSug.putString("signalType", "signal");
-                        regSug.putFloat("sdx", ndx);
-                        regSug.putFloat("sdz", ndz);
+                        regSug.putFloat("sdx", edx);
+                        regSug.putFloat("sdz", edz);
                         regSug.putString("dir", "Regular signal — waiting point from " + cardinal);
                         suggestions.add(regSug);
                     }
@@ -1454,8 +1488,9 @@ public class TrainNetworkDataReader {
             String trainInfo = maxTrainName.isEmpty()
                     ? " (max train: " + (int) maxTrainLength + "b)"
                     : " (max train: " + (int) maxTrainLength + "b — '" + maxTrainName + "')";
+            String junctionType = isCrossing ? "4-way crossing" : (branchDirs.size() + "-way junction");
             int divergingCount = branchDirs.size() - throughBranches.size();
-            diag.putString("desc", branchDirs.size() + "-way junction: " + unsignaledBranchCount
+            diag.putString("desc", junctionType + ": " + unsignaledBranchCount
                     + " unsignaled diverging branch(es) need chain signals (of "
                     + divergingCount + " diverging, " + throughBranches.size() / 2 + " through-line)."
                     + trainInfo);
@@ -2446,103 +2481,8 @@ public class TrainNetworkDataReader {
             }
         }
 
-        // === Check 12: Crossing Signal Warning ===
-        // Detect chain signals at 4-way crossing junctions (where all branches
-        // are through-lines). In Create, crossings are handled internally —
-        // the occupation system prevents collisions. Adding chain signals at
-        // crossings BREAKS pathfinding because:
-        //   - Short internal edges can't hold proper signal pairs
-        //   - Chain signals need regular terminators on ALL exit paths
-        //   - Missing terminators → chain can't resolve → NO_PATH
-        // Warn users to REMOVE these harmful signals.
-        {
-            // First, identify crossing junction node IDs
-            Set<Integer> crossingJunctionNodes = new HashSet<>();
-            for (Map.Entry<Integer, List<int[]>> entry : adjacency.entrySet()) {
-                int jId = entry.getKey();
-                List<int[]> branches = entry.getValue();
-                if (branches.size() < 4) continue;
-
-                // Check if all branches are through-line (same as Check 1 analysis)
-                List<float[]> dirs = new ArrayList<>();
-                for (int[] nb : branches) {
-                    if (nb[0] >= nodes.size()) continue;
-                    CompoundTag nNode = nodes.getCompound(nb[0]);
-                    CompoundTag jNode = nodes.getCompound(jId);
-                    float dx2 = nNode.getFloat("x") - jNode.getFloat("x");
-                    float dz2 = nNode.getFloat("z") - jNode.getFloat("z");
-                    float d2 = (float) Math.sqrt(dx2 * dx2 + dz2 * dz2);
-                    if (d2 > 0.01f) dirs.add(new float[]{dx2 / d2, dz2 / d2});
-                }
-
-                // Greedy through-line pairing
-                int pairedCount = 0;
-                Set<Integer> claimed = new HashSet<>();
-                List<float[]> pairDots = new ArrayList<>();
-                for (int pi = 0; pi < dirs.size(); pi++) {
-                    for (int pj = pi + 1; pj < dirs.size(); pj++) {
-                        float dot2 = dirs.get(pi)[0] * dirs.get(pj)[0] + dirs.get(pi)[1] * dirs.get(pj)[1];
-                        pairDots.add(new float[]{dot2, pi, pj});
-                    }
-                }
-                pairDots.sort((a, b) -> Float.compare(a[0], b[0]));
-                for (float[] pair : pairDots) {
-                    if (pair[0] >= -0.7f) break;
-                    int pi = (int) pair[1], pj = (int) pair[2];
-                    if (claimed.contains(pi) || claimed.contains(pj)) continue;
-                    claimed.add(pi);
-                    claimed.add(pj);
-                    pairedCount += 2;
-                }
-
-                if (pairedCount == branches.size()) {
-                    crossingJunctionNodes.add(jId);
-                }
-            }
-
-            // Check all signals — flag chain signals on edges touching crossing junctions
-            for (int si = 0; si < signals.size(); si++) {
-                CompoundTag sig = signals.getCompound(si);
-                if (!sig.contains("edgeA") || !sig.contains("edgeB")) continue;
-                int a = sig.getInt("edgeA");
-                int b = sig.getInt("edgeB");
-
-                // Is this signal on an edge touching a crossing junction?
-                boolean touchesCrossing = crossingJunctionNodes.contains(a) || crossingJunctionNodes.contains(b);
-                if (!touchesCrossing) continue;
-
-                String typeF2 = sig.contains("typeF") ? sig.getString("typeF") : "entry_signal";
-                String typeB2 = sig.contains("typeB") ? sig.getString("typeB") : "entry_signal";
-                boolean hasChain2 = typeF2.equals("cross_signal") || typeB2.equals("cross_signal");
-                if (!hasChain2) continue;
-
-                // Chain signal at a crossing — this is harmful!
-                float sx2 = sig.getFloat("x");
-                float sy2 = sig.getFloat("y");
-                float sz2 = sig.getFloat("z");
-                int crossingNode = crossingJunctionNodes.contains(a) ? a : b;
-
-                CompoundTag crossDiag = new CompoundTag();
-                crossDiag.putString("type", "CROSSING_SIGNAL");
-                crossDiag.putString("severity", "CRIT");
-                crossDiag.putFloat("x", sx2);
-                crossDiag.putFloat("y", sy2);
-                crossDiag.putFloat("z", sz2);
-                crossDiag.putString("desc", "Chain signal at track crossing (node "
-                        + crossingNode + ") — REMOVE this signal. Create handles crossing "
-                        + "collisions internally. Chain signals at crossings break pathfinding "
-                        + "(NO_PATH) because short internal edges can't hold regular terminators.");
-                crossDiag.putString("detail", "This is a 4-way crossing where two straight tracks "
-                        + "cross each other. Unlike junctions (T/Y), crossings do NOT need signals. "
-                        + "Create's occupation system prevents collisions automatically. "
-                        + "Remove ALL chain signals near this crossing to fix train NO_PATH errors.");
-                diagnostics.add(crossDiag);
-
-                LogicLink.LOGGER.warn("[LogicLink] CROSSING_SIGNAL: Chain signal at ({},{},{}) "
-                        + "on crossing junction {} — should be REMOVED",
-                        (int) sx2, (int) sy2, (int) sz2, crossingNode);
-            }
-        }
+        // Check 12 removed: Crossings DO need chain signals for collision prevention.
+        // The previous Check 12 incorrectly told users to remove crossing signals.
 
         // === Debug: dump all diagnostics for troubleshooting ===
         LogicLink.LOGGER.debug("[LogicLink] ===== DIAGNOSTICS DUMP ({} total) =====", diagnostics.size());
