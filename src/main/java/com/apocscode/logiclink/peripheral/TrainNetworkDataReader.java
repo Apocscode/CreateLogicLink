@@ -1456,25 +1456,28 @@ public class TrainNetworkDataReader {
                 // === Regular signal further out (waiting/queue point) ===
                 // Creates a block section boundary where trains can stop and wait.
                 // This MUST be a regular signal (not chain) to terminate chain look-ahead.
-                float regularOffset = offset + Math.max(3.0f, maxTrainLength * 0.5f);
-                if (regularOffset < effectiveDist * 0.95f) {
-                    float regX = jx + edx * regularOffset;
-                    float regY = jy + ((effNy - jy) / Math.max(0.01f, endDist)) * regularOffset;
-                    float regZ = jz + edz * regularOffset;
-                    int rsx = Mth.floor(regX), rsy = Mth.floor(regY), rsz = Mth.floor(regZ);
+                // Skip for crossings — one regular signal per arm is sufficient.
+                if (!isCrossing) {
+                    float regularOffset = offset + Math.max(3.0f, maxTrainLength * 0.5f);
+                    if (regularOffset < effectiveDist * 0.95f) {
+                        float regX = jx + edx * regularOffset;
+                        float regY = jy + ((effNy - jy) / Math.max(0.01f, endDist)) * regularOffset;
+                        float regZ = jz + edz * regularOffset;
+                        int rsx = Mth.floor(regX), rsy = Mth.floor(regY), rsz = Mth.floor(regZ);
 
-                    if (!isDuplicateSuggestion(suggestions, rsx, rsy, rsz, "signal", edx, edz)) {
-                        CompoundTag regSug = new CompoundTag();
-                        regSug.putInt("sx", rsx);
-                        regSug.putInt("sy", rsy);
-                        regSug.putInt("sz", rsz);
-                        regSug.putString("signalType", "signal");
-                        regSug.putFloat("sdx", edx);
-                        regSug.putFloat("sdz", edz);
-                        regSug.putString("dir", "Regular signal — waiting point from " + cardinal);
-                        suggestions.add(regSug);
+                        if (!isDuplicateSuggestion(suggestions, rsx, rsy, rsz, "signal", edx, edz)) {
+                            CompoundTag regSug = new CompoundTag();
+                            regSug.putInt("sx", rsx);
+                            regSug.putInt("sy", rsy);
+                            regSug.putInt("sz", rsz);
+                            regSug.putString("signalType", "signal");
+                            regSug.putFloat("sdx", edx);
+                            regSug.putFloat("sdz", edz);
+                            regSug.putString("dir", "Regular signal — waiting point from " + cardinal);
+                            suggestions.add(regSug);
+                        }
                     }
-                }
+                } // end if (!isCrossing)
             }
             diag.put("suggestions", suggestions);
 
@@ -1483,7 +1486,8 @@ public class TrainNetworkDataReader {
 
             int unsignaledBranchCount = 0;
             for (int i = 0; i < suggestions.size(); i++) {
-                if (suggestions.getCompound(i).getString("signalType").equals("chain")) {
+                String st = suggestions.getCompound(i).getString("signalType");
+                if (st.equals("chain") || (isCrossing && st.equals("signal"))) {
                     unsignaledBranchCount++;
                 }
             }
@@ -1492,8 +1496,9 @@ public class TrainNetworkDataReader {
                     : " (max train: " + (int) maxTrainLength + "b — '" + maxTrainName + "')";
             String junctionType = isCrossing ? "4-way crossing" : (branchDirs.size() + "-way junction");
             int divergingCount = branchDirs.size() - throughBranches.size();
+            String signalWord = isCrossing ? "regular signals" : "chain signals";
             diag.putString("desc", junctionType + ": " + unsignaledBranchCount
-                    + " unsignaled diverging branch(es) need chain signals (of "
+                    + " unsignaled branch(es) need " + signalWord + " (of "
                     + divergingCount + " diverging, " + throughBranches.size() / 2 + " through-line)."
                     + trainInfo);
 
