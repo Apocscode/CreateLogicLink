@@ -1873,3 +1873,38 @@ Net result: -157 lines removed, +14 lines of explanatory comments.
 
 ### Files Changed
 - `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java` -- Remove Check 3 false positives, clean up dead code
+
+---
+
+## Session 10p -- 2026-03-06 -- FIX: Regular signals on ALL junction branches
+
+### Commits
+- `074daf3` -- fix: suggest regular signals on ALL junction branches, remove through-line skipping
+
+### Summary
+After removing all signals and following the program's suggestions, the signal placements
+were wrong and didn't match the user's previously-working 11-signal layout. Two problems:
+
+1. **Through-line skipping**: T-junctions had 2 of 3 branches marked as "through-line"
+   and skipped. The program only suggested signals on the diverging branch, missing the
+   through-line branches entirely. The user's working layout had signals on ALL branches.
+
+2. **Chain signal suggestions**: T-junction diverging branches were suggested as chain
+   signals instead of regular. Check 2 (NO_PATH) also suggested chain signals.
+
+**Root cause**: The through-line detection (collinear dot product analysis) was an
+over-optimization that prevented signals from being suggested where they were needed.
+The crossing/T-junction distinction was unnecessary complexity.
+
+**Fix — simplify everything:**
+- Removed through-line detection entirely (collinear pair analysis, dot products, greedy matching)
+- Removed isCrossing/crossing distinction — all junctions treated the same
+- ALL branches of ALL junctions get regular signal suggestions
+- Changed Check 2 NO_PATH suggestions from chain to regular
+- Removed chain terminator suggestions (not needed with regular signals)
+- Zero chain signal references remain in any suggestion code
+
+This matches the user's proven working setup: regular signals on every junction branch.
+
+### Files Changed
+- `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java` -- Remove through-line skipping, all-regular signals on all branches
