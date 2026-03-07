@@ -1764,3 +1764,71 @@ existing T-junction chain+regular signals as they are.
 
 ### Files Changed
 - `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java` -- Regular signals at crossings
+
+---
+
+## Session 10n -- 2026-03-06 -- FIX: Actually implement regular signals at crossings (source code research)
+
+### Commits
+- `147d41f` -- fix: use regular signals at crossings based on Create source code research
+
+### Summary
+Session 10m's commit (`b2fbae9`) claimed to change crossing signals from chain to regular,
+but **only added the `if (!isCrossing)` guard to skip regular terminators**. The actual
+`signalType` field was STILL `"chain"` — the fix was never implemented!
+
+**Research Phase (Create Source Code + Wiki):**
+This session started by researching Create's ACTUAL signal rules from authoritative sources
+instead of guessing:
+
+1. **Create Wiki (create.fandom.com/wiki/Train_Signal):**
+   - "A typical use of chain signals is to protect junctions or crossings"
+   - Chain signals prevent entry if the train can't exit (looks ahead to next signal)
+   - If station is between chain and regular signal, chain resolves on segment clear alone
+   - Signals divide network into segments; trains stop at occupied segments
+
+2. **Create Source Code (Navigation.java, SignalBoundary.java):**
+   - `canNavigateVia(TrackNode side)` — returns false if no block entities on approach side
+     → pathfinder SKIPS that edge entirely (`continue Search;`) → causes NO_PATH
+   - Chain signals (cross_signal) check `waitingForChainedGroups` for resolution
+   - `resolveSignalChain()` — if no chained signals found, returns GREEN (empty map → green)
+   - Entry signals (regular) just check immediate segment occupancy → simpler, always resolves
+   - Pathfinder treats both types identically for route discovery (both add penalty if occupied)
+
+3. **Key Insight:** Chain signals at crossings work IF they have proper regular terminators,
+   but regular signals at crossings are SIMPLER and equally correct:
+   - Regular signals create segment boundaries (crossing = 1 segment)
+   - Trains stop at red regular signals (segment occupied → red)
+   - No chain look-ahead complexity, no terminator requirements
+   - Same collision prevention via segment occupancy
+
+**Bug Found: Signal Type Never Changed**
+The actual `signalType` in Check 1 was always `"chain"` for all junctions including crossings.
+Session 10m only:
+1. Added `if (!isCrossing)` guard around second regular signal (removing terminators!)
+2. Changed description text to say "regular signals"
+3. Changed unsignaled count logic
+The `branchSug.putString("signalType", "chain")` line was never made conditional.
+
+**Fixes Applied:**
+1. Signal type now conditional: `isCrossing ? "signal" : "chain"`
+2. Description updated to match: "Regular signal — crossing approach from N"
+3. Check 3 (SIGNAL_CONFLICT) now exempts crossing edges — regular signals at crossings
+   are valid, not a conflict requiring chain
+4. Added `crossingJunctionIds` tracking set populated during Check 1, reused in Check 3
+
+**Cross-Check Consistency:**
+- Check 1 (suggestions): crossing=regular, T-junction=chain ✓
+- Check 3 (conflicts): won't flag crossing regular signals ✓
+- Check 9 (missing regular): crossing arms have regulars → won't fire ✓
+- Check 11 (chain-only corridor): no chain at crossings → won't fire ✓
+- Check 3b (double-chain): unchanged, still flags both-sides-chain ✓
+
+**User Action Required:**
+1. REMOVE ALL existing signals near both crossings
+2. Place regular signals ONLY — one on each of the 4 approach arms per crossing
+3. Make signals TWO-WAY (place signal block on both sides of track)
+4. Both faces should be entry_signal (regular) — do NOT wrench to chain
+
+### Files Changed
+- `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java` -- Regular signals at crossings, Check 3 crossing exemption
