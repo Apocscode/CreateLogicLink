@@ -1908,3 +1908,39 @@ This matches the user's proven working setup: regular signals on every junction 
 
 ### Files Changed
 - `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java` -- Remove through-line skipping, all-regular signals on all branches
+
+---
+
+## Session 10q -- 2026-03-06 -- FIX: Deduplicate signal suggestions (19→~11)
+
+### Commits
+- `d1d110a` -- fix: deduplicate signal suggestions and remove short-edge signals
+
+### Summary
+User placed 19 signals following the program's suggestions. Trains got NO_PATH because
+too many signals created impossibly small track segments. Working setup had 11 signals.
+
+**Three bugs found:**
+
+1. **Adjacent junction dedup**: When two junctions share an edge (e.g., T-junction 13 and
+   crossing 33 both connect via edge 13↔33), BOTH generated a signal suggestion on that
+   edge. User placed both → 2 signals on a 12.5b edge, ~4 blocks apart.
+   Fix: Added `suggestedEdges` set shared across all junctions. Before adding a suggestion,
+   check if the edge key is already in the set. First junction wins, second skips.
+
+2. **Check 2 duplicate suggestions**: Check 2 (NO_PATH diagnostic) generated its own
+   per-branch signal suggestions for the nearest junction, with DIFFERENT positions than
+   Check 1. When there are 0 signals, both Check 1 and Check 2 fire simultaneously, and
+   the user sees both sets → places both → too many signals.
+   Fix: Removed Check 2's per-branch signal suggestions entirely. Check 1 already handles
+   junction signal placement comprehensively.
+
+3. **Short internal edges**: Crossing geometry creates tiny edges (1.5-2.5b) between the
+   junction node and intermediate 2-way nodes. The short-edge walk extends through the
+   intermediate to a real approach, but edges where the walk FAILS (neighbor is also a
+   junction, not a 2-way pass-through) still generated signals on 1.5b edges.
+   Fix: Skip branches where dist < 3.0 and the walk fails. The other junction handles
+   its own outbound approaches.
+
+### Files Changed
+- `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java` -- Dedup, remove Check 2 suggestions, skip short internal edges
