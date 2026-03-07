@@ -1256,10 +1256,7 @@ public class TrainNetworkDataReader {
         }
         LogicLink.LOGGER.info("Junction branch signaled (with walk): {}", junctionBranchSignaled);
 
-        // Track which junction nodes are 4-way crossings (not T-junctions).
-        // Crossings use regular signals (segment boundaries) instead of chain signals.
-        // This is populated during Check 1 and reused in Check 3.
-        Set<Integer> crossingJunctionIds = new HashSet<>();
+
 
         // === Check 1: Unsignaled junction branches ===
         // Flag diverging branches at junctions that have NO signal at all.
@@ -1345,7 +1342,6 @@ public class TrainNetworkDataReader {
             boolean isCrossing = (throughBranches.size() == branchDirs.size() && branchDirs.size() >= 4);
             if (isCrossing) {
                 throughBranches.clear();
-                crossingJunctionIds.add(jId);
                 LogicLink.LOGGER.info("[LogicLink]   All {} branches through-line — 4-way crossing, clearing to suggest signals on all approaches",
                         branchDirs.size());
             }
@@ -1728,158 +1724,19 @@ public class TrainNetworkDataReader {
             diagnostics.add(diag);
         }
 
-        // === Check 3: Existing signals with wrong type (conflict/improper) ===
-        // Identify junction node IDs (3+ connections)
-        Set<Integer> junctionNodes = new HashSet<>();
-        for (Map.Entry<Integer, List<int[]>> entry : adjacency.entrySet()) {
-            if (entry.getValue().size() >= 3) {
-                junctionNodes.add(entry.getKey());
-            }
-        }
-
-        // Pre-scan: For each junction edge, check if ANY signal on that edge already
-        // has chain on any side. If so, other signals on the same edge are
-        // block-section boundaries (intentionally regular) and should NOT be
-        // flagged as conflicts.
-        // Direction-agnostic: Create's Couple ordering for edgeLocation vs types
-        // is not guaranteed to be consistent across signals, so we cannot reliably
-        // determine which "side" (F/B) physically faces which direction. Instead,
-        // we check: does this signal have chain on ANY side?
-        Set<String> edgeHasChainAnySide = new HashSet<>();
-        for (int i = 0; i < signals.size(); i++) {
-            CompoundTag sig = signals.getCompound(i);
-            if (!sig.contains("edgeA") || !sig.contains("edgeB")) continue;
-            int a = sig.getInt("edgeA");
-            int b = sig.getInt("edgeB");
-            String tF = sig.contains("typeF") ? sig.getString("typeF") : "entry_signal";
-            String tB = sig.contains("typeB") ? sig.getString("typeB") : "entry_signal";
-            if (tF.equals("cross_signal") || tB.equals("cross_signal")) {
-                String ek = Math.min(a, b) + ":" + Math.max(a, b);
-                edgeHasChainAnySide.add(ek);
-            }
-        }
-
-        for (int i = 0; i < signals.size(); i++) {
-            CompoundTag sig = signals.getCompound(i);
-            if (!sig.contains("edgeA") || !sig.contains("edgeB")) continue;
-
-            int edgeA = sig.getInt("edgeA");
-            int edgeB = sig.getInt("edgeB");
-            String typeF = sig.contains("typeF") ? sig.getString("typeF") : "entry_signal";
-            String typeB = sig.contains("typeB") ? sig.getString("typeB") : "entry_signal";
-
-            // Determine if this edge connects to a junction
-            boolean aIsJunction = junctionNodes.contains(edgeA);
-            boolean bIsJunction = junctionNodes.contains(edgeB);
-            boolean onJunctionEdge = aIsJunction || bIsJunction;
-
-            // Get signal world position
-            float sx = sig.contains("x") ? sig.getFloat("x") : 0;
-            float sy = sig.contains("y") ? sig.getFloat("y") : 0;
-            float sz = sig.contains("z") ? sig.getFloat("z") : 0;
-            // Use mapX/mapZ as fallback if block entity pos is (0,0,0)
-            if (sx == 0 && sz == 0) {
-                if (sig.contains("mapX") && sig.contains("mapZ")) {
-                    sx = sig.getFloat("mapX");
-                    sz = sig.getFloat("mapZ");
-                } else {
-                    continue; // no valid position at all
-                }
-            }
-
-            if (onJunctionEdge) {
-                LogicLink.LOGGER.debug("[LogicLink] Check3 Signal#{} @ ({},{},{}) edgeA={} edgeB={} typeF='{}' typeB='{}' aIsJ={} bIsJ={}",
-                        i, (int) sx, (int) sy, (int) sz, edgeA, edgeB, typeF, typeB, aIsJunction, bIsJunction);
-            }
-
-            // Direction-agnostic signal conflict check.
-            // Create's Couple ordering for types vs edgeLocation can vary per signal
-            // depending on placement direction, so we don't assume F↔A or F↔B mapping.
-            // Instead: check if the signal has chain on at least one side.
-            // If yes — the signal is protecting this junction. No flag.
-            // If no — both sides regular on a junction edge = conflict.
-
-            String ek = Math.min(edgeA, edgeB) + ":" + Math.max(edgeA, edgeB);
-            boolean hasAnyChain = typeF.equals("cross_signal") || typeB.equals("cross_signal");
-            boolean partnerHasChain = edgeHasChainAnySide.contains(ek);
-
-            List<String> issues = new ArrayList<>();
-
-            // Only flag if signal has NO chain AND no other signal on this edge has chain.
-            // Signals that are all-regular on a junction edge when another signal on the
-            // same edge IS chain are intentional block-section boundaries.
-            // EXCEPTION: 4-way crossings use regular signals (not chain) by design.
-            // Regular signals at crossings create segment boundaries — trains stop
-            // if the crossing segment is occupied. This is the correct pattern per
-            // the Create wiki. Skip crossing edges from this check.
-            boolean onCrossingEdge = (aIsJunction && crossingJunctionIds.contains(edgeA))
-                    || (bIsJunction && crossingJunctionIds.contains(edgeB));
-            if (onJunctionEdge && !onCrossingEdge && !hasAnyChain && !partnerHasChain) {
-                // Build descriptive message with junction locations
-                StringBuilder msg = new StringBuilder();
-                if (aIsJunction && bIsJunction) {
-                    msg.append("regular signal on edge between 2 junctions — needs chain on each junction-facing side");
-                } else if (aIsJunction) {
-                    msg.append("regular signal should be CHAIN (protects junction at node ").append(edgeA).append(")");
-                } else {
-                    msg.append("regular signal should be CHAIN (protects junction at node ").append(edgeB).append(")");
-                }
-                msg.append(". Use wrench to toggle chain on the side facing approaching trains");
-                issues.add(msg.toString());
-            }
-
-            // Note: "chain on non-junction edge" check removed — Create's graph can have
-            // intermediate nodes between junctions and signals, causing false positives.
-            // Chain signals on non-junction edges are harmless (just slightly conservative).
-
-            if (!issues.isEmpty()) {
-                CompoundTag diag = new CompoundTag();
-                diag.putString("type", "SIGNAL_CONFLICT");
-                diag.putString("severity", "CRIT");
-                diag.putFloat("x", sx);
-                diag.putFloat("y", sy);
-                diag.putFloat("z", sz);
-
-                StringBuilder descBuilder = new StringBuilder("Signal conflict: ");
-                for (int j = 0; j < issues.size(); j++) {
-                    if (j > 0) descBuilder.append("; ");
-                    descBuilder.append(issues.get(j));
-                }
-                diag.putString("desc", descBuilder.toString());
-
-                // Suggestion: the signal's own position, flagged as "conflict"
-                ListTag suggestions = new ListTag();
-                CompoundTag conflictSug = new CompoundTag();
-                conflictSug.putInt("sx", (int) sx);
-                conflictSug.putInt("sy", (int) sy);
-                conflictSug.putInt("sz", (int) sz);
-                conflictSug.putString("signalType", "conflict");
-                // Copy edge direction from existing signal data for arrow rendering
-                if (sig.contains("dirX") && sig.contains("dirZ")) {
-                    conflictSug.putFloat("sdx", sig.getFloat("dirX"));
-                    conflictSug.putFloat("sdz", sig.getFloat("dirZ"));
-                } else if (edgeA < nodes.size() && edgeB < nodes.size()) {
-                    // Fallback: compute direction from edge node positions
-                    CompoundTag nodeA = nodes.getCompound(edgeA);
-                    CompoundTag nodeB = nodes.getCompound(edgeB);
-                    float fdx = nodeB.getFloat("x") - nodeA.getFloat("x");
-                    float fdz = nodeB.getFloat("z") - nodeA.getFloat("z");
-                    float flen = (float) Math.sqrt(fdx * fdx + fdz * fdz);
-                    if (flen > 0.01f) {
-                        conflictSug.putFloat("sdx", fdx / flen);
-                        conflictSug.putFloat("sdz", fdz / flen);
-                    }
-                }
-
-                // Determine what the correct type should be
-                conflictSug.putString("correctType", "chain");
-                conflictSug.putString("dir", "Use wrench to toggle chain on junction-facing side");
-                suggestions.add(conflictSug);
-                diag.put("suggestions", suggestions);
-
-                diagnostics.add(diag);
-            }
-        }
+        // === Check 3: REMOVED — "regular signal should be chain" ===
+        // From Create source code (Navigation.java, SignalBoundary.java):
+        // Regular signals at junctions are VALID — they create segment boundaries.
+        // Trains stop at occupied segments regardless of signal type.
+        // Chain signals provide look-ahead but are not required.
+        // In-game testing confirms regular signals work at both crossings and
+        // T-junctions. Only double-chain (Check 3b below) is always wrong.
+        //
+        // Other checks handle actual problems:
+        // - Check 1: missing signals on junction branches
+        // - Check 3b: both sides chain (no stopping point)
+        // - Check 9: missing regular signal terminators for chain signals
+        // - Check 11: chain-only corridors with no regular terminator
 
         // === Check 3b: Double-Chain Signals (both sides chain) ===
         // A signal with chain (cross_signal) on BOTH sides is always wrong.
