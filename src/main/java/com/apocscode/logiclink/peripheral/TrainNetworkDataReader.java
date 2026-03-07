@@ -1256,6 +1256,11 @@ public class TrainNetworkDataReader {
         }
         LogicLink.LOGGER.info("Junction branch signaled (with walk): {}", junctionBranchSignaled);
 
+        // Track which junction nodes are 4-way crossings (not T-junctions).
+        // Crossings use regular signals (segment boundaries) instead of chain signals.
+        // This is populated during Check 1 and reused in Check 3.
+        Set<Integer> crossingJunctionIds = new HashSet<>();
+
         // === Check 1: Unsignaled junction branches ===
         // Flag diverging branches at junctions that have NO signal at all.
         // Branches that already have a signal (even wrong type) are skipped here —
@@ -1340,6 +1345,7 @@ public class TrainNetworkDataReader {
             boolean isCrossing = (throughBranches.size() == branchDirs.size() && branchDirs.size() >= 4);
             if (isCrossing) {
                 throughBranches.clear();
+                crossingJunctionIds.add(jId);
                 LogicLink.LOGGER.info("[LogicLink]   All {} branches through-line — 4-way crossing, clearing to suggest signals on all approaches",
                         branchDirs.size());
             }
@@ -1434,22 +1440,32 @@ public class TrainNetworkDataReader {
 
                 int bsx = Mth.floor(sugX), bsy = Mth.floor(sugY), bsz = Mth.floor(sugZ);
 
-                // === Chain signal on diverging branch entry ===
-                // Prevents train from entering junction if it can't exit.
-                // Place on the diverging branch, facing toward the junction.
+                // === Signal on junction branch entry ===
+                // Crossings: regular signal (entry_signal) creates a segment boundary.
+                //   Regular signals are simpler and don't need chain terminators.
+                //   Per Create wiki: trains stop at regular signals if segment ahead
+                //   is occupied — sufficient protection for crossings.
+                // T-junctions: chain signal (cross_signal) for better protection.
+                //   Chain signals look ahead through the junction, only allowing
+                //   entry if the train can also exit. Needs a regular signal
+                //   downstream as a terminator (added below for non-crossings).
+                String sigType = isCrossing ? "signal" : "chain";
+                String sigLabel = isCrossing ? "Regular signal" : "Chain signal";
+                String branchDesc = isCrossing ? "crossing approach" : "diverging entry";
+
                 CompoundTag branchSug = new CompoundTag();
                 branchSug.putInt("sx", bsx);
                 branchSug.putInt("sy", bsy);
                 branchSug.putInt("sz", bsz);
-                branchSug.putString("signalType", "chain");
+                branchSug.putString("signalType", sigType);
                 branchSug.putFloat("sdx", edx);
                 branchSug.putFloat("sdz", edz);
                 branchSug.putFloat("edgeLength", effectiveDist);
                 branchSug.putFloat("maxTrainLength", maxTrainLength);
                 branchSug.putBoolean("clearanceWarning", !clearanceOk);
-                branchSug.putString("dir", "Chain signal — diverging entry from " + cardinal + clearanceNote);
+                branchSug.putString("dir", sigLabel + " — " + branchDesc + " from " + cardinal + clearanceNote);
 
-                if (!isDuplicateSuggestion(suggestions, bsx, bsy, bsz, "chain", edx, edz)) {
+                if (!isDuplicateSuggestion(suggestions, bsx, bsy, bsz, sigType, edx, edz)) {
                     suggestions.add(branchSug);
                 }
 
@@ -1792,7 +1808,13 @@ public class TrainNetworkDataReader {
             // Only flag if signal has NO chain AND no other signal on this edge has chain.
             // Signals that are all-regular on a junction edge when another signal on the
             // same edge IS chain are intentional block-section boundaries.
-            if (onJunctionEdge && !hasAnyChain && !partnerHasChain) {
+            // EXCEPTION: 4-way crossings use regular signals (not chain) by design.
+            // Regular signals at crossings create segment boundaries — trains stop
+            // if the crossing segment is occupied. This is the correct pattern per
+            // the Create wiki. Skip crossing edges from this check.
+            boolean onCrossingEdge = (aIsJunction && crossingJunctionIds.contains(edgeA))
+                    || (bIsJunction && crossingJunctionIds.contains(edgeB));
+            if (onJunctionEdge && !onCrossingEdge && !hasAnyChain && !partnerHasChain) {
                 // Build descriptive message with junction locations
                 StringBuilder msg = new StringBuilder();
                 if (aIsJunction && bIsJunction) {
