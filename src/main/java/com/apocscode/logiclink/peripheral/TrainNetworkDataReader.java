@@ -1259,11 +1259,11 @@ public class TrainNetworkDataReader {
 
 
         // === Check 1: Unsignaled junction branches ===
-        // Flag diverging branches at junctions that have NO signal at all.
-        // Branches that already have a signal (even wrong type) are skipped here —
-        // Check 3 independently handles wrong-type signal detection.
-        // This separation prevents overlap: placing a chain signal on an unsignaled
-        // branch clears Check 1 cleanly without triggering Check 3.
+        // Flag branches at junctions that have NO signal at all.
+        // Suggests one regular signal per unsignaled branch.
+        // Uses suggestedEdges to prevent two adjacent junctions from both
+        // suggesting signals on the same shared edge.
+        Set<String> suggestedEdges = new HashSet<>();
         for (Map.Entry<Integer, List<int[]>> entry : adjacency.entrySet()) {
             List<int[]> branches = entry.getValue();
             if (branches.size() < 3) continue; // not a junction
@@ -1325,6 +1325,7 @@ public class TrainNetworkDataReader {
                 float effectiveDist = dist;
                 float effNx = nx, effNy = ny, effNz = nz;
                 int effNeighborId = neighborId2;
+                boolean shortEdgeWalked = false;
                 if (dist < 3.0f) {
                     List<int[]> neighborBranches = adjacency.get(neighborId2);
                     if (neighborBranches != null && neighborBranches.size() == 2) {
@@ -1339,14 +1340,23 @@ public class TrainNetworkDataReader {
                             effectiveDist = dist + contDist;
                             effNx = cnx; effNy = cny; effNz = cnz;
                             effNeighborId = contId;
+                            shortEdgeWalked = true;
                             LogicLink.LOGGER.info("[LogicLink]     Short edge {}b — walked through node {} to node {}, effective dist={}b",
                                     String.format("%.1f", dist), neighborId2, contId, String.format("%.1f", effectiveDist));
                             break;
                         }
                     }
+                    // Skip short edges that couldn't be walked (neighbor is a junction
+                    // or dead-end). These are internal crossing geometry edges — too
+                    // short for a useful signal. The other junction handles its own outbound edges.
+                    if (!shortEdgeWalked) {
+                        LogicLink.LOGGER.info("[LogicLink]   Branch {} to node {} ({},{},{}), dist={} — too short, skipped",
+                                bi, neighborId2, (int)nx, (int)ny, (int)nz, String.format("%.1f", dist));
+                        continue;
+                    }
                 }
 
-                // Place chain signal far enough from junction for train clearance.
+                // Place signal far enough from junction for train clearance.
                 float idealOffset = Math.max(3.0f, maxTrainLength * 0.5f);
                 float offset = Math.min(idealOffset, effectiveDist * 0.8f);
                 // Direction from junction to effective neighbor
@@ -1379,6 +1389,9 @@ public class TrainNetworkDataReader {
                         || junctionBranchSignaled.contains(effEdgeKey);
                 if (alreadySignaled) continue;
 
+                // Skip if another junction already suggested a signal on this edge
+                if (suggestedEdges.contains(branchEdgeKey) || suggestedEdges.contains(effEdgeKey)) continue;
+
                 int bsx = Mth.floor(sugX), bsy = Mth.floor(sugY), bsz = Mth.floor(sugZ);
 
                 // === Signal on junction branch entry ===
@@ -1407,11 +1420,9 @@ public class TrainNetworkDataReader {
 
                 if (!isDuplicateSuggestion(suggestions, bsx, bsy, bsz, sigType, edx, edz)) {
                     suggestions.add(branchSug);
+                    suggestedEdges.add(branchEdgeKey);
+                    suggestedEdges.add(effEdgeKey);
                 }
-
-                // No separate terminator needed — regular signals are self-terminating.
-                // Previous code added a second chain-terminator signal for T-junctions,
-                // but since we now use regular signals everywhere, one per branch suffices.
             }
             diag.put("suggestions", suggestions);
 
@@ -1569,7 +1580,7 @@ public class TrainNetworkDataReader {
                             if (detail.length() > 0) detail.append("; ");
                             detail.append("Nearest junction (").append(jBranchCount)
                                   .append("-way @ ").append((int) jjx).append(",").append((int) jjz)
-                                  .append(") has NO signals — add chain signals");
+                                  .append(") has NO signals — add regular signals on each branch");
                         } else if (jSigCount < jBranchCount) {
                             if (detail.length() > 0) detail.append("; ");
                             detail.append("Nearest junction @ ").append((int) jjx).append(",").append((int) jjz)
@@ -1577,46 +1588,9 @@ public class TrainNetworkDataReader {
                                   .append(" signaled branches — check coverage");
                         }
 
-                        // Generate per-branch suggestions for this junction
-                        List<int[]> jBranches = adjacency.get(bestJunction);
-                        ListTag sug = new ListTag();
-                        if (jBranches != null) {
-                            for (int[] br : jBranches) {
-                                int nId = br[0];
-                                if (nId >= nodes.size()) continue;
-                                CompoundTag nNode = nodes.getCompound(nId);
-                                float nnx = nNode.getFloat("x");
-                                float nny = nNode.getFloat("y");
-                                float nnz = nNode.getFloat("z");
-                                float ddx2 = jjx - nnx;
-                                float ddy2 = jjy - nny;
-                                float ddz2 = jjz - nnz;
-                                float d2 = (float) Math.sqrt(ddx2 * ddx2 + ddy2 * ddy2 + ddz2 * ddz2);
-                                if (d2 < 0.01f) continue;
-                                float bndx = ddx2 / d2;
-                                float bndz = ddz2 / d2;
-                                float boff = Math.min(5.0f, d2 * 0.4f);
-                                CompoundTag s = new CompoundTag();
-                                s.putInt("sx", Mth.floor(jjx - bndx * boff));
-                                s.putInt("sy", Mth.floor(jjy - (ddy2 / d2) * boff));
-                                s.putInt("sz", Mth.floor(jjz - bndz * boff));
-                                s.putString("signalType", "signal");
-                                s.putFloat("sdx", bndx);
-                                s.putFloat("sdz", bndz);
-                                s.putString("dir", "Check junction signals \u2014 entry from " + getCardinalDir(bndx, bndz));
-                                sug.add(s);
-                            }
-                        }
-                        if (sug.isEmpty()) {
-                            CompoundTag s = new CompoundTag();
-                            s.putInt("sx", Mth.floor(jjx));
-                            s.putInt("sy", Mth.floor(jjy));
-                            s.putInt("sz", Mth.floor(jjz));
-                            s.putString("signalType", "signal");
-                            s.putString("dir", "Check junction signals");
-                            sug.add(s);
-                        }
-                        diag.put("suggestions", sug);
+                        // No per-branch suggestions here — Check 1 already generates
+                        // proper signal placement suggestions for all junction branches.
+                        // Adding duplicate suggestions here caused too many signals to be placed.
                     }
                 }
 
