@@ -1303,76 +1303,21 @@ public class TrainNetworkDataReader {
                 branchNeighborIds.add(neighborId);
             }
 
-            // Detect collinear branch pairs (through-lines) via dot product.
-            // For ANY junction size (3+way), find all roughly-opposite branch pairs.
-            // Uses greedy matching: most collinear pair claimed first, then next unclaimed.
-            // Through-line branches do NOT need chain signals — trains flow straight
-            // through without needing junction protection on the main line.
-            Set<Integer> throughBranches = new HashSet<>();
-            {
-                float[][] dirs = branchDirs.toArray(new float[0][]);
-                List<float[]> pairDots = new ArrayList<>();
-                for (int pi = 0; pi < dirs.length; pi++) {
-                    for (int pj = pi + 1; pj < dirs.length; pj++) {
-                        float dot = dirs[pi][0] * dirs[pj][0] + dirs[pi][1] * dirs[pj][1];
-                        pairDots.add(new float[]{dot, pi, pj});
-                    }
-                }
-                pairDots.sort((a, b) -> Float.compare(a[0], b[0]));
-                Set<Integer> claimed = new HashSet<>();
-                for (float[] pair : pairDots) {
-                    if (pair[0] >= -0.7f) break;
-                    int pi = (int) pair[1];
-                    int pj = (int) pair[2];
-                    if (claimed.contains(pi) || claimed.contains(pj)) continue;
-                    throughBranches.add(pi);
-                    throughBranches.add(pj);
-                    claimed.add(pi);
-                    claimed.add(pj);
-                }
-            }
-
-            // 4-WAY CROSSING: If ALL branches are paired as through-lines,
-            // this is a track crossing (two straight tracks intersecting).
-            // Crossings NEED chain signals on every approach — without them,
-            // two trains from perpendicular tracks will collide.
-            // Clear all through-line pairings so every branch gets signals.
-            // Short internal edges are handled below by walking outward to
-            // find the real approach edge for signal placement.
-            boolean isCrossing = (throughBranches.size() == branchDirs.size() && branchDirs.size() >= 4);
-            if (isCrossing) {
-                throughBranches.clear();
-                LogicLink.LOGGER.info("[LogicLink]   All {} branches through-line — 4-way crossing, clearing to suggest signals on all approaches",
-                        branchDirs.size());
-            }
-
-            // Signal suggestions: diverging branches need chain signals.
-            // Through-line branches (straight through the junction) do NOT need
-            // chain signals — adding chain on through-lines creates chain→chain
-            // corridors between junctions that cause Create NO_PATH errors.
-            //
-            // Per branch: 1 chain signal (close to junction, facing toward junction)
-            //             1 regular signal (further out, waiting/queue point)
+            // ALL junction branches get regular signals — no through-line skipping.
+            // From Create source code research and in-game testing:
+            // Regular signals on every branch create segment boundaries.
+            // Trains stop at occupied segments. This works at crossings, T-junctions,
+            // and all junction types. Proven with 11 all-regular signals in-game.
             ListTag suggestions = new ListTag();
-            LogicLink.LOGGER.info("[LogicLink] Junction node {} at ({}, {}, {}) with {} branches, {} through-line",
+            LogicLink.LOGGER.info("[LogicLink] Junction node {} at ({}, {}, {}) with {} branches",
                     jId, Mth.floor(jx), Mth.floor(jy), Mth.floor(jz),
-                    branchDirs.size(), throughBranches.size());
+                    branchDirs.size());
 
             for (int bi = 0; bi < branchDirs.size(); bi++) {
                 float[] bd = branchDirs.get(bi);
                 float ndx = bd[0], ndz = bd[1], dist = bd[2];
                 float nx = bd[3], ny = bd[4], nz = bd[5];
                 int neighborId2 = branchNeighborIds.get(bi);
-                boolean isThrough = throughBranches.contains(bi);
-
-                // Skip through-line branches — they don't need junction signals.
-                // Adding chain signals on through-lines creates chain-only corridors
-                // between adjacent junctions, which breaks Create's pathfinder.
-                if (isThrough) {
-                    LogicLink.LOGGER.info("[LogicLink]   Branch {} to node {} ({},{},{}), dist={} — through-line, skipped",
-                            bi, neighborId2, (int)nx, (int)ny, (int)nz, String.format("%.1f", dist));
-                    continue;
-                }
 
                 // --- Short-edge walk: if edge < 3 blocks and neighbor is a 2-way
                 // intermediate node, walk outward to find the real approach edge.
@@ -1421,7 +1366,7 @@ public class TrainNetworkDataReader {
                         ? ""
                         : " [!] Edge " + (int) effectiveDist + "b < max train " + (int) maxTrainLength + "b";
 
-                LogicLink.LOGGER.info("[LogicLink]   Branch {} to node {} ({},{},{}), dist={} — diverging",
+                LogicLink.LOGGER.info("[LogicLink]   Branch {} to node {} ({},{},{}), dist={}",
                         bi, neighborId2, (int)nx, (int)ny, (int)nz, String.format("%.1f", dist));
 
                 // Skip branches that already have ANY signal (within 3 hops)
@@ -1437,17 +1382,16 @@ public class TrainNetworkDataReader {
                 int bsx = Mth.floor(sugX), bsy = Mth.floor(sugY), bsz = Mth.floor(sugZ);
 
                 // === Signal on junction branch entry ===
-                // Crossings: regular signal (entry_signal) creates a segment boundary.
-                //   Regular signals are simpler and don't need chain terminators.
-                //   Per Create wiki: trains stop at regular signals if segment ahead
-                //   is occupied — sufficient protection for crossings.
-                // T-junctions: chain signal (cross_signal) for better protection.
-                //   Chain signals look ahead through the junction, only allowing
-                //   entry if the train can also exit. Needs a regular signal
-                //   downstream as a terminator (added below for non-crossings).
-                String sigType = isCrossing ? "signal" : "chain";
-                String sigLabel = isCrossing ? "Regular signal" : "Chain signal";
-                String branchDesc = isCrossing ? "crossing approach" : "diverging entry";
+                // Regular signals (entry_signal) at ALL junction types.
+                // From Create source code research and in-game testing:
+                // Regular signals create segment boundaries where trains stop
+                // if the segment ahead is occupied. This works at both crossings
+                // AND T-junctions — proven with all-regular signal setups.
+                // Chain signals add look-ahead complexity and require terminators,
+                // but provide no benefit over regular signals for basic protection.
+                String sigType = "signal";
+                String sigLabel = "Regular signal";
+                String branchDesc = "junction approach";
 
                 CompoundTag branchSug = new CompoundTag();
                 branchSug.putInt("sx", bsx);
@@ -1465,53 +1409,22 @@ public class TrainNetworkDataReader {
                     suggestions.add(branchSug);
                 }
 
-                // === Regular signal further out (waiting/queue point) ===
-                // Creates a block section boundary where trains can stop and wait.
-                // This MUST be a regular signal (not chain) to terminate chain look-ahead.
-                // Skip for crossings — one regular signal per arm is sufficient.
-                if (!isCrossing) {
-                    float regularOffset = offset + Math.max(3.0f, maxTrainLength * 0.5f);
-                    if (regularOffset < effectiveDist * 0.95f) {
-                        float regX = jx + edx * regularOffset;
-                        float regY = jy + ((effNy - jy) / Math.max(0.01f, endDist)) * regularOffset;
-                        float regZ = jz + edz * regularOffset;
-                        int rsx = Mth.floor(regX), rsy = Mth.floor(regY), rsz = Mth.floor(regZ);
-
-                        if (!isDuplicateSuggestion(suggestions, rsx, rsy, rsz, "signal", edx, edz)) {
-                            CompoundTag regSug = new CompoundTag();
-                            regSug.putInt("sx", rsx);
-                            regSug.putInt("sy", rsy);
-                            regSug.putInt("sz", rsz);
-                            regSug.putString("signalType", "signal");
-                            regSug.putFloat("sdx", edx);
-                            regSug.putFloat("sdz", edz);
-                            regSug.putString("dir", "Regular signal — waiting point from " + cardinal);
-                            suggestions.add(regSug);
-                        }
-                    }
-                } // end if (!isCrossing)
+                // No separate terminator needed — regular signals are self-terminating.
+                // Previous code added a second chain-terminator signal for T-junctions,
+                // but since we now use regular signals everywhere, one per branch suffices.
             }
             diag.put("suggestions", suggestions);
 
             // Skip diagnostic entirely if no suggestions remain
             if (suggestions.isEmpty()) continue;
 
-            int unsignaledBranchCount = 0;
-            for (int i = 0; i < suggestions.size(); i++) {
-                String st = suggestions.getCompound(i).getString("signalType");
-                if (st.equals("chain") || (isCrossing && st.equals("signal"))) {
-                    unsignaledBranchCount++;
-                }
-            }
+            int unsignaledBranchCount = suggestions.size();
             String trainInfo = maxTrainName.isEmpty()
                     ? " (max train: " + (int) maxTrainLength + "b)"
                     : " (max train: " + (int) maxTrainLength + "b — '" + maxTrainName + "')";
-            String junctionType = isCrossing ? "4-way crossing" : (branchDirs.size() + "-way junction");
-            int divergingCount = branchDirs.size() - throughBranches.size();
-            String signalWord = isCrossing ? "regular signals" : "chain signals";
+            String junctionType = branchDirs.size() + "-way junction";
             diag.putString("desc", junctionType + ": " + unsignaledBranchCount
-                    + " unsignaled branch(es) need " + signalWord + " (of "
-                    + divergingCount + " diverging, " + throughBranches.size() / 2 + " through-line)."
+                    + " unsignaled branch(es) need regular signals."
                     + trainInfo);
 
             diagnostics.add(diag);
@@ -1687,7 +1600,7 @@ public class TrainNetworkDataReader {
                                 s.putInt("sx", Mth.floor(jjx - bndx * boff));
                                 s.putInt("sy", Mth.floor(jjy - (ddy2 / d2) * boff));
                                 s.putInt("sz", Mth.floor(jjz - bndz * boff));
-                                s.putString("signalType", "chain");
+                                s.putString("signalType", "signal");
                                 s.putFloat("sdx", bndx);
                                 s.putFloat("sdz", bndz);
                                 s.putString("dir", "Check junction signals \u2014 entry from " + getCardinalDir(bndx, bndz));
@@ -1699,7 +1612,7 @@ public class TrainNetworkDataReader {
                             s.putInt("sx", Mth.floor(jjx));
                             s.putInt("sy", Mth.floor(jjy));
                             s.putInt("sz", Mth.floor(jjz));
-                            s.putString("signalType", "chain");
+                            s.putString("signalType", "signal");
                             s.putString("dir", "Check junction signals");
                             sug.add(s);
                         }
