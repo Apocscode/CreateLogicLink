@@ -1832,3 +1832,44 @@ The `branchSug.putString("signalType", "chain")` line was never made conditional
 
 ### Files Changed
 - `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java` -- Regular signals at crossings, Check 3 crossing exemption
+
+---
+
+## Session 10o -- 2026-03-06 -- FIX: Remove Check 3 false positive diagnostics
+
+### Commits
+- `d243c34` -- fix: remove Check 3 false positive diagnostics for regular signals at junctions
+
+### Summary
+After Session 10n's fixes, user tested in-game. Trains are running successfully (0 NO_PATH,
+positions changing, 11 signals all entry_signal/entry_signal). However, the tablet showed
+3 SIGNAL_CONFLICT diagnostics from Check 3 at T-junction edges:
+
+1. `(-34,-58,241)` on edge 20↔6 — T-junction 20's diverging branch
+2. `(30,-59,230)` on edge 48↔15 — T-junction 15's diverging branch
+3. `(-29.5,-60,232.5)` on edge 20↔7 — T-junction 20's through-line edge
+
+Check 3 said "regular signal should be CHAIN" but these regular signals are WORKING.
+From Create source code research (Navigation.java, SignalBoundary.java): regular signals
+at junctions create valid segment boundaries. Trains stop at occupied segments regardless
+of signal type. Chain signals provide optional look-ahead but are NOT required.
+
+**Fix: Removed Check 3 entirely.** The "regular should be chain" diagnostic was fundamentally
+wrong — it was an overly prescriptive rule that doesn't match Create's actual behavior.
+
+Removed dead code:
+- Entire Check 3 for-loop and pre-scan block
+- `edgeHasChainAnySide` set (only used by removed Check 3)
+- `junctionNodes` set (only used by removed Check 3)
+- `crossingJunctionIds` set (only consumed by removed Check 3)
+
+Kept intact:
+- Check 3b: double-chain detection (both sides chain = always wrong, guaranteed NO_PATH)
+- Check 1: missing signals on junction branches
+- Check 9: missing regular signal terminators for chain signals
+- Check 11: chain-only corridors with no regular terminator
+
+Net result: -157 lines removed, +14 lines of explanatory comments.
+
+### Files Changed
+- `src/main/java/com/apocscode/logiclink/peripheral/TrainNetworkDataReader.java` -- Remove Check 3 false positives, clean up dead code
