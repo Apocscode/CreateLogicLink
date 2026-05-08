@@ -310,38 +310,46 @@ public class SignalTabletItem extends Item {
 
     private PlacementAttempt placeSignal(ServerLevel level, Player player, InteractionHand hand, BlockPos targetPos,
                                 PlacementCandidate candidate) {
-        // Find the closest safe replaceable block near the target position.
-        // "Safe" means close to the selected track and not crowded by other tracks.
+        // Determine the track axis, then derive the right-perpendicular (horizontal).
+        // "Right" = UP × axis, so standing at the track facing along axis, right is to the right.
+        BlockPos trackPos = candidate.trackPos();
+        BlockState trackState = level.getBlockState(trackPos);
+        ITrackBlock trackBlock = (ITrackBlock) trackState.getBlock();
+        List<Vec3> axes = trackBlock.getTrackAxes(level, trackPos, trackState);
+        Vec3 axis = axes.isEmpty() ? new Vec3(1, 0, 0) : axes.get(0).normalize();
+
+        // right = UP cross axis (right-hand rule: right side when facing along axis)
+        Vec3 right = new Vec3(0, 1, 0).cross(axis).normalize();
+        int rx = (int) Math.round(right.x);
+        int rz = (int) Math.round(right.z);
+        // If axis is purely vertical rx==rz==0; fall back to X offset
+        if (rx == 0 && rz == 0) { rx = 1; }
+
+        // Candidate positions in priority order:
+        // 1) +2 right, +2 up  (ideal)
+        // 2) +1 right, +2 up  (closer to track)
+        // 3) -2 right, +2 up  (other side)
+        // 4) -1 right, +2 up
+        // 5-8) same offsets at +1 up (lower, for low-clearance areas)
+        int[][] offsets = {
+            { rx*2, 2, rz*2 },
+            { rx,   2, rz   },
+            {-rx*2, 2,-rz*2 },
+            {-rx,   2,-rz   },
+            { rx*2, 1, rz*2 },
+            { rx,   1, rz   },
+            {-rx*2, 1,-rz*2 },
+            {-rx,   1,-rz   },
+        };
+
         BlockPos placementPos = null;
-        double bestScore = Double.MAX_VALUE;
-        for (int dx = -AUTO_PLACE_TARGET_SEARCH_RADIUS; dx <= AUTO_PLACE_TARGET_SEARCH_RADIUS; dx++) {
-            for (int dy = -2; dy <= 2; dy++) {
-                for (int dz = -AUTO_PLACE_TARGET_SEARCH_RADIUS; dz <= AUTO_PLACE_TARGET_SEARCH_RADIUS; dz++) {
-                    BlockPos check = targetPos.offset(dx, dy, dz);
-                    // Never place on a track block
-                    if (level.getBlockState(check).getBlock() instanceof ITrackBlock)
-                        continue;
-                    if (!level.getBlockState(check).canBeReplaced())
-                        continue;
-                    // Must be beside the track, not on it or below it
-                    if (check.getY() < candidate.trackPos().getY())
-                        continue;
-                    // Must not be the track block's own position
-                    if (check.equals(candidate.trackPos()))
-                        continue;
-                    double dTrack = check.distSqr(candidate.trackPos());
-                    if (dTrack < 0.9 || dTrack > 36)
-                        continue;
-
-
-                    double dTarget = check.distSqr(targetPos);
-                    double score = dTarget * 10.0 + dTrack;
-                    if (score < bestScore) {
-                        bestScore = score;
-                        placementPos = check;
-                    }
-                }
-            }
+        for (int[] off : offsets) {
+            BlockPos check = trackPos.offset(off[0], off[1], off[2]);
+            if (check.equals(trackPos)) continue;
+            if (level.getBlockState(check).getBlock() instanceof ITrackBlock) continue;
+            if (!level.getBlockState(check).canBeReplaced()) continue;
+            placementPos = check;
+            break;
         }
 
         if (placementPos == null) {
@@ -385,7 +393,7 @@ public class SignalTabletItem extends Item {
                 LogicLink.LOGGER.info("placeSignal: placed+linked signal at {}, track={}, front={}",
                     placementPos, candidate.trackPos(), candidate.front());
                 }
-            placeNixieTubeLight(level, placementPos);
+            placeNixieTubeLight(level, placementPos, rx, rz);
             return PlacementAttempt.SUCCESS;
 
         } catch (Exception e) {
@@ -395,12 +403,16 @@ public class SignalTabletItem extends Item {
         }
     }
 
-    private void placeNixieTubeLight(ServerLevel level, BlockPos signalPos) {
+    private void placeNixieTubeLight(ServerLevel level, BlockPos signalPos, int rx, int rz) {
         Block lightBlock = resolveNixieTubeLightBlock();
         if (lightBlock == null)
             return;
 
+        // Place light 2 above the signal (same horizontal offset, 2 up from signal)
         BlockPos lightPos = signalPos.above(2);
+        // Prefer the position but fall back one block up if occupied
+        if (!level.getBlockState(lightPos).canBeReplaced())
+            lightPos = signalPos.above(3);
         if (!level.getBlockState(lightPos).canBeReplaced())
             return;
 
