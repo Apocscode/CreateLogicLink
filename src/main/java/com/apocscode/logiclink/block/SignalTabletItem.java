@@ -97,6 +97,7 @@ public class SignalTabletItem extends Item {
                     wrapper.put(TAG_PENDING, queue);
                     wrapper.putInt(TAG_TOTAL, queue.size());
                     stack.set(DataComponents.CUSTOM_DATA, CustomData.of(wrapper));
+                    player.setItemInHand(hand, stack);
 
                     player.sendSystemMessage(Component.literal(
                             "\u00A7a[Signal Tablet]\u00A7r Scan: " + scanData.getInt("issueCount")
@@ -121,6 +122,7 @@ public class SignalTabletItem extends Item {
                     int done = total - after;
                     wrapper.put(TAG_PENDING, pending);
                     stack.set(DataComponents.CUSTOM_DATA, CustomData.of(wrapper));
+                    player.setItemInHand(hand, stack);
 
                     player.sendSystemMessage(Component.literal(
                             "\u00A7b[Signal Tablet]\u00A7r Wave " + done + "/" + total
