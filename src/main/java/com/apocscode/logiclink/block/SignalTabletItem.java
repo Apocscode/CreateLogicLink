@@ -142,9 +142,13 @@ public class SignalTabletItem extends Item {
         return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
     }
 
-    /** Flatten all signal/chain suggestions from scan data into a single ordered queue. */
+    /** Flatten all signal/chain suggestions from scan data into a queue sorted nearest-to-player first. */
     private static ListTag buildPendingQueue(CompoundTag scanData) {
-        ListTag queue = new ListTag();
+        double px = scanData.getDouble("playerX");
+        double py = scanData.getDouble("playerY");
+        double pz = scanData.getDouble("playerZ");
+
+        List<CompoundTag> list = new java.util.ArrayList<>();
         ListTag diagnostics = scanData.getList("Diagnostics", CompoundTag.TAG_COMPOUND);
         for (int i = 0; i < diagnostics.size(); i++) {
             ListTag suggestions = diagnostics.getCompound(i).getList("suggestions", CompoundTag.TAG_COMPOUND);
@@ -152,10 +156,21 @@ public class SignalTabletItem extends Item {
                 CompoundTag sug = suggestions.getCompound(j);
                 String t = sug.getString("signalType");
                 if ("signal".equals(t) || "chain".equals(t)) {
-                    queue.add(sug.copy());
+                    list.add(sug.copy());
                 }
             }
         }
+
+        // Sort by distance to player so nearby signals are placed first
+        list.sort(Comparator.comparingDouble(sug -> {
+            double dx = sug.getInt("sx") - px;
+            double dy = sug.getInt("sy") - py;
+            double dz = sug.getInt("sz") - pz;
+            return dx * dx + dy * dy + dz * dz;
+        }));
+
+        ListTag queue = new ListTag();
+        list.forEach(queue::add);
         return queue;
     }
 
