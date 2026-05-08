@@ -79,39 +79,11 @@ public class SignalTabletItem extends Item {
         if (level instanceof ServerLevel serverLevel) {
             CompoundTag wrapper = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
 
-            if (player.isShiftKeyDown()) {
-                // Shift-right-click: advance the placement wave queue
-                if (!player.hasPermissions(2)) {
-                    player.sendSystemMessage(Component.literal(
-                            "\u00A7c[Signal Tablet]\u00A7r Auto-place requires operator permission level 2"));
-                } else if (!wrapper.contains(TAG_PENDING) || wrapper.getList(TAG_PENDING, CompoundTag.TAG_COMPOUND).isEmpty()) {
-                    player.sendSystemMessage(Component.literal(
-                            "\u00A7e[Signal Tablet]\u00A7r No pending signals — right-click first to scan"));
-                } else {
-                    ListTag pending = wrapper.getList(TAG_PENDING, CompoundTag.TAG_COMPOUND);
-                    int total = wrapper.getInt(TAG_TOTAL);
-                    int before = pending.size();
+            boolean hasPending = wrapper.contains(TAG_PENDING)
+                    && !wrapper.getList(TAG_PENDING, CompoundTag.TAG_COMPOUND).isEmpty();
 
-                    AutoPlaceResult result = placeWave(serverLevel, player, hand, pending);
-
-                    int after = pending.size();
-                    int done = total - after;
-                    wrapper.put(TAG_PENDING, pending);
-                    stack.set(DataComponents.CUSTOM_DATA, CustomData.of(wrapper));
-
-                    player.sendSystemMessage(Component.literal(
-                            "\u00A7b[Signal Tablet]\u00A7r Wave " + done + "/" + total
-                            + " — placed " + result.placed()
-                            + ", retyped " + result.retyped()
-                            + ", already-correct " + result.alreadyCorrect()
-                            + ", blocked " + result.blocked()
-                            + ", no-track " + result.noTrack()
-                            + ", failed " + result.failed()
-                            + ", skipped " + result.skipped()
-                            + (after == 0 ? " \u00A7a— ALL DONE" : " \u00A77— " + after + " remaining")));
-                }
-            } else {
-                // Plain right-click: scan and queue all suggestions
+            if (player.isShiftKeyDown() || !hasPending) {
+                // Shift-right-click OR no pending queue: scan and reset queue
                 CompoundTag scanData = TrainNetworkDataReader.scanDiagnosticsOnly(serverLevel);
                 if (scanData != null) {
                     scanData.putDouble("playerX", player.getX());
@@ -128,11 +100,35 @@ public class SignalTabletItem extends Item {
 
                     player.sendSystemMessage(Component.literal(
                             "\u00A7a[Signal Tablet]\u00A7r Scan: " + scanData.getInt("issueCount")
-                            + " issue(s). " + queue.size() + " signal(s) queued in waves of " + WAVE_SIZE
-                            + " — shift-right-click to start placing"));
+                            + " issue(s). " + queue.size() + " signal(s) queued — right-click again to place"));
                 } else {
                     player.sendSystemMessage(Component.literal(
                             "\u00A7c[Signal Tablet]\u00A7r No train network found"));
+                }
+            } else {
+                // Right-click with pending queue: place next wave
+                if (!player.hasPermissions(2)) {
+                    player.sendSystemMessage(Component.literal(
+                            "\u00A7c[Signal Tablet]\u00A7r Auto-place requires operator permission level 2"));
+                } else {
+                    ListTag pending = wrapper.getList(TAG_PENDING, CompoundTag.TAG_COMPOUND);
+                    int total = wrapper.getInt(TAG_TOTAL);
+
+                    LogicLink.LOGGER.info("[Signal Tablet] Starting wave, pending={}, total={}", pending.size(), total);
+                    AutoPlaceResult result = placeWave(serverLevel, player, hand, pending);
+
+                    int after = pending.size();
+                    int done = total - after;
+                    wrapper.put(TAG_PENDING, pending);
+                    stack.set(DataComponents.CUSTOM_DATA, CustomData.of(wrapper));
+
+                    player.sendSystemMessage(Component.literal(
+                            "\u00A7b[Signal Tablet]\u00A7r Wave " + done + "/" + total
+                            + " — placed " + result.placed()
+                            + ", blocked " + result.blocked()
+                            + ", no-track " + result.noTrack()
+                            + ", failed " + result.failed()
+                            + (after == 0 ? " \u00A7a— ALL DONE" : " \u00A77— " + after + " remaining")));
                 }
             }
         }
