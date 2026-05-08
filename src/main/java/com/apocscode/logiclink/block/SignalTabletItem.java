@@ -325,15 +325,15 @@ public class SignalTabletItem extends Item {
         // If axis is purely vertical rx==rz==0; fall back to X offset
         if (rx == 0 && rz == 0) { rx = 1; }
 
-        // Candidate positions in priority order:
-        // 1) +4 right, +2 up  (ideal)
-        // 2) -4 right, +2 up  (other side fallback)
-        // 3-4) same offsets at +3 up (vertical fallback if blocked)
+        // Candidate positions in priority order.
+        // Tie horizontal side to travel direction so opposite directions on the same
+        // track block naturally prefer opposite sides.
+        int side = candidate.front() ? 1 : -1;
         int[][] offsets = {
-            { rx * 4, 2, rz * 4 },
-            {-rx * 4, 2,-rz * 4 },
-            { rx * 4, 3, rz * 4 },
-            {-rx * 4, 3,-rz * 4 },
+            { side * rx * 4, 2, side * rz * 4 },
+            {-side * rx * 4, 2,-side * rz * 4 },
+            { side * rx * 4, 3, side * rz * 4 },
+            {-side * rx * 4, 3,-side * rz * 4 },
         };
 
         BlockPos placementPos = null;
