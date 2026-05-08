@@ -60,13 +60,13 @@ public class SignalTabletItem extends Item {
     private static final int WAVE_SIZE = 5;
     private static final int AUTO_PLACE_TRACK_SEARCH_RADIUS = 12;
     private static final int AUTO_PLACE_TARGET_SEARCH_RADIUS = 5;
-        private static final String[] PIXIE_TUBE_LIGHT_IDS = new String[] {
-            "ars_nouveau:pixie_tube_light",
-            "ars_nouveau:pixie_tube",
-            "forbidden_arcanus:pixie_tube_light"
+        private static final String[] NIXIE_TUBE_LIGHT_IDS = new String[] {
+            "create:nixie_tube",
+            "createselectronics:nixie_tube",
+            "supplementaries:nixie_tube"
         };
-        private static Block cachedPixieTubeLightBlock;
-        private static boolean pixieTubeLightResolved;
+        private static Block cachedNixieTubeLightBlock;
+        private static boolean nixieTubeLightResolved;
 
     public SignalTabletItem(Properties props) {
         super(props.stacksTo(1));
@@ -318,12 +318,19 @@ public class SignalTabletItem extends Item {
             for (int dy = -2; dy <= 2; dy++) {
                 for (int dz = -AUTO_PLACE_TARGET_SEARCH_RADIUS; dz <= AUTO_PLACE_TARGET_SEARCH_RADIUS; dz++) {
                     BlockPos check = targetPos.offset(dx, dy, dz);
+                    // Never place on a track block
+                    if (level.getBlockState(check).getBlock() instanceof ITrackBlock)
+                        continue;
                     if (!level.getBlockState(check).canBeReplaced())
                         continue;
-
-                    // Must not replace the track block itself.
+                    // Must be beside the track, not on it or below it
+                    if (check.getY() < candidate.trackPos().getY())
+                        continue;
+                    // Must not be the track block's own position
+                    if (check.equals(candidate.trackPos()))
+                        continue;
                     double dTrack = check.distSqr(candidate.trackPos());
-                    if (dTrack < 0.5 || dTrack > 36)
+                    if (dTrack < 0.9 || dTrack > 36)
                         continue;
 
 
@@ -378,7 +385,7 @@ public class SignalTabletItem extends Item {
                 LogicLink.LOGGER.info("placeSignal: placed+linked signal at {}, track={}, front={}",
                     placementPos, candidate.trackPos(), candidate.front());
                 }
-            placePixieTubeLight(level, placementPos);
+            placeNixieTubeLight(level, placementPos);
             return PlacementAttempt.SUCCESS;
 
         } catch (Exception e) {
@@ -388,8 +395,8 @@ public class SignalTabletItem extends Item {
         }
     }
 
-    private void placePixieTubeLight(ServerLevel level, BlockPos signalPos) {
-        Block lightBlock = resolvePixieTubeLightBlock();
+    private void placeNixieTubeLight(ServerLevel level, BlockPos signalPos) {
+        Block lightBlock = resolveNixieTubeLightBlock();
         if (lightBlock == null)
             return;
 
@@ -402,38 +409,38 @@ public class SignalTabletItem extends Item {
         level.sendBlockUpdated(lightPos, lightState, lightState, 3);
     }
 
-    private static Block resolvePixieTubeLightBlock() {
-        if (pixieTubeLightResolved)
-            return cachedPixieTubeLightBlock;
+    private static Block resolveNixieTubeLightBlock() {
+        if (nixieTubeLightResolved)
+            return cachedNixieTubeLightBlock;
 
-        pixieTubeLightResolved = true;
+        nixieTubeLightResolved = true;
 
-        for (String id : PIXIE_TUBE_LIGHT_IDS) {
+        for (String id : NIXIE_TUBE_LIGHT_IDS) {
             ResourceLocation rl = ResourceLocation.tryParse(id);
             if (rl == null)
                 continue;
             Block block = BuiltInRegistries.BLOCK.getOptional(rl).orElse(null);
             if (block != null && block != Blocks.AIR) {
-                cachedPixieTubeLightBlock = block;
-                LogicLink.LOGGER.info("SignalTablet: using Pixie Tube Light block {}", rl);
-                return cachedPixieTubeLightBlock;
+                cachedNixieTubeLightBlock = block;
+                LogicLink.LOGGER.info("SignalTablet: using Nixie Tube block {}", rl);
+                return cachedNixieTubeLightBlock;
             }
         }
 
         // Fallback: best-effort lookup when pack uses a different namespace/path.
         for (ResourceLocation key : BuiltInRegistries.BLOCK.keySet()) {
             String path = key.getPath();
-            if (path.contains("pixie") && path.contains("tube") && path.contains("light")) {
+            if (path.contains("nixie") && path.contains("tube")) {
                 Block block = BuiltInRegistries.BLOCK.getOptional(key).orElse(null);
                 if (block != null && block != Blocks.AIR) {
-                    cachedPixieTubeLightBlock = block;
-                    LogicLink.LOGGER.info("SignalTablet: using fallback Pixie Tube Light block {}", key);
-                    return cachedPixieTubeLightBlock;
+                    cachedNixieTubeLightBlock = block;
+                    LogicLink.LOGGER.info("SignalTablet: using fallback Nixie Tube block {}", key);
+                    return cachedNixieTubeLightBlock;
                 }
             }
         }
 
-        LogicLink.LOGGER.warn("SignalTablet: Pixie Tube Light block not found; skipping light placement");
+        LogicLink.LOGGER.warn("SignalTablet: Nixie Tube block not found; skipping light placement");
         return null;
     }
 
