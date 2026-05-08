@@ -7,14 +7,21 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.world.level.storage.LevelResource;
 import net.minecraft.world.level.Level;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 
 import org.jetbrains.annotations.Nullable;
 
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
@@ -33,6 +40,8 @@ import java.util.*;
  * All coordinate data is projected to X-Z plane for 2D map display.
  */
 public class TrainNetworkDataReader {
+
+    private static final DateTimeFormatter REPORT_STAMP = DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss");
 
     // ==================== Limits ====================
     public static final int MAX_NODES = 16384;
@@ -387,7 +396,111 @@ public class TrainNetworkDataReader {
         result.putInt("nodeCount", nodeCount);
         result.putInt("edgeCount", edgeCount);
 
+        writeDiagnosticsReport(level, result);
+
         return result;
+    }
+
+    private static void writeDiagnosticsReport(@Nullable Level level, CompoundTag result) {
+        if (level == null || level.getServer() == null) return;
+
+        Path worldRoot = level.getServer().getWorldPath(LevelResource.ROOT);
+        Path reportDir = worldRoot.resolve("logiclink-reports");
+        String stamp = LocalDateTime.now().format(REPORT_STAMP);
+        Path latest = reportDir.resolve("signal-diagnostics-latest.txt");
+        Path dated = reportDir.resolve("signal-diagnostics-" + stamp + ".txt");
+
+        StringBuilder report = new StringBuilder(4096);
+        report.append("LogicLink Signal Diagnostics Report\n");
+        report.append("Generated: ").append(stamp).append("\n\n");
+
+        report.append("Summary\n");
+        report.append("- Issues: ").append(result.getInt("issueCount")).append("\n");
+        report.append("- Junction issues: ").append(result.getInt("junctionCount")).append("\n");
+        report.append("- No path: ").append(result.getInt("noPathCount")).append("\n");
+        report.append("- Signal conflicts: ").append(result.getInt("conflictCount")).append("\n");
+        report.append("- Missing regular terminators: ").append(result.getInt("missingRegularCount")).append("\n");
+        report.append("- Chain-only corridors: ").append(result.getInt("chainCorridorCount")).append("\n");
+        report.append("- Stations: ").append(result.getInt("stationCount")).append("\n");
+        report.append("- Signals: ").append(result.getInt("signalCount")).append("\n");
+        report.append("- Trains: ").append(result.getInt("trainCount")).append("\n");
+        report.append("- Nodes: ").append(result.getInt("nodeCount")).append("\n");
+        report.append("- Edges: ").append(result.getInt("edgeCount")).append("\n");
+        if (result.contains("MaxTrainLength")) {
+            report.append("- Max train length: ").append((int) result.getFloat("MaxTrainLength")).append(" blocks\n");
+        }
+        report.append("\nDiagnostics\n");
+
+        if (!result.contains("Diagnostics")) {
+            report.append("No diagnostics available.\n");
+        } else {
+            ListTag diagnostics = result.getList("Diagnostics", 10);
+            if (diagnostics.isEmpty()) {
+                report.append("No issues detected.\n");
+            }
+
+            for (int i = 0; i < diagnostics.size(); i++) {
+                CompoundTag diag = diagnostics.getCompound(i);
+                report.append(i + 1).append(". ")
+                        .append(diag.getString("severity"))
+                        .append(" ")
+                        .append(diag.getString("type"))
+                        .append("\n");
+
+                if (diag.contains("x")) {
+                    report.append("   At: ")
+                            .append((int) diag.getFloat("x"))
+                            .append(", ")
+                            .append((int) diag.getFloat("y"))
+                            .append(", ")
+                            .append((int) diag.getFloat("z"))
+                            .append("\n");
+                }
+
+                if (diag.contains("trainName")) {
+                    report.append("   Train: ").append(diag.getString("trainName")).append("\n");
+                }
+
+                if (diag.contains("desc")) {
+                    report.append("   Desc: ").append(diag.getString("desc")).append("\n");
+                }
+
+                if (diag.contains("detail")) {
+                    report.append("   Detail: ").append(diag.getString("detail")).append("\n");
+                }
+
+                if (diag.contains("suggestions")) {
+                    ListTag suggestions = diag.getList("suggestions", 10);
+                    for (int s = 0; s < suggestions.size(); s++) {
+                        CompoundTag sug = suggestions.getCompound(s);
+                        report.append("   Suggest ").append(s + 1).append(": ")
+                                .append(sug.getString("signalType"))
+                                .append(" at ")
+                                .append(sug.getInt("sx"))
+                                .append(", ")
+                                .append(sug.getInt("sy"))
+                                .append(", ")
+                                .append(sug.getInt("sz"));
+                        if (sug.contains("dir")) {
+                            report.append(" [").append(sug.getString("dir")).append("]");
+                        }
+                        report.append("\n");
+                    }
+                }
+
+                report.append("\n");
+            }
+        }
+
+        try {
+            Files.createDirectories(reportDir);
+            Files.writeString(latest, report.toString(), StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+            Files.writeString(dated, report.toString(), StandardOpenOption.CREATE_NEW);
+            LogicLink.LOGGER.info("TrainNetworkDataReader: Wrote signal diagnostics reports to {} and {}",
+                    latest.toAbsolutePath(), dated.toAbsolutePath());
+        } catch (IOException e) {
+            LogicLink.LOGGER.warn("TrainNetworkDataReader: Failed to write signal diagnostics report: {}", e.getMessage());
+        }
     }
 
     // ==================== Graph Topology ====================
@@ -1258,9 +1371,12 @@ public class TrainNetworkDataReader {
 
 
 
-        // === Check 1: Unsignaled junction branches ===
-        // Flag branches at junctions that have NO signal at all.
-        // Suggests one regular signal per unsignaled branch.
+        // === Check 1: Unsignaled junction entries ===
+        // Flag branches at junctions that have NO signal protection at all.
+        // Per Create's train signal behavior, the first protection before a
+        // junction should be a chain signal on the approach. A regular signal
+        // should then exist further down the branch to terminate the chain and
+        // create the next block section (handled by Check 9 below).
         // Uses suggestedEdges to prevent two adjacent junctions from both
         // suggesting signals on the same shared edge.
         Set<String> suggestedEdges = new HashSet<>();
@@ -1303,11 +1419,10 @@ public class TrainNetworkDataReader {
                 branchNeighborIds.add(neighborId);
             }
 
-            // ALL junction branches get regular signals — no through-line skipping.
-            // From Create source code research and in-game testing:
-            // Regular signals on every branch create segment boundaries.
-            // Trains stop at occupied segments. This works at crossings, T-junctions,
-            // and all junction types. Proven with 11 all-regular signals in-game.
+                // Each unprotected junction approach should get a chain signal.
+                // Create's Navigation/SignalBoundary logic treats cross signals as
+                // look-ahead guards for junction entry, while regular entry signals
+                // terminate the chain further away from the junction.
             ListTag suggestions = new ListTag();
             LogicLink.LOGGER.info("[LogicLink] Junction node {} at ({}, {}, {}) with {} branches",
                     jId, Mth.floor(jx), Mth.floor(jy), Mth.floor(jz),
@@ -1395,16 +1510,12 @@ public class TrainNetworkDataReader {
                 int bsx = Mth.floor(sugX), bsy = Mth.floor(sugY), bsz = Mth.floor(sugZ);
 
                 // === Signal on junction branch entry ===
-                // Regular signals (entry_signal) at ALL junction types.
-                // From Create source code research and in-game testing:
-                // Regular signals create segment boundaries where trains stop
-                // if the segment ahead is occupied. This works at both crossings
-                // AND T-junctions — proven with all-regular signal setups.
-                // Chain signals add look-ahead complexity and require terminators,
-                // but provide no benefit over regular signals for basic protection.
-                String sigType = "signal";
-                String sigLabel = "Regular signal";
-                String branchDesc = "junction approach";
+                // Suggest a chain signal on the approach into the junction.
+                // This matches Create's junction-entry behavior: trains stop at
+                // the chain signal and only enter once an exit block is clear.
+                String sigType = "chain";
+                String sigLabel = "Chain signal";
+                String branchDesc = "junction entry";
 
                 CompoundTag branchSug = new CompoundTag();
                 branchSug.putInt("sx", bsx);
@@ -1416,7 +1527,7 @@ public class TrainNetworkDataReader {
                 branchSug.putFloat("edgeLength", effectiveDist);
                 branchSug.putFloat("maxTrainLength", maxTrainLength);
                 branchSug.putBoolean("clearanceWarning", !clearanceOk);
-                branchSug.putString("dir", sigLabel + " — " + branchDesc + " from " + cardinal + clearanceNote);
+                branchSug.putString("dir", sigLabel + " — guard " + branchDesc + " from " + cardinal + clearanceNote);
 
                 if (!isDuplicateSuggestion(suggestions, bsx, bsy, bsz, sigType, edx, edz)) {
                     suggestions.add(branchSug);
@@ -1430,13 +1541,15 @@ public class TrainNetworkDataReader {
             if (suggestions.isEmpty()) continue;
 
             int unsignaledBranchCount = suggestions.size();
-            String trainInfo = maxTrainName.isEmpty()
+                String trainInfo = maxTrainName.isEmpty()
                     ? " (max train: " + (int) maxTrainLength + "b)"
                     : " (max train: " + (int) maxTrainLength + "b — '" + maxTrainName + "')";
-            String junctionType = branchDirs.size() + "-way junction";
-            diag.putString("desc", junctionType + ": " + unsignaledBranchCount
-                    + " unsignaled branch(es) need regular signals."
+                String junctionType = branchDirs.size() + "-way junction";
+                diag.putString("desc", junctionType + ": " + unsignaledBranchCount
+                    + " approach branch(es) need chain signals before the junction."
                     + trainInfo);
+                diag.putString("detail", "Place chain signals on the approaches into this junction. "
+                    + "Then place a regular signal further down each exit branch to terminate the chain and create a block section.");
 
             diagnostics.add(diag);
         }
@@ -1580,7 +1693,7 @@ public class TrainNetworkDataReader {
                             if (detail.length() > 0) detail.append("; ");
                             detail.append("Nearest junction (").append(jBranchCount)
                                   .append("-way @ ").append((int) jjx).append(",").append((int) jjz)
-                                  .append(") has NO signals — add regular signals on each branch");
+                                  .append(") has NO signals — add chain signals on each approach and regular terminators after the junction");
                         } else if (jSigCount < jBranchCount) {
                             if (detail.length() > 0) detail.append("; ");
                             detail.append("Nearest junction @ ").append((int) jjx).append(",").append((int) jjz)
