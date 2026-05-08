@@ -326,20 +326,14 @@ public class SignalTabletItem extends Item {
         if (rx == 0 && rz == 0) { rx = 1; }
 
         // Candidate positions in priority order:
-        // 1) +2 right, +2 up  (ideal)
-        // 2) +1 right, +2 up  (closer to track)
-        // 3) -2 right, +2 up  (other side)
-        // 4) -1 right, +2 up
-        // 5-8) same offsets at +1 up (lower, for low-clearance areas)
+        // 1) +4 right, +2 up  (ideal)
+        // 2) -4 right, +2 up  (other side fallback)
+        // 3-4) same offsets at +3 up (vertical fallback if blocked)
         int[][] offsets = {
-            { rx*2, 2, rz*2 },
-            { rx,   2, rz   },
-            {-rx*2, 2,-rz*2 },
-            {-rx,   2,-rz   },
-            { rx*2, 1, rz*2 },
-            { rx,   1, rz   },
-            {-rx*2, 1,-rz*2 },
-            {-rx,   1,-rz   },
+            { rx * 4, 2, rz * 4 },
+            {-rx * 4, 2,-rz * 4 },
+            { rx * 4, 3, rz * 4 },
+            {-rx * 4, 3,-rz * 4 },
         };
 
         BlockPos placementPos = null;
@@ -393,7 +387,7 @@ public class SignalTabletItem extends Item {
                 LogicLink.LOGGER.info("placeSignal: placed+linked signal at {}, track={}, front={}",
                     placementPos, candidate.trackPos(), candidate.front());
                 }
-            placeNixieTubeLight(level, placementPos, rx, rz);
+            placeNixieTubeLight(level, placementPos);
             return PlacementAttempt.SUCCESS;
 
         } catch (Exception e) {
@@ -403,16 +397,13 @@ public class SignalTabletItem extends Item {
         }
     }
 
-    private void placeNixieTubeLight(ServerLevel level, BlockPos signalPos, int rx, int rz) {
+    private void placeNixieTubeLight(ServerLevel level, BlockPos signalPos) {
         Block lightBlock = resolveNixieTubeLightBlock();
         if (lightBlock == null)
             return;
 
-        // Place light 2 above the signal (same horizontal offset, 2 up from signal)
-        BlockPos lightPos = signalPos.above(2);
-        // Prefer the position but fall back one block up if occupied
-        if (!level.getBlockState(lightPos).canBeReplaced())
-            lightPos = signalPos.above(3);
+        // Place light directly on top of the signal.
+        BlockPos lightPos = signalPos.above();
         if (!level.getBlockState(lightPos).canBeReplaced())
             return;
 
