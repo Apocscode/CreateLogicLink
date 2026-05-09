@@ -8,6 +8,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtUtils;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
@@ -105,6 +106,33 @@ public class SignalDirectionFlagBlockEntity extends BlockEntity {
         if (placer instanceof ServerPlayer sp) {
             sp.sendSystemMessage(Component.literal("[Signal Flag] anchored to track " + foundTrack.toShortString() + " mode=" + mode));
         }
+    }
+
+    public boolean initializeFromTrackTargetingData(CompoundTag blockEntityData, @Nullable Player placer) {
+        if (level == null) return false;
+        if (!blockEntityData.contains("TargetTrack")) return false;
+
+        java.util.Optional<BlockPos> relativeTargetOptional = NbtUtils.readBlockPos(blockEntityData, "TargetTrack");
+        if (relativeTargetOptional.isEmpty()) return false;
+        BlockPos relativeTarget = relativeTargetOptional.get();
+        BlockPos absoluteTarget = worldPosition.offset(relativeTarget);
+        if (!(level.getBlockState(absoluteTarget).getBlock() instanceof ITrackBlock)) {
+            return false;
+        }
+
+        anchorTrackPos = absoluteTarget;
+        boolean targetDirection = blockEntityData.getBoolean("TargetDirection");
+        mode = targetDirection ? FlagMode.ONE_WAY_FORWARD : FlagMode.ONE_WAY_REVERSE;
+
+        setChanged();
+        level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+
+        if (placer instanceof ServerPlayer sp) {
+            sp.sendSystemMessage(Component.literal("[Signal Flag] anchored to selected track "
+                    + absoluteTarget.toShortString() + " mode=" + mode));
+        }
+
+        return true;
     }
 
     @Nullable

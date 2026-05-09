@@ -6,9 +6,12 @@ import com.mojang.serialization.MapCodec;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
@@ -94,7 +97,12 @@ public class SignalDirectionFlagBlock extends HorizontalDirectionalBlock impleme
         if (level.isClientSide()) return;
         BlockEntity be = level.getBlockEntity(pos);
         if (be instanceof SignalDirectionFlagBlockEntity flagBe) {
-            flagBe.initializeFromPlacement(placer instanceof Player p ? p : null);
+            Player player = placer instanceof Player p ? p : null;
+            CompoundTag blockEntityData = stack.getOrDefault(DataComponents.BLOCK_ENTITY_DATA, CustomData.EMPTY).copyTag();
+            boolean initializedFromTarget = flagBe.initializeFromTrackTargetingData(blockEntityData, player);
+            if (!initializedFromTarget) {
+                flagBe.initializeFromPlacement(player);
+            }
         }
     }
 

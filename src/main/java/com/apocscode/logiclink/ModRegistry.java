@@ -17,6 +17,7 @@ import com.apocscode.logiclink.block.RedstoneControllerBlock;
 import com.apocscode.logiclink.block.RedstoneControllerBlockEntity;
 import com.apocscode.logiclink.block.SignalDirectionFlagBlock;
 import com.apocscode.logiclink.block.SignalDirectionFlagBlockEntity;
+import com.apocscode.logiclink.block.SignalDirectionFlagItem;
 import com.apocscode.logiclink.block.TrainControllerBlock;
 import com.apocscode.logiclink.block.TrainControllerBlockEntity;
 import com.apocscode.logiclink.block.SignalTabletItem;
@@ -278,9 +279,9 @@ public class ModRegistry {
     /**
      * BlockItem for the Signal Direction Flag.
      */
-    public static final DeferredItem<BlockItem> SIGNAL_DIRECTION_FLAG_ITEM = ITEMS.register(
+    public static final DeferredItem<SignalDirectionFlagItem> SIGNAL_DIRECTION_FLAG_ITEM = ITEMS.register(
             "signal_direction_flag",
-            () -> new BlockItem(SIGNAL_DIRECTION_FLAG_BLOCK.get(), new Item.Properties())
+            () -> new SignalDirectionFlagItem(SIGNAL_DIRECTION_FLAG_BLOCK.get(), new Item.Properties())
     );
 
     // ==================== Block Entities ====================
