@@ -7,7 +7,9 @@
     "block.logiclink.logic_drive": "Logic Drive",
     "block.logiclink.train_controller": "Train Controller",
     "block.logiclink.train_monitor": "Train Network Monitor",
+    "block.logiclink.signal_direction_flag": "Signal Direction Flag",
     "item.logiclink.signal_tablet": "Signal Diagnostic Tablet",
+    "item.logiclink.signal_direction_flag": "Signal Direction Flag",
 
     "logiclink.linked.tooltip": "Logic Link Hub : Linked",
     "logiclink.linked.tooltip_clear": "Right-click in air to clear",

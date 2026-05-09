@@ -309,9 +309,19 @@ public class SignalTabletItem extends Item {
         }
 
         Vec3 axis = trackAxes.get(0).normalize();
-        LaneType laneType = classifyLaneType(level, trackPos, axis);
+        SignalDirectionFlagBlockEntity.FlagOverride flagOverride = findFlagOverride(level, trackPos);
+        LaneType laneType = flagOverride != null
+                ? (flagOverride.bidirectional() ? LaneType.SINGLE_BIDIRECTIONAL : LaneType.DUAL_ONE_WAY)
+                : classifyLaneType(level, trackPos, axis);
+        String decisionSource = flagOverride != null ? "FLAG" : "AUTO";
 
-        boolean preferredFront = desired.lengthSqr() == 0 || axis.dot(desired.normalize()) >= 0;
+        boolean preferredFront;
+        if (flagOverride != null && !flagOverride.bidirectional()) {
+            preferredFront = flagOverride.forward();
+        } else {
+            preferredFront = desired.lengthSqr() == 0 || axis.dot(desired.normalize()) >= 0;
+        }
+
         TrackTargetingBlockItem.OverlapResult preferredOverlap = getOverlap(level, trackPos, preferredFront);
         TrackTargetingBlockItem.OverlapResult alternateOverlap = getOverlap(level, trackPos, !preferredFront);
 
@@ -320,8 +330,8 @@ public class SignalTabletItem extends Item {
             // For dual one-way systems, keep each lane direction-stable.
             // If preferred direction is invalid on this lane, reject and let search pick another lane.
             if (preferredOverlap != TrackTargetingBlockItem.OverlapResult.VALID) {
-                LogicLink.LOGGER.info("candidate: reject dual-one-way lane track={} preferredFront={} preferredOverlap={} altOverlap={}",
-                        trackPos, preferredFront, preferredOverlap, alternateOverlap);
+                LogicLink.LOGGER.info("candidate: reject dual-one-way lane track={} source={} preferredFront={} preferredOverlap={} altOverlap={}",
+                        trackPos, decisionSource, preferredFront, preferredOverlap, alternateOverlap);
                 return null;
             }
             front = preferredFront;
@@ -336,11 +346,30 @@ public class SignalTabletItem extends Item {
             }
         }
 
-        LogicLink.LOGGER.info("candidate: track={} laneType={} preferredFront={} chosenFront={} prefOverlap={} altOverlap={}",
-                trackPos, laneType, preferredFront, front, preferredOverlap, alternateOverlap);
+        LogicLink.LOGGER.info("candidate: track={} laneType={} source={} preferredFront={} chosenFront={} prefOverlap={} altOverlap={} flagAnchor={}",
+                trackPos, laneType, decisionSource, preferredFront, front, preferredOverlap, alternateOverlap,
+                flagOverride != null ? flagOverride.anchorTrackPos() : "none");
 
         double score = targetPos.distSqr(trackPos);
         return new PlacementCandidate(trackPos, front, score, laneType);
+    }
+
+    private SignalDirectionFlagBlockEntity.FlagOverride findFlagOverride(ServerLevel level, BlockPos trackPos) {
+        final int radius = 6;
+        for (int dx = -radius; dx <= radius; dx++) {
+            for (int dy = -3; dy <= 3; dy++) {
+                for (int dz = -radius; dz <= radius; dz++) {
+                    BlockPos p = trackPos.offset(dx, dy, dz);
+                    BlockEntity be = level.getBlockEntity(p);
+                    if (!(be instanceof SignalDirectionFlagBlockEntity flagBe))
+                        continue;
+                    if (!flagBe.isForTrack(trackPos))
+                        continue;
+                    return flagBe.getOverride();
+                }
+            }
+        }
+        return null;
     }
 
     private LaneType classifyLaneType(ServerLevel level, BlockPos trackPos, Vec3 axis) {

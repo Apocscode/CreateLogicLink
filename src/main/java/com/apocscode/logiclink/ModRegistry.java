@@ -15,6 +15,8 @@ import com.apocscode.logiclink.block.LogicSensorBlockEntity;
 import com.apocscode.logiclink.block.LogicSensorBlockItem;
 import com.apocscode.logiclink.block.RedstoneControllerBlock;
 import com.apocscode.logiclink.block.RedstoneControllerBlockEntity;
+import com.apocscode.logiclink.block.SignalDirectionFlagBlock;
+import com.apocscode.logiclink.block.SignalDirectionFlagBlockEntity;
 import com.apocscode.logiclink.block.TrainControllerBlock;
 import com.apocscode.logiclink.block.TrainControllerBlockEntity;
 import com.apocscode.logiclink.block.SignalTabletItem;
@@ -175,6 +177,20 @@ public class ModRegistry {
                     .noOcclusion())
     );
 
+    /**
+     * Signal Direction Flag — track-anchored direction override marker used by Signal Tablet
+     * placement logic. Right-click to cycle: forward, reverse, bidirectional.
+     */
+    public static final DeferredBlock<SignalDirectionFlagBlock> SIGNAL_DIRECTION_FLAG_BLOCK = BLOCKS.register(
+            "signal_direction_flag",
+            () -> new SignalDirectionFlagBlock(BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.COLOR_LIGHT_GRAY)
+                    .strength(2.5F)
+                    .requiresCorrectToolForDrops()
+                    .sound(SoundType.METAL)
+                    .noOcclusion())
+    );
+
     // ==================== Items ====================
 
     /**
@@ -259,6 +275,14 @@ public class ModRegistry {
             () -> new BlockItem(CONTRAPTION_REMOTE_BLOCK.get(), new Item.Properties())
     );
 
+    /**
+     * BlockItem for the Signal Direction Flag.
+     */
+    public static final DeferredItem<BlockItem> SIGNAL_DIRECTION_FLAG_ITEM = ITEMS.register(
+            "signal_direction_flag",
+            () -> new BlockItem(SIGNAL_DIRECTION_FLAG_BLOCK.get(), new Item.Properties())
+    );
+
     // ==================== Block Entities ====================
 
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<LogicLinkBlockEntity>> LOGIC_LINK_BE =
@@ -341,6 +365,15 @@ public class ModRegistry {
                     ).build(null)
             );
 
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<SignalDirectionFlagBlockEntity>> SIGNAL_DIRECTION_FLAG_BE =
+            BLOCK_ENTITY_TYPES.register(
+                    "signal_direction_flag",
+                    () -> BlockEntityType.Builder.of(
+                            SignalDirectionFlagBlockEntity::new,
+                            SIGNAL_DIRECTION_FLAG_BLOCK.get()
+                    ).build(null)
+            );
+
     // ==================== Menu Types ====================
 
     public static final DeferredHolder<MenuType<?>, MenuType<TrainMonitorMenu>> TRAIN_MONITOR_MENU =
@@ -394,6 +427,7 @@ public class ModRegistry {
                         output.accept(TRAIN_CONTROLLER_ITEM.get());
                         output.accept(TRAIN_MONITOR_ITEM.get());
                         output.accept(SIGNAL_TABLET_ITEM.get());
+                        output.accept(SIGNAL_DIRECTION_FLAG_ITEM.get());
                         output.accept(LOGIC_REMOTE_ITEM.get());
                         output.accept(CONTRAPTION_REMOTE_ITEM.get());
                         // Patchouli guide book is added automatically by
