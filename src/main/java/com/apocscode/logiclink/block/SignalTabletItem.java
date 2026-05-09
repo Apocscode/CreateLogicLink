@@ -40,7 +40,9 @@ import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Handheld Signal Diagnostic Tablet.
@@ -149,6 +151,7 @@ public class SignalTabletItem extends Item {
         double pz = scanData.getDouble("playerZ");
 
         List<CompoundTag> list = new java.util.ArrayList<>();
+        Set<String> exactKeys = new HashSet<>();
         ListTag diagnostics = scanData.getList("Diagnostics", CompoundTag.TAG_COMPOUND);
         for (int i = 0; i < diagnostics.size(); i++) {
             ListTag suggestions = diagnostics.getCompound(i).getList("suggestions", CompoundTag.TAG_COMPOUND);
@@ -156,7 +159,12 @@ public class SignalTabletItem extends Item {
                 CompoundTag sug = suggestions.getCompound(j);
                 String t = sug.getString("signalType");
                 if ("signal".equals(t) || "chain".equals(t)) {
-                    list.add(sug.copy());
+                    String key = t + ":" + sug.getInt("sx") + ":" + sug.getInt("sy") + ":" + sug.getInt("sz")
+                            + ":" + Mth.floor(sug.getFloat("sdx") * 1000f)
+                            + ":" + Mth.floor(sug.getFloat("sdz") * 1000f);
+                    if (exactKeys.add(key)) {
+                        list.add(sug.copy());
+                    }
                 }
             }
         }
@@ -181,6 +189,7 @@ public class SignalTabletItem extends Item {
      */
     private AutoPlaceResult placeWave(ServerLevel level, Player player, InteractionHand hand, ListTag pending) {
         int placed = 0, retyped = 0, alreadyCorrect = 0, blocked = 0, noTrack = 0, failed = 0, skipped = 0;
+        Set<String> laneDirectionSeen = new HashSet<>();
 
         int count = Math.min(WAVE_SIZE, pending.size());
         // Work from the front: collect this wave then remove them
@@ -213,6 +222,15 @@ public class SignalTabletItem extends Item {
                 noTrack++;
                 continue;
             }
+
+                String laneDirectionKey = candidate.trackPos().getX() + ":" + candidate.trackPos().getY() + ":"
+                    + candidate.trackPos().getZ() + ":" + candidate.front();
+                if (!laneDirectionSeen.add(laneDirectionKey)) {
+                skipped++;
+                LogicLink.LOGGER.info("placeWave: dedupe skip target={} track={} front={} laneType={}",
+                    targetPos, candidate.trackPos(), candidate.front(), candidate.laneType());
+                continue;
+                }
 
             PlacementAttempt attempt = placeSignal(level, player, hand, targetPos, candidate);
             if (attempt == PlacementAttempt.BLOCKED) {
@@ -286,19 +304,73 @@ public class SignalTabletItem extends Item {
         }
 
         Vec3 axis = trackAxes.get(0).normalize();
-        boolean front = desired.lengthSqr() == 0 || axis.dot(desired.normalize()) >= 0;
-        TrackTargetingBlockItem.OverlapResult overlap = getOverlap(level, trackPos, front);
-        if (overlap != TrackTargetingBlockItem.OverlapResult.VALID) {
-            boolean alternateFront = !front;
-            TrackTargetingBlockItem.OverlapResult alternateOverlap = getOverlap(level, trackPos, alternateFront);
-            if (alternateOverlap != TrackTargetingBlockItem.OverlapResult.VALID) {
+        LaneType laneType = classifyLaneType(level, trackPos, axis);
+
+        boolean preferredFront = desired.lengthSqr() == 0 || axis.dot(desired.normalize()) >= 0;
+        TrackTargetingBlockItem.OverlapResult preferredOverlap = getOverlap(level, trackPos, preferredFront);
+        TrackTargetingBlockItem.OverlapResult alternateOverlap = getOverlap(level, trackPos, !preferredFront);
+
+        boolean front;
+        if (laneType == LaneType.DUAL_ONE_WAY) {
+            // For dual one-way systems, keep each lane direction-stable.
+            // If preferred direction is invalid on this lane, reject and let search pick another lane.
+            if (preferredOverlap != TrackTargetingBlockItem.OverlapResult.VALID) {
+                LogicLink.LOGGER.info("candidate: reject dual-one-way lane track={} preferredFront={} preferredOverlap={} altOverlap={}",
+                        trackPos, preferredFront, preferredOverlap, alternateOverlap);
                 return null;
             }
-            front = alternateFront;
+            front = preferredFront;
+        } else {
+            // For single bidirectional systems, allow either direction if needed.
+            if (preferredOverlap == TrackTargetingBlockItem.OverlapResult.VALID) {
+                front = preferredFront;
+            } else if (alternateOverlap == TrackTargetingBlockItem.OverlapResult.VALID) {
+                front = !preferredFront;
+            } else {
+                return null;
+            }
         }
 
+        LogicLink.LOGGER.info("candidate: track={} laneType={} preferredFront={} chosenFront={} prefOverlap={} altOverlap={}",
+                trackPos, laneType, preferredFront, front, preferredOverlap, alternateOverlap);
+
         double score = targetPos.distSqr(trackPos);
-        return new PlacementCandidate(trackPos, front, score);
+        return new PlacementCandidate(trackPos, front, score, laneType);
+    }
+
+    private LaneType classifyLaneType(ServerLevel level, BlockPos trackPos, Vec3 axis) {
+        Vec3 right = new Vec3(0, 1, 0).cross(axis).normalize();
+        int rx = (int) Math.round(right.x);
+        int rz = (int) Math.round(right.z);
+        if (rx == 0 && rz == 0) {
+            return LaneType.SINGLE_BIDIRECTIONAL;
+        }
+
+        Vec3 axisNorm = axis.normalize();
+        for (int lateral = 2; lateral <= 6; lateral++) {
+            for (int sign : new int[] { -1, 1 }) {
+                int ox = sign * rx * lateral;
+                int oz = sign * rz * lateral;
+                for (int dy = -1; dy <= 1; dy++) {
+                    BlockPos probe = trackPos.offset(ox, dy, oz);
+                    if (probe.equals(trackPos))
+                        continue;
+                    BlockState probeState = level.getBlockState(probe);
+                    if (!(probeState.getBlock() instanceof ITrackBlock probeTrack))
+                        continue;
+                    List<Vec3> probeAxes = probeTrack.getTrackAxes(level, probe, probeState);
+                    if (probeAxes.size() != 1)
+                        continue;
+                    Vec3 probeAxis = probeAxes.get(0).normalize();
+                    double parallel = Math.abs(probeAxis.dot(axisNorm));
+                    if (parallel >= 0.96) {
+                        return LaneType.DUAL_ONE_WAY;
+                    }
+                }
+            }
+        }
+
+        return LaneType.SINGLE_BIDIRECTIONAL;
     }
 
     private TrackTargetingBlockItem.OverlapResult getOverlap(ServerLevel level, BlockPos trackPos, boolean front) {
@@ -484,7 +556,12 @@ public class SignalTabletItem extends Item {
         com.apocscode.logiclink.client.SignalTabletScreen.openFromItem(stack);
     }
 
-    private record PlacementCandidate(BlockPos trackPos, boolean front, double distanceScore) {
+    private enum LaneType {
+        DUAL_ONE_WAY,
+        SINGLE_BIDIRECTIONAL
+    }
+
+    private record PlacementCandidate(BlockPos trackPos, boolean front, double distanceScore, LaneType laneType) {
     }
 
     private enum PlacementAttempt {
