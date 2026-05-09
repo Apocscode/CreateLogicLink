@@ -67,8 +67,13 @@ public class SignalTabletItem extends Item {
             "createselectronics:nixie_tube",
             "supplementaries:nixie_tube"
         };
+        private static final String[] METAL_GIRDER_IDS = new String[] {
+            "create:metal_girder"
+        };
         private static Block cachedNixieTubeLightBlock;
         private static boolean nixieTubeLightResolved;
+        private static Block cachedMetalGirderBlock;
+        private static boolean metalGirderResolved;
 
     public SignalTabletItem(Properties props) {
         super(props.stacksTo(1));
@@ -459,6 +464,7 @@ public class SignalTabletItem extends Item {
                 LogicLink.LOGGER.info("placeSignal: placed+linked signal at {}, track={}, front={}",
                     placementPos, candidate.trackPos(), candidate.front());
                 }
+            placeMetalGirderSupport(level, placementPos);
             placeNixieTubeLight(level, placementPos);
             return PlacementAttempt.SUCCESS;
 
@@ -482,6 +488,28 @@ public class SignalTabletItem extends Item {
         BlockState lightState = lightBlock.defaultBlockState();
         level.setBlockAndUpdate(lightPos, lightState);
         level.sendBlockUpdated(lightPos, lightState, lightState, 3);
+    }
+
+    private void placeMetalGirderSupport(ServerLevel level, BlockPos signalPos) {
+        Block girderBlock = resolveMetalGirderBlock();
+        if (girderBlock == null)
+            return;
+
+        // Always try to build a 2-block support directly below the signal.
+        for (int depth = 1; depth <= 2; depth++) {
+            BlockPos supportPos = signalPos.below(depth);
+            BlockState existing = level.getBlockState(supportPos);
+            if (existing.getBlock() == girderBlock)
+                continue;
+            if (!existing.canBeReplaced()) {
+                LogicLink.LOGGER.info("SignalTablet: girder support blocked at {} below signal {}", supportPos, signalPos);
+                continue;
+            }
+
+            BlockState girderState = girderBlock.defaultBlockState();
+            level.setBlockAndUpdate(supportPos, girderState);
+            level.sendBlockUpdated(supportPos, girderState, girderState, 3);
+        }
     }
 
     private static Block resolveNixieTubeLightBlock() {
@@ -516,6 +544,41 @@ public class SignalTabletItem extends Item {
         }
 
         LogicLink.LOGGER.warn("SignalTablet: Nixie Tube block not found; skipping light placement");
+        return null;
+    }
+
+    private static Block resolveMetalGirderBlock() {
+        if (metalGirderResolved)
+            return cachedMetalGirderBlock;
+
+        metalGirderResolved = true;
+
+        for (String id : METAL_GIRDER_IDS) {
+            ResourceLocation rl = ResourceLocation.tryParse(id);
+            if (rl == null)
+                continue;
+            Block block = BuiltInRegistries.BLOCK.getOptional(rl).orElse(null);
+            if (block != null && block != Blocks.AIR) {
+                cachedMetalGirderBlock = block;
+                LogicLink.LOGGER.info("SignalTablet: using Metal Girder block {}", rl);
+                return cachedMetalGirderBlock;
+            }
+        }
+
+        // Fallback for packs that rename path but still include a metal girder block.
+        for (ResourceLocation key : BuiltInRegistries.BLOCK.keySet()) {
+            String path = key.getPath();
+            if (path.contains("metal") && path.contains("girder")) {
+                Block block = BuiltInRegistries.BLOCK.getOptional(key).orElse(null);
+                if (block != null && block != Blocks.AIR) {
+                    cachedMetalGirderBlock = block;
+                    LogicLink.LOGGER.info("SignalTablet: using fallback Metal Girder block {}", key);
+                    return cachedMetalGirderBlock;
+                }
+            }
+        }
+
+        LogicLink.LOGGER.warn("SignalTablet: Metal Girder block not found; skipping support placement");
         return null;
     }
 
