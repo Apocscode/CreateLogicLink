@@ -2,6 +2,7 @@ package com.apocscode.logiclink.block;
 
 import com.apocscode.logiclink.ModRegistry;
 import com.simibubi.create.content.trains.track.ITrackBlock;
+import com.simibubi.create.foundation.block.IBE;
 import com.mojang.serialization.MapCodec;
 
 import net.minecraft.core.BlockPos;
@@ -30,7 +31,8 @@ import net.minecraft.world.phys.shapes.VoxelShape;
 
 import org.jetbrains.annotations.Nullable;
 
-public class SignalDirectionFlagBlock extends HorizontalDirectionalBlock implements EntityBlock {
+public class SignalDirectionFlagBlock extends HorizontalDirectionalBlock
+    implements EntityBlock, IBE<SignalDirectionFlagBlockEntity> {
 
     public static final MapCodec<SignalDirectionFlagBlock> CODEC = simpleCodec(SignalDirectionFlagBlock::new);
     private static final VoxelShape SHAPE = Block.box(2, 0, 2, 14, 16, 14);
@@ -89,6 +91,16 @@ public class SignalDirectionFlagBlock extends HorizontalDirectionalBlock impleme
     @Override
     public <T extends BlockEntity> BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> type) {
         return null;
+    }
+
+    @Override
+    public Class<SignalDirectionFlagBlockEntity> getBlockEntityClass() {
+        return SignalDirectionFlagBlockEntity.class;
+    }
+
+    @Override
+    public BlockEntityType<? extends SignalDirectionFlagBlockEntity> getBlockEntityType() {
+        return ModRegistry.SIGNAL_DIRECTION_FLAG_BE.get();
     }
 
     @Override
