@@ -165,6 +165,12 @@ public class SignalDirectionFlagBlockEntity extends BlockEntity {
         return best;
     }
 
+    public void resetAnchor() {
+        anchorTrackPos = null;
+        mode = FlagMode.ONE_WAY_FORWARD;
+        setChanged();
+    }
+
     public record FlagOverride(BlockPos anchorTrackPos, boolean forward, boolean bidirectional) {
     }
 }

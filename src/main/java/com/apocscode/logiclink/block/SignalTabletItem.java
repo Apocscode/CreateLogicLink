@@ -248,6 +248,11 @@ public class SignalTabletItem extends Item {
             }
 
             placed++;
+            if (player instanceof net.minecraft.server.level.ServerPlayer sp) {
+                sp.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                    "\u00A7a[Signal]§r placed at " + candidate.trackPos().toShortString() + 
+                    " | source=" + (candidate.decisionSource().equals("FLAG") ? "\u00A7bFLAG" : "\u00A78AUTO") + "\u00A7r"));
+            }
             if (level.getBlockEntity(targetPos) instanceof SignalBlockEntity be
                     && setSignalMode(be, targetPos, wantChain)) {
                 retyped++;
@@ -351,7 +356,7 @@ public class SignalTabletItem extends Item {
                 flagOverride != null ? flagOverride.anchorTrackPos() : "none");
 
         double score = targetPos.distSqr(trackPos);
-        return new PlacementCandidate(trackPos, front, score, laneType);
+        return new PlacementCandidate(trackPos, front, score, laneType, decisionSource);
     }
 
     private SignalDirectionFlagBlockEntity.FlagOverride findFlagOverride(ServerLevel level, BlockPos trackPos) {
@@ -653,7 +658,7 @@ public class SignalTabletItem extends Item {
         SINGLE_BIDIRECTIONAL
     }
 
-    private record PlacementCandidate(BlockPos trackPos, boolean front, double distanceScore, LaneType laneType) {
+    private record PlacementCandidate(BlockPos trackPos, boolean front, double distanceScore, LaneType laneType, String decisionSource) {
     }
 
     private enum PlacementAttempt {

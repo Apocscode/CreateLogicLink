@@ -104,10 +104,19 @@ public class SignalDirectionFlagBlock extends HorizontalDirectionalBlock impleme
             return InteractionResult.SUCCESS;
         }
         BlockEntity be = level.getBlockEntity(pos);
-        if (be instanceof SignalDirectionFlagBlockEntity flagBe) {
-            flagBe.cycleMode(player);
+        if (!(be instanceof SignalDirectionFlagBlockEntity flagBe)) {
+            return InteractionResult.PASS;
+        }
+
+        if (player.isShiftKeyDown()) {
+            flagBe.resetAnchor();
+            if (player instanceof net.minecraft.server.level.ServerPlayer sp) {
+                sp.sendSystemMessage(net.minecraft.network.chat.Component.literal("[Signal Flag] anchor reset — right-click to re-anchor"));
+            }
             return InteractionResult.SUCCESS;
         }
-        return InteractionResult.PASS;
+
+        flagBe.cycleMode(player);
+        return InteractionResult.SUCCESS;
     }
 }
