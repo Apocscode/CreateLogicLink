@@ -36,6 +36,8 @@ import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.Vec3;
 
@@ -248,6 +250,12 @@ public class SignalTabletItem extends Item {
             }
 
             placed++;
+            if ("FLAG".equals(candidate.decisionSource())
+                    && player instanceof net.minecraft.server.level.ServerPlayer spFlag) {
+                spFlag.sendSystemMessage(net.minecraft.network.chat.Component.literal(
+                    "\u00A79[Signal Flag]\u00A7r override track=" + candidate.trackPos().toShortString()
+                    + " front=" + candidate.front()));
+            }
             if (player instanceof net.minecraft.server.level.ServerPlayer sp) {
                 sp.sendSystemMessage(net.minecraft.network.chat.Component.literal(
                     "\u00A7a[Signal]§r placed at " + candidate.trackPos().toShortString() + 
@@ -499,7 +507,7 @@ public class SignalTabletItem extends Item {
                     placementPos, candidate.trackPos(), candidate.front());
                 }
             placeMetalGirderSupport(level, placementPos);
-            placeNixieTubeLight(level, placementPos);
+                placeNixieTubeLight(level, placementPos, trackPos, axis, candidate.front());
             return PlacementAttempt.SUCCESS;
 
         } catch (Exception e) {
@@ -509,7 +517,7 @@ public class SignalTabletItem extends Item {
         }
     }
 
-    private void placeNixieTubeLight(ServerLevel level, BlockPos signalPos) {
+    private void placeNixieTubeLight(ServerLevel level, BlockPos signalPos, BlockPos trackPos, Vec3 axis, boolean front) {
         Block lightBlock = resolveNixieTubeLightBlock();
         if (lightBlock == null)
             return;
@@ -520,8 +528,45 @@ public class SignalTabletItem extends Item {
             return;
 
         BlockState lightState = lightBlock.defaultBlockState();
+
+        Direction towardTrack = horizontalDirectionFromDelta(
+                trackPos.getX() - signalPos.getX(),
+                trackPos.getZ() - signalPos.getZ());
+        Direction fallback = horizontalDirectionFromAxis(axis, front);
+        Direction facing = towardTrack != null ? towardTrack : fallback;
+
+        if (lightState.hasProperty(BlockStateProperties.HORIZONTAL_FACING)) {
+            DirectionProperty horizontalFacing = BlockStateProperties.HORIZONTAL_FACING;
+            lightState = lightState.setValue(horizontalFacing, facing);
+        } else if (lightState.hasProperty(BlockStateProperties.FACING)) {
+            DirectionProperty facingProp = BlockStateProperties.FACING;
+            lightState = lightState.setValue(facingProp, facing);
+        } else if (lightState.hasProperty(BlockStateProperties.HORIZONTAL_AXIS)) {
+            lightState = lightState.setValue(BlockStateProperties.HORIZONTAL_AXIS, facing.getAxis());
+        } else if (lightState.hasProperty(BlockStateProperties.AXIS)) {
+            lightState = lightState.setValue(BlockStateProperties.AXIS, facing.getAxis());
+        }
+
         level.setBlockAndUpdate(lightPos, lightState);
         level.sendBlockUpdated(lightPos, lightState, lightState, 3);
+    }
+
+    private static Direction horizontalDirectionFromAxis(Vec3 axis, boolean front) {
+        Vec3 dir = front ? axis.normalize() : axis.normalize().scale(-1);
+        if (Math.abs(dir.x) >= Math.abs(dir.z)) {
+            return dir.x >= 0 ? Direction.EAST : Direction.WEST;
+        }
+        return dir.z >= 0 ? Direction.SOUTH : Direction.NORTH;
+    }
+
+    private static Direction horizontalDirectionFromDelta(int dx, int dz) {
+        if (Math.abs(dx) >= Math.abs(dz) && dx != 0) {
+            return dx > 0 ? Direction.EAST : Direction.WEST;
+        }
+        if (dz != 0) {
+            return dz > 0 ? Direction.SOUTH : Direction.NORTH;
+        }
+        return null;
     }
 
     private void placeMetalGirderSupport(ServerLevel level, BlockPos signalPos) {
