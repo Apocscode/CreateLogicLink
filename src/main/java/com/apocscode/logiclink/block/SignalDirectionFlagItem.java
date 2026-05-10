@@ -33,6 +33,7 @@ public class SignalDirectionFlagItem extends TrackTargetingBlockItem {
         ItemStack stack = context.getItemInHand();
         Level level = context.getLevel();
         Player player = context.getPlayer();
+        var hand = context.getHand();
 
         // Save the current arrow-marker selection before Create's useOn clears it.
         BlockPos savedPos = stack.get(AllDataComponents.TRACK_TARGETING_ITEM_SELECTED_POS);
@@ -43,15 +44,17 @@ public class SignalDirectionFlagItem extends TrackTargetingBlockItem {
 
         InteractionResult result = super.useOn(context);
 
+        ItemStack heldStack = player != null ? player.getItemInHand(hand) : stack;
+
         // After a successful placement Create removes the selection components.
         // Re-apply them so the arrow stays for the next placement on the same track.
         // Restore on both sides so the server doesn't immediately resync a cleared stack.
-        boolean missingPos = !stack.has(AllDataComponents.TRACK_TARGETING_ITEM_SELECTED_POS);
-        boolean missingDir = !stack.has(AllDataComponents.TRACK_TARGETING_ITEM_SELECTED_DIRECTION);
+        boolean missingPos = !heldStack.has(AllDataComponents.TRACK_TARGETING_ITEM_SELECTED_POS);
+        boolean missingDir = !heldStack.has(AllDataComponents.TRACK_TARGETING_ITEM_SELECTED_DIRECTION);
         if (!isClearing && hadSelection && (missingPos || (savedDir != null && missingDir))) {
-            stack.set(AllDataComponents.TRACK_TARGETING_ITEM_SELECTED_POS, savedPos);
+            heldStack.set(AllDataComponents.TRACK_TARGETING_ITEM_SELECTED_POS, savedPos);
             if (savedDir != null)
-                stack.set(AllDataComponents.TRACK_TARGETING_ITEM_SELECTED_DIRECTION, savedDir);
+                heldStack.set(AllDataComponents.TRACK_TARGETING_ITEM_SELECTED_DIRECTION, savedDir);
         }
 
         return result;

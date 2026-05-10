@@ -495,9 +495,8 @@ public class SignalTabletItem extends Item {
                 BlockPos relativeTrack = candidate.trackPos().subtract(placementPos);
                 CompoundTag beNbt = new CompoundTag();
                 beNbt.put("TargetTrack", NbtUtils.writeBlockPos(relativeTrack));
-                // Create's persisted TargetDirection is inverted relative to the lane-direction
-                // choice we derive from withGraphLocation()/flag overrides.
-                beNbt.putBoolean("TargetDirection", !candidate.front());
+                // Create persists the same boolean used by TrackTargetingBlockItem selection.
+                beNbt.putBoolean("TargetDirection", candidate.front());
                 sbe.loadWithComponents(beNbt, level.registryAccess());
 
                 // Register the signal with the track graph immediately (tick() will retry if null)
