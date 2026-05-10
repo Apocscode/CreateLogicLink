@@ -34,6 +34,8 @@ import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
@@ -695,7 +697,15 @@ public class SignalTabletItem extends Item {
     }
 
     private void openTabletScreen(ItemStack stack) {
-        com.apocscode.logiclink.client.SignalTabletScreen.openFromItem(stack);
+        ClientHelper.openScreen(stack);
+    }
+
+    /** Isolated so the class loader only touches SignalTabletScreen on the client dist. */
+    @OnlyIn(Dist.CLIENT)
+    private static final class ClientHelper {
+        static void openScreen(ItemStack stack) {
+            com.apocscode.logiclink.client.SignalTabletScreen.openFromItem(stack);
+        }
     }
 
     private enum LaneType {
