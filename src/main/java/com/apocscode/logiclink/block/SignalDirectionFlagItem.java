@@ -45,9 +45,10 @@ public class SignalDirectionFlagItem extends TrackTargetingBlockItem {
 
         // After a successful placement Create removes the selection components.
         // Re-apply them so the arrow stays for the next placement on the same track.
-        // Only restore on client to avoid sync issues - the arrow is a client-side visual.
-        if (!isClearing && hadSelection && result.consumesAction() && level.isClientSide
-                && !stack.has(AllDataComponents.TRACK_TARGETING_ITEM_SELECTED_POS)) {
+        // Restore on both sides so the server doesn't immediately resync a cleared stack.
+        boolean missingPos = !stack.has(AllDataComponents.TRACK_TARGETING_ITEM_SELECTED_POS);
+        boolean missingDir = !stack.has(AllDataComponents.TRACK_TARGETING_ITEM_SELECTED_DIRECTION);
+        if (!isClearing && hadSelection && result.consumesAction() && (missingPos || (savedDir != null && missingDir))) {
             stack.set(AllDataComponents.TRACK_TARGETING_ITEM_SELECTED_POS, savedPos);
             if (savedDir != null)
                 stack.set(AllDataComponents.TRACK_TARGETING_ITEM_SELECTED_DIRECTION, savedDir);
