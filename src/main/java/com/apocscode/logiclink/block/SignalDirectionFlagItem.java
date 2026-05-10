@@ -48,7 +48,7 @@ public class SignalDirectionFlagItem extends TrackTargetingBlockItem {
         // Restore on both sides so the server doesn't immediately resync a cleared stack.
         boolean missingPos = !stack.has(AllDataComponents.TRACK_TARGETING_ITEM_SELECTED_POS);
         boolean missingDir = !stack.has(AllDataComponents.TRACK_TARGETING_ITEM_SELECTED_DIRECTION);
-        if (!isClearing && hadSelection && result.consumesAction() && (missingPos || (savedDir != null && missingDir))) {
+        if (!isClearing && hadSelection && (missingPos || (savedDir != null && missingDir))) {
             stack.set(AllDataComponents.TRACK_TARGETING_ITEM_SELECTED_POS, savedPos);
             if (savedDir != null)
                 stack.set(AllDataComponents.TRACK_TARGETING_ITEM_SELECTED_DIRECTION, savedDir);
