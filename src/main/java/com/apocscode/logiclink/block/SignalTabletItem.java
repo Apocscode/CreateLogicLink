@@ -495,7 +495,9 @@ public class SignalTabletItem extends Item {
                 BlockPos relativeTrack = candidate.trackPos().subtract(placementPos);
                 CompoundTag beNbt = new CompoundTag();
                 beNbt.put("TargetTrack", NbtUtils.writeBlockPos(relativeTrack));
-                beNbt.putBoolean("TargetDirection", candidate.front());
+                // Create's TargetDirection is OPPOSITE of our forward semantic,
+                // so invert it when passing to Create
+                beNbt.putBoolean("TargetDirection", !candidate.front());
                 sbe.loadWithComponents(beNbt, level.registryAccess());
 
                 // Register the signal with the track graph immediately (tick() will retry if null)
