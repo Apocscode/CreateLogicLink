@@ -300,7 +300,24 @@ public class SignalTabletItem extends Item {
                         continue;
                     }
 
-                    if (best == null || candidate.distanceScore() < best.distanceScore()) {
+                    if (best == null) {
+                        best = candidate;
+                        continue;
+                    }
+
+                    boolean bestIsFlag = "FLAG".equals(best.decisionSource());
+                    boolean candidateIsFlag = "FLAG".equals(candidate.decisionSource());
+
+                    // If any flag-driven candidate exists, always prefer flagged tracks over nearby auto tracks.
+                    if (candidateIsFlag && !bestIsFlag) {
+                        best = candidate;
+                        continue;
+                    }
+                    if (!candidateIsFlag && bestIsFlag) {
+                        continue;
+                    }
+
+                    if (candidate.distanceScore() < best.distanceScore()) {
                         best = candidate;
                     }
                 }
