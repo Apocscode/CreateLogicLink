@@ -126,8 +126,16 @@ public class SignalTabletItem extends Item {
                     ListTag pending = wrapper.getList(TAG_PENDING, CompoundTag.TAG_COMPOUND);
                     int total = wrapper.getInt(TAG_TOTAL);
 
-                    LogicLink.LOGGER.info("[Signal Tablet] Starting wave, pending={}, total={}", pending.size(), total);
-                    AutoPlaceResult result = placeWave(serverLevel, player, hand, pending);
+                    boolean runAll = player.isShiftKeyDown();
+                    LogicLink.LOGGER.info("[Signal Tablet] Starting {}, pending={}, total={}",
+                            runAll ? "full reconcile" : "wave", pending.size(), total);
+
+                    AutoPlaceResult result;
+                    if (runAll) {
+                        result = placeAllPending(serverLevel, player, hand, pending);
+                    } else {
+                        result = placeWave(serverLevel, player, hand, pending, WAVE_SIZE);
+                    }
 
                     int after = pending.size();
                     int done = total - after;
@@ -136,8 +144,10 @@ public class SignalTabletItem extends Item {
                     player.setItemInHand(hand, stack);
 
                     player.sendSystemMessage(Component.literal(
-                            "\u00A7b[Signal Tablet]\u00A7r Wave " + done + "/" + total
+                            "\u00A7b[Signal Tablet]\u00A7r " + (runAll ? "Reconcile" : "Wave") + " " + done + "/" + total
                             + " — placed " + result.placed()
+                            + ", retyped " + result.retyped()
+                            + ", already-correct " + result.alreadyCorrect()
                             + ", blocked " + result.blocked()
                             + ", no-track " + result.noTrack()
                             + ", failed " + result.failed()
@@ -196,11 +206,11 @@ public class SignalTabletItem extends Item {
      * Entries that fail (no-track / fail) are dropped; the caller decides whether to
      * retry them on the next wave.
      */
-    private AutoPlaceResult placeWave(ServerLevel level, Player player, InteractionHand hand, ListTag pending) {
+    private AutoPlaceResult placeWave(ServerLevel level, Player player, InteractionHand hand, ListTag pending, int maxCount) {
         int placed = 0, retyped = 0, alreadyCorrect = 0, blocked = 0, noTrack = 0, failed = 0, skipped = 0;
         Set<String> laneDirectionSeen = new HashSet<>();
 
-        int count = Math.min(WAVE_SIZE, pending.size());
+        int count = Math.min(maxCount, pending.size());
         // Work from the front: collect this wave then remove them
         List<CompoundTag> wave = new java.util.ArrayList<>(count);
         for (int i = 0; i < count; i++) {
@@ -241,6 +251,16 @@ public class SignalTabletItem extends Item {
                 continue;
                 }
 
+                ExistingSignalResolution existing = reconcileExistingSignal(level, candidate, wantChain);
+                if (existing == ExistingSignalResolution.RETYPED) {
+                    retyped++;
+                    continue;
+                }
+                if (existing == ExistingSignalResolution.ALREADY_CORRECT) {
+                    alreadyCorrect++;
+                    continue;
+                }
+
             PlacementAttempt attempt = placeSignal(level, player, hand, targetPos, candidate);
             if (attempt == PlacementAttempt.BLOCKED) {
                 blocked++;
@@ -272,11 +292,42 @@ public class SignalTabletItem extends Item {
         return new AutoPlaceResult(placed, retyped, alreadyCorrect, blocked, noTrack, failed, skipped);
     }
 
+    private AutoPlaceResult placeAllPending(ServerLevel level, Player player, InteractionHand hand, ListTag pending) {
+        int placed = 0, retyped = 0, alreadyCorrect = 0, blocked = 0, noTrack = 0, failed = 0, skipped = 0;
+        int passLimit = 4096;
+        while (!pending.isEmpty() && passLimit-- > 0) {
+            AutoPlaceResult pass = placeWave(level, player, hand, pending, pending.size());
+            placed += pass.placed();
+            retyped += pass.retyped();
+            alreadyCorrect += pass.alreadyCorrect();
+            blocked += pass.blocked();
+            noTrack += pass.noTrack();
+            failed += pass.failed();
+            skipped += pass.skipped();
+            if (pass.placed() == 0 && pass.retyped() == 0 && pass.alreadyCorrect() == 0) {
+                break;
+            }
+        }
+        return new AutoPlaceResult(placed, retyped, alreadyCorrect, blocked, noTrack, failed, skipped);
+    }
+
     private PlacementCandidate findPlacementCandidate(ServerLevel level, BlockPos targetPos, float dx, float dz) {
         Vec3 desired = new Vec3(dx, 0, dz);
         int trackBlocks = 0;
         int junctionTracks = 0;
         int invalidOverlaps = 0;
+
+        BlockState targetState = level.getBlockState(targetPos);
+        if (targetState.getBlock() instanceof ITrackBlock targetTrackBlock) {
+            List<Vec3> targetAxes = targetTrackBlock.getTrackAxes(level, targetPos, targetState);
+            if (targetAxes.size() == 1) {
+                PlacementCandidate exact = createPlacementCandidate(level, targetPos, targetPos, desired);
+                if (exact != null) {
+                    LogicLink.LOGGER.info("findPlacementCandidate: target-lock on exact track {}", targetPos);
+                    return exact;
+                }
+            }
+        }
 
         PlacementCandidate best = null;
         for (int dxScan = -AUTO_PLACE_TRACK_SEARCH_RADIUS; dxScan <= AUTO_PLACE_TRACK_SEARCH_RADIUS; dxScan++) {
@@ -330,6 +381,75 @@ public class SignalTabletItem extends Item {
         }
 
         return best;
+    }
+
+    private ExistingSignalResolution reconcileExistingSignal(ServerLevel level, PlacementCandidate candidate, boolean wantChain) {
+        for (BlockPos placementPos : candidatePlacementPositions(level, candidate.trackPos(), candidate.front())) {
+            BlockEntity be = level.getBlockEntity(placementPos);
+            if (!(be instanceof SignalBlockEntity sbe)) {
+                continue;
+            }
+
+            SignalBoundary signal = sbe.getSignal();
+            SignalBlock.SignalType desiredType = wantChain
+                    ? SignalBlock.SignalType.CROSS_SIGNAL
+                    : SignalBlock.SignalType.ENTRY_SIGNAL;
+            if (signal == null) {
+                level.removeBlock(placementPos, false);
+                LogicLink.LOGGER.info("reconcile: removed orphan signal at {}", placementPos);
+                return ExistingSignalResolution.REMOVED;
+            }
+
+            SignalBlock.SignalType currentType = signal.getTypeFor(placementPos);
+            if (currentType == desiredType) {
+                LogicLink.LOGGER.info("reconcile: existing signal already correct at {} (type={})", placementPos, currentType);
+                return ExistingSignalResolution.ALREADY_CORRECT;
+            }
+
+            signal.cycleSignalType(placementPos);
+            SignalBlock.SignalType after = signal.getTypeFor(placementPos);
+            if (after == desiredType) {
+                sbe.setChanged();
+                level.sendBlockUpdated(placementPos, level.getBlockState(placementPos), level.getBlockState(placementPos), 3);
+                LogicLink.LOGGER.info("reconcile: retyped existing signal at {} from {} to {}",
+                        placementPos, currentType, after);
+                return ExistingSignalResolution.RETYPED;
+            }
+
+            level.removeBlock(placementPos, false);
+            LogicLink.LOGGER.info("reconcile: removed incompatible signal at {} (wanted {}, got {})",
+                    placementPos, desiredType, after);
+            return ExistingSignalResolution.REMOVED;
+        }
+        return ExistingSignalResolution.NONE;
+    }
+
+    private List<BlockPos> candidatePlacementPositions(ServerLevel level, BlockPos trackPos, boolean front) {
+        BlockState trackState = level.getBlockState(trackPos);
+        ITrackBlock trackBlock = (ITrackBlock) trackState.getBlock();
+        List<Vec3> axes = trackBlock.getTrackAxes(level, trackPos, trackState);
+        Vec3 axis = axes.isEmpty() ? new Vec3(1, 0, 0) : axes.get(0).normalize();
+
+        Vec3 right = new Vec3(0, 1, 0).cross(axis).normalize();
+        int rx = (int) Math.round(right.x);
+        int rz = (int) Math.round(right.z);
+        if (rx == 0 && rz == 0) {
+            rx = 1;
+        }
+
+        int side = front ? 1 : -1;
+        int[][] offsets = {
+                { side * rx * 4, 2, side * rz * 4 },
+                { -side * rx * 4, 2, -side * rz * 4 },
+                { side * rx * 4, 3, side * rz * 4 },
+                { -side * rx * 4, 3, -side * rz * 4 },
+        };
+
+        List<BlockPos> result = new java.util.ArrayList<>(offsets.length);
+        for (int[] off : offsets) {
+            result.add(trackPos.offset(off[0], off[1], off[2]));
+        }
+        return result;
     }
 
     private PlacementCandidate createPlacementCandidate(ServerLevel level, BlockPos trackPos, BlockPos targetPos, Vec3 desired) {
@@ -450,35 +570,9 @@ public class SignalTabletItem extends Item {
 
     private PlacementAttempt placeSignal(ServerLevel level, Player player, InteractionHand hand, BlockPos targetPos,
                                 PlacementCandidate candidate) {
-        // Determine the track axis, then derive the right-perpendicular (horizontal).
-        // "Right" = UP × axis, so standing at the track facing along axis, right is to the right.
         BlockPos trackPos = candidate.trackPos();
-        BlockState trackState = level.getBlockState(trackPos);
-        ITrackBlock trackBlock = (ITrackBlock) trackState.getBlock();
-        List<Vec3> axes = trackBlock.getTrackAxes(level, trackPos, trackState);
-        Vec3 axis = axes.isEmpty() ? new Vec3(1, 0, 0) : axes.get(0).normalize();
-
-        // right = UP cross axis (right-hand rule: right side when facing along axis)
-        Vec3 right = new Vec3(0, 1, 0).cross(axis).normalize();
-        int rx = (int) Math.round(right.x);
-        int rz = (int) Math.round(right.z);
-        // If axis is purely vertical rx==rz==0; fall back to X offset
-        if (rx == 0 && rz == 0) { rx = 1; }
-
-        // Candidate positions in priority order.
-        // Tie horizontal side to travel direction so opposite directions on the same
-        // track block naturally prefer opposite sides.
-        int side = candidate.front() ? 1 : -1;
-        int[][] offsets = {
-            { side * rx * 4, 2, side * rz * 4 },
-            {-side * rx * 4, 2,-side * rz * 4 },
-            { side * rx * 4, 3, side * rz * 4 },
-            {-side * rx * 4, 3,-side * rz * 4 },
-        };
-
         BlockPos placementPos = null;
-        for (int[] off : offsets) {
-            BlockPos check = trackPos.offset(off[0], off[1], off[2]);
+        for (BlockPos check : candidatePlacementPositions(level, trackPos, candidate.front())) {
             if (check.equals(trackPos)) continue;
             if (level.getBlockState(check).getBlock() instanceof ITrackBlock) continue;
             if (!level.getBlockState(check).canBeReplaced()) continue;
@@ -529,6 +623,10 @@ public class SignalTabletItem extends Item {
                     placementPos, candidate.trackPos(), candidate.front());
                 }
             placeMetalGirderSupport(level, placementPos);
+                BlockState placedTrackState = level.getBlockState(trackPos);
+                ITrackBlock placedTrackBlock = (ITrackBlock) placedTrackState.getBlock();
+                List<Vec3> axes = placedTrackBlock.getTrackAxes(level, trackPos, placedTrackState);
+                Vec3 axis = axes.isEmpty() ? new Vec3(1, 0, 0) : axes.get(0).normalize();
                 placeNixieTubeLight(level, placementPos, trackPos, axis, candidate.front());
             return PlacementAttempt.SUCCESS;
 
@@ -740,6 +838,13 @@ public class SignalTabletItem extends Item {
         SUCCESS,
         BLOCKED,
         FAILED
+    }
+
+    private enum ExistingSignalResolution {
+        NONE,
+        ALREADY_CORRECT,
+        RETYPED,
+        REMOVED
     }
 
     private record AutoPlaceResult(int placed, int retyped, int alreadyCorrect, int blocked, int noTrack,
