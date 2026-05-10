@@ -1,13 +1,13 @@
 package com.apocscode.logiclink.block;
 
+import com.simibubi.create.AllDataComponents;
 import com.simibubi.create.content.trains.graph.EdgePointType;
 import com.simibubi.create.content.trains.track.TrackTargetingBlockItem;
 
-import net.minecraft.core.component.DataComponents;
-import net.minecraft.nbt.CompoundTag;
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.item.context.UseOnContext;
 import net.minecraft.world.level.block.Block;
 
@@ -15,6 +15,11 @@ import net.minecraft.world.level.block.Block;
  * Uses Create's native track-targeting item flow:
  * first click selects a track + direction (with Create arrow indicator),
  * second click places the block nearby.
+ *
+ * Create always removes TRACK_TARGETING_ITEM_SELECTED_POS/DIRECTION after
+ * placement (that's what drives the arrow overlay). We save and restore them
+ * so the arrow persists for rapid repeated flag placement on the same track.
+ * Shift+click clearing is detected and skipped so the user can still clear.
  */
 public class SignalDirectionFlagItem extends TrackTargetingBlockItem {
 
@@ -25,18 +30,24 @@ public class SignalDirectionFlagItem extends TrackTargetingBlockItem {
     @Override
     public InteractionResult useOn(UseOnContext context) {
         ItemStack stack = context.getItemInHand();
-        CompoundTag before = stack.getOrDefault(DataComponents.BLOCK_ENTITY_DATA, CustomData.EMPTY).copyTag();
-        boolean hadTrackSelection = before.contains("TargetTrack");
+        Player player = context.getPlayer();
+
+        // Save the current arrow-marker selection before Create's useOn clears it.
+        BlockPos savedPos = stack.get(AllDataComponents.TRACK_TARGETING_ITEM_SELECTED_POS);
+        Boolean savedDir = stack.get(AllDataComponents.TRACK_TARGETING_ITEM_SELECTED_DIRECTION);
+        boolean hadSelection = savedPos != null;
+        // Shift+click with a selection = intentional clear; don't restore afterward.
+        boolean isClearing = hadSelection && player != null && player.isShiftKeyDown();
 
         InteractionResult result = super.useOn(context);
 
-        // Keep the selected track+direction on the item so the Create arrow marker
-        // remains after each placement for rapid repeated flag placement.
-        if (!context.getLevel().isClientSide && hadTrackSelection && result.consumesAction()) {
-            CompoundTag after = stack.getOrDefault(DataComponents.BLOCK_ENTITY_DATA, CustomData.EMPTY).copyTag();
-            if (!after.contains("TargetTrack")) {
-                stack.set(DataComponents.BLOCK_ENTITY_DATA, CustomData.of(before));
-            }
+        // After a successful placement Create removes the selection components.
+        // Re-apply them so the arrow stays for the next placement on the same track.
+        if (!isClearing && hadSelection && result.consumesAction()
+                && !stack.has(AllDataComponents.TRACK_TARGETING_ITEM_SELECTED_POS)) {
+            stack.set(AllDataComponents.TRACK_TARGETING_ITEM_SELECTED_POS, savedPos);
+            if (savedDir != null)
+                stack.set(AllDataComponents.TRACK_TARGETING_ITEM_SELECTED_DIRECTION, savedDir);
         }
 
         return result;
