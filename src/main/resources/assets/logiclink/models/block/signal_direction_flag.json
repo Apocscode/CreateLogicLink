@@ -1,5 +1,6 @@
 {
   "textures": {
+    "particle": "logiclink:block/signal_flag_semaphore",
     "0": "logiclink:block/signal_flag_semaphore"
   },
   "elements": [
