@@ -19,6 +19,7 @@ import com.apocscode.logiclink.network.RemoteButtonPayload;
 import com.apocscode.logiclink.network.RemoteControlPayload;
 import com.apocscode.logiclink.network.SeatInputPayload;
 import com.apocscode.logiclink.network.SensorNetwork;
+import com.apocscode.logiclink.network.SignalHardResetPayload;
 import com.mojang.logging.LogUtils;
 
 import net.minecraft.server.level.ServerPlayer;
@@ -134,6 +135,11 @@ public class LogicLink {
                 OpenFreqConfigPayload.TYPE,
                 OpenFreqConfigPayload.STREAM_CODEC,
                 OpenFreqConfigPayload::handle
+        );
+        registrar.playToServer(
+                SignalHardResetPayload.TYPE,
+                SignalHardResetPayload.STREAM_CODEC,
+                SignalHardResetPayload::handle
         );
     }
 

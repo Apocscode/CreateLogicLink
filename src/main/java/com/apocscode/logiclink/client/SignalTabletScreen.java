@@ -1,6 +1,7 @@
 package com.apocscode.logiclink.client;
 
 import com.apocscode.logiclink.block.SignalTabletItem;
+import com.apocscode.logiclink.network.SignalHardResetPayload;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -363,13 +364,52 @@ public class SignalTabletScreen extends Screen {
             gfx.fill(x + w - margin - 3, barY, x + w - margin, barY + barH, 0xFF555577);
         }
 
-        // Footer
+        // Footer and Hard Reset button
         int footerY = y + h - 12;
         gfx.drawString(font, "Click buttons to highlight in-world  |  Rescan: right-click tablet  |  ESC to close", x + margin, footerY, GRAY, false);
+
+        // Hard Reset button (if there are conflicts)
+        int conflictCount = scanData.getInt("conflictCount");
+        if (conflictCount > 0) {
+            String btnText = "HARD RESET ALL SIGNALS";
+            int btnW = font.width(btnText) + 12;
+            int btnH = 14;
+            int btnX = x + w - margin - btnW;
+            int btnY = y + h - 22;
+
+            boolean hovered = mouseX >= btnX && mouseX < btnX + btnW && mouseY >= btnY && mouseY < btnY + btnH;
+            int btnColor = hovered ? 0xFFCC3333 : 0xFF882222;
+            gfx.fill(btnX, btnY, btnX + btnW, btnY + btnH, btnColor);
+            gfx.fill(btnX, btnY, btnX + btnW, btnY + 1, 0x44FFFFFF);  // top highlight
+            gfx.drawString(font, btnText, btnX + 6, btnY + 2, 0xFFFFFF88, false);
+        }
     }
 
     @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        // Check hard reset button first
+        int conflictCount = scanData.getInt("conflictCount");
+        if (conflictCount > 0 && button == 0) {
+            int x = guiLeft, y = guiTop, w = guiWidth, h = guiHeight;
+            int margin = 6;
+
+            String btnText = "HARD RESET ALL SIGNALS";
+            int btnW = font.width(btnText) + 12;
+            int btnH = 14;
+            int btnX = x + w - margin - btnW;
+            int btnY = y + h - 22;
+
+            if (mouseX >= btnX && mouseX < btnX + btnW && mouseY >= btnY && mouseY < btnY + btnH) {
+                // Send hard reset command to server
+                var connection = Minecraft.getInstance().getConnection();
+                if (connection != null) {
+                    connection.send(new SignalHardResetPayload(scanData));
+                }
+                this.onClose();
+                return true;
+            }
+        }
+
         if (button == 0 && !sortedDiags.isEmpty()) {
             int x = guiLeft, w = guiWidth;
             int margin = 6;
