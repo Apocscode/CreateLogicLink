@@ -2,6 +2,7 @@ package com.apocscode.logiclink.block;
 
 import com.simibubi.create.AllDataComponents;
 import com.simibubi.create.content.trains.graph.EdgePointType;
+import com.simibubi.create.content.trains.track.BezierTrackPointLocation;
 import com.simibubi.create.content.trains.track.TrackTargetingBlockItem;
 
 import net.minecraft.core.BlockPos;
@@ -38,6 +39,7 @@ public class SignalDirectionFlagItem extends TrackTargetingBlockItem {
         // Save the current arrow-marker selection before Create's useOn clears it.
         BlockPos savedPos = stack.get(AllDataComponents.TRACK_TARGETING_ITEM_SELECTED_POS);
         Boolean savedDir = stack.get(AllDataComponents.TRACK_TARGETING_ITEM_SELECTED_DIRECTION);
+        BezierTrackPointLocation savedBezier = stack.get(AllDataComponents.TRACK_TARGETING_ITEM_BEZIER);
         boolean hadSelection = savedPos != null;
         // Shift+click with a selection = intentional clear; don't restore afterward.
         boolean isClearing = hadSelection && player != null && player.isShiftKeyDown();
@@ -51,10 +53,13 @@ public class SignalDirectionFlagItem extends TrackTargetingBlockItem {
         // Restore on both sides so the server doesn't immediately resync a cleared stack.
         boolean missingPos = !heldStack.has(AllDataComponents.TRACK_TARGETING_ITEM_SELECTED_POS);
         boolean missingDir = !heldStack.has(AllDataComponents.TRACK_TARGETING_ITEM_SELECTED_DIRECTION);
-        if (!isClearing && hadSelection && (missingPos || (savedDir != null && missingDir))) {
+        boolean missingBezier = savedBezier != null && !heldStack.has(AllDataComponents.TRACK_TARGETING_ITEM_BEZIER);
+        if (!isClearing && hadSelection && (missingPos || (savedDir != null && missingDir) || missingBezier)) {
             heldStack.set(AllDataComponents.TRACK_TARGETING_ITEM_SELECTED_POS, savedPos);
             if (savedDir != null)
                 heldStack.set(AllDataComponents.TRACK_TARGETING_ITEM_SELECTED_DIRECTION, savedDir);
+            if (savedBezier != null)
+                heldStack.set(AllDataComponents.TRACK_TARGETING_ITEM_BEZIER, savedBezier);
         }
 
         return result;

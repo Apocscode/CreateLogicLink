@@ -38,6 +38,8 @@ public class SignalDirectionFlagBlockEntity extends BlockEntity {
     }
 
     @Nullable private BlockPos anchorTrackPos;
+    // Base one-way direction for this flag: true means AxisDirection.POSITIVE on the target track.
+    private boolean forwardIsPositive = true;
     private FlagMode mode = FlagMode.ONE_WAY_FORWARD;
 
     public SignalDirectionFlagBlockEntity(BlockPos pos, BlockState state) {
@@ -96,7 +98,8 @@ public class SignalDirectionFlagBlockEntity extends BlockEntity {
                 Vec3 axis = axes.get(0).normalize();
                 Vec3 facingVec = new Vec3(facing.getStepX(), 0, facing.getStepZ());
                 double dot = axis.dot(facingVec);
-                mode = dot >= 0 ? FlagMode.ONE_WAY_FORWARD : FlagMode.ONE_WAY_REVERSE;
+                forwardIsPositive = dot >= 0;
+                mode = FlagMode.ONE_WAY_FORWARD;
             }
         }
 
@@ -123,7 +126,8 @@ public class SignalDirectionFlagBlockEntity extends BlockEntity {
         anchorTrackPos = absoluteTarget;
         boolean targetDirection = blockEntityData.getBoolean("TargetDirection");
         // Create stores TargetDirection directly from the selected track direction.
-        mode = targetDirection ? FlagMode.ONE_WAY_FORWARD : FlagMode.ONE_WAY_REVERSE;
+        forwardIsPositive = targetDirection;
+        mode = FlagMode.ONE_WAY_FORWARD;
 
         setChanged();
         level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
@@ -143,9 +147,9 @@ public class SignalDirectionFlagBlockEntity extends BlockEntity {
         }
 
         return switch (mode) {
-            case ONE_WAY_FORWARD -> new FlagOverride(anchorTrackPos, true, false);
-            case ONE_WAY_REVERSE -> new FlagOverride(anchorTrackPos, false, false);
-            case BIDIRECTIONAL -> new FlagOverride(anchorTrackPos, true, true);
+            case ONE_WAY_FORWARD -> new FlagOverride(anchorTrackPos, forwardIsPositive, false);
+            case ONE_WAY_REVERSE -> new FlagOverride(anchorTrackPos, !forwardIsPositive, false);
+            case BIDIRECTIONAL -> new FlagOverride(anchorTrackPos, forwardIsPositive, true);
         };
     }
 
@@ -158,6 +162,7 @@ public class SignalDirectionFlagBlockEntity extends BlockEntity {
         if (anchorTrackPos != null) {
             tag.putLong("AnchorTrack", anchorTrackPos.asLong());
         }
+        tag.putBoolean("ForwardIsPositive", forwardIsPositive);
         tag.putString("Mode", mode.name());
     }
 
@@ -165,6 +170,7 @@ public class SignalDirectionFlagBlockEntity extends BlockEntity {
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
         anchorTrackPos = tag.contains("AnchorTrack") ? BlockPos.of(tag.getLong("AnchorTrack")) : null;
+        forwardIsPositive = !tag.contains("ForwardIsPositive") || tag.getBoolean("ForwardIsPositive");
         if (tag.contains("Mode")) {
             try {
                 mode = FlagMode.valueOf(tag.getString("Mode"));
@@ -199,6 +205,7 @@ public class SignalDirectionFlagBlockEntity extends BlockEntity {
 
     public void resetAnchor() {
         anchorTrackPos = null;
+        forwardIsPositive = true;
         mode = FlagMode.ONE_WAY_FORWARD;
         setChanged();
     }
