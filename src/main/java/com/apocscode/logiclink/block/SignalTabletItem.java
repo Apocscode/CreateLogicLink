@@ -333,6 +333,8 @@ public class SignalTabletItem extends Item {
         boolean preferredFront;
         if (flagOverride != null && !flagOverride.bidirectional()) {
             preferredFront = flagOverride.forward();
+            LogicLink.LOGGER.info("[Signal Placement] Using flag override at {} for track {}. front={}. ",
+                    flagOverride.trackPos(), trackPos, preferredFront);
         } else {
             preferredFront = desired.lengthSqr() == 0 || axis.dot(desired.normalize()) >= 0;
         }
@@ -363,7 +365,7 @@ public class SignalTabletItem extends Item {
 
         LogicLink.LOGGER.info("candidate: track={} laneType={} source={} preferredFront={} chosenFront={} prefOverlap={} altOverlap={} flagAnchor={}",
                 trackPos, laneType, decisionSource, preferredFront, front, preferredOverlap, alternateOverlap,
-                flagOverride != null ? flagOverride.anchorTrackPos() : "none");
+                flagOverride != null ? flagOverride.trackPos() : "none");
 
         double score = targetPos.distSqr(trackPos);
         return new PlacementCandidate(trackPos, front, score, laneType, decisionSource);

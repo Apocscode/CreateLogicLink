@@ -9,6 +9,7 @@ import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 
 /**
@@ -30,6 +31,7 @@ public class SignalDirectionFlagItem extends TrackTargetingBlockItem {
     @Override
     public InteractionResult useOn(UseOnContext context) {
         ItemStack stack = context.getItemInHand();
+        Level level = context.getLevel();
         Player player = context.getPlayer();
 
         // Save the current arrow-marker selection before Create's useOn clears it.
@@ -43,7 +45,8 @@ public class SignalDirectionFlagItem extends TrackTargetingBlockItem {
 
         // After a successful placement Create removes the selection components.
         // Re-apply them so the arrow stays for the next placement on the same track.
-        if (!isClearing && hadSelection && result.consumesAction()
+        // Only restore on client to avoid sync issues - the arrow is a client-side visual.
+        if (!isClearing && hadSelection && result.consumesAction() && level.isClientSide
                 && !stack.has(AllDataComponents.TRACK_TARGETING_ITEM_SELECTED_POS)) {
             stack.set(AllDataComponents.TRACK_TARGETING_ITEM_SELECTED_POS, savedPos);
             if (savedDir != null)

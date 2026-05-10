@@ -149,6 +149,9 @@ public class SignalDirectionFlagBlockEntity extends BlockEntity {
         };
     }
 
+    public record FlagOverride(BlockPos trackPos, boolean forward, boolean bidirectional) {
+    }
+
     @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
@@ -198,8 +201,5 @@ public class SignalDirectionFlagBlockEntity extends BlockEntity {
         anchorTrackPos = null;
         mode = FlagMode.ONE_WAY_FORWARD;
         setChanged();
-    }
-
-    public record FlagOverride(BlockPos anchorTrackPos, boolean forward, boolean bidirectional) {
     }
 }
