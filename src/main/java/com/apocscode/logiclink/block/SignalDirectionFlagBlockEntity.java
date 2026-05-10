@@ -122,7 +122,8 @@ public class SignalDirectionFlagBlockEntity extends BlockEntity {
 
         anchorTrackPos = absoluteTarget;
         boolean targetDirection = blockEntityData.getBoolean("TargetDirection");
-        mode = targetDirection ? FlagMode.ONE_WAY_FORWARD : FlagMode.ONE_WAY_REVERSE;
+        // Create's TargetDirection boolean is opposite of this block's forward semantic.
+        mode = targetDirection ? FlagMode.ONE_WAY_REVERSE : FlagMode.ONE_WAY_FORWARD;
 
         setChanged();
         level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
