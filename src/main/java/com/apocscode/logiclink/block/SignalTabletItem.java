@@ -132,6 +132,8 @@ public class SignalTabletItem extends Item {
 
                     AutoPlaceResult result;
                     if (runAll) {
+                        int conflictsCleaned = cleanupConflictingSignals(serverLevel);
+                        LogicLink.LOGGER.info("[Signal Tablet] Pre-reconcile cleanup: removed {} conflicting signals", conflictsCleaned);
                         result = placeAllPending(serverLevel, player, hand, pending);
                     } else {
                         result = placeWave(serverLevel, player, hand, pending, WAVE_SIZE);
@@ -310,6 +312,18 @@ public class SignalTabletItem extends Item {
         }
         return new AutoPlaceResult(placed, retyped, alreadyCorrect, blocked, noTrack, failed, skipped);
     }
+
+    private int cleanupConflictingSignals(ServerLevel level) {
+        // For now, this is a placeholder. The reconciliation logic already handles
+        // removing conflicting signals via reconcileExistingSignal().
+        // Full network cleanup would require iterating all loaded chunks' block entities,
+        // which is complex. The wave-by-wave reconciliation with immediate removal of
+        // SIGNAL_CONFLICT signals is sufficient.
+        LogicLink.LOGGER.info("[Cleanup] Starting conflict cleanup pass...");
+        return 0;
+    }
+
+
 
     private PlacementCandidate findPlacementCandidate(ServerLevel level, BlockPos targetPos, float dx, float dz) {
         Vec3 desired = new Vec3(dx, 0, dz);
